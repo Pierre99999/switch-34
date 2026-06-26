@@ -152,6 +152,7 @@ export default function DealDashboardPage() {
   const [saving, setSaving] = useState(false)
   const [addingRound, setAddingRound] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [generatingNarrative, setGeneratingNarrative] = useState(false)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
 
@@ -194,6 +195,25 @@ export default function DealDashboardPage() {
   function handleCancelEdit() {
     setPending({})
     setIsEditing(false)
+  }
+
+  async function handleGenerateNarrative() {
+    if (!currentRoundData) return
+    setGeneratingNarrative(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai/narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to generate narrative')
+    }
+    setGeneratingNarrative(false)
   }
 
   async function handleAddRound() {
@@ -263,12 +283,21 @@ export default function DealDashboardPage() {
       {isLatestRound && (
         <div className="flex items-center gap-3 mb-6">
           {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50"
-            >
-              edit scores
-            </button>
+            <>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50"
+              >
+                edit scores
+              </button>
+              <button
+                onClick={handleGenerateNarrative}
+                disabled={generatingNarrative}
+                className="px-4 py-2 border border-stone-500 text-stone-600 text-xs uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
+              >
+                {generatingNarrative ? 'generating…' : '✦ narrative'}
+              </button>
+            </>
           ) : (
             <>
               <button

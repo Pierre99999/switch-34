@@ -18,6 +18,8 @@ export default function CapturePage() {
   const [freeNote, setFreeNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [suggestingScores, setSuggestingScores] = useState(false)
+  const [scoreSuggestions, setScoreSuggestions] = useState<Record<string, { score: number; rationale: string }> | null>(null)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -72,6 +74,26 @@ export default function CapturePage() {
     if (error) setError(error.message)
     else await load()
     setSaving(false)
+  }
+
+  async function handleSuggestScores() {
+    if (!currentRoundData) return
+    setSuggestingScores(true)
+    setError(null)
+    setScoreSuggestions(null)
+    try {
+      const res = await fetch('/api/ai/suggest-scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      setScoreSuggestions(data.suggestions)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to suggest scores')
+    }
+    setSuggestingScores(false)
   }
 
   if (!deal) {
@@ -190,22 +212,51 @@ export default function CapturePage() {
 
       {/* Save + next action */}
       {isLatestRound && (
-        <div className="flex items-center gap-3 pt-2 border-t border-stone-300">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-stone-900 text-stone-50 px-6 py-3 text-sm uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-          >
-            {saving ? 'saving…' : 'save capture'}
-          </button>
-          <button
-            onClick={() => router.push(`/deals/${dealId}/dashboard`)}
-            className="px-6 py-3 border border-stone-300 text-stone-600 text-sm uppercase tracking-widest font-mono hover:border-stone-900 hover:text-stone-900"
-          >
-            → update scores
-          </button>
-          {error && <span className="text-xs font-mono text-rose-700">{error}</span>}
-        </div>
+        <>
+          <div className="flex items-center gap-3 pt-2 border-t border-stone-300">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="bg-stone-900 text-stone-50 px-6 py-3 text-sm uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+            >
+              {saving ? 'saving…' : 'save capture'}
+            </button>
+            <button
+              onClick={handleSuggestScores}
+              disabled={suggestingScores}
+              className="px-6 py-3 border border-stone-500 text-stone-600 text-sm uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
+            >
+              {suggestingScores ? 'analyzing…' : '✦ suggest scores'}
+            </button>
+            <button
+              onClick={() => router.push(`/deals/${dealId}/dashboard`)}
+              className="px-6 py-3 border border-stone-300 text-stone-600 text-sm uppercase tracking-widest font-mono hover:border-stone-900 hover:text-stone-900"
+            >
+              → update scores
+            </button>
+            {error && <span className="text-xs font-mono text-rose-700">{error}</span>}
+          </div>
+          {scoreSuggestions && (
+            <div className="mt-6 border border-stone-300 bg-stone-50 p-5">
+              <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-4">
+                score suggestions — review and apply manually on the dashboard
+              </div>
+              <div className="space-y-3">
+                {Object.entries(scoreSuggestions).map(([variable, s]) => (
+                  s.score !== null && (
+                    <div key={variable} className="flex items-start gap-4">
+                      <div className="w-32 shrink-0 text-[10px] uppercase tracking-widest text-stone-500 font-mono pt-0.5">{variable}</div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-mono text-sm text-stone-900 font-bold">{s.score}/5</span>
+                      </div>
+                      <div className="text-xs text-stone-600 font-serif italic leading-relaxed">{s.rationale}</div>
+                    </div>
+                  )
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

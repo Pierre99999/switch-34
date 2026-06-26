@@ -71,6 +71,7 @@ export default function BriefingPage() {
   const [selectedRound, setSelectedRound] = useState<number>(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [generatingBriefing, setGeneratingBriefing] = useState(false)
 
   // Local editable state — always reflects the selected round
   const [line, setLine] = useState('')
@@ -146,6 +147,33 @@ export default function BriefingPage() {
 
   // ── List helpers ────────────────────────────────────────────
 
+  async function handleGenerateBriefing() {
+    if (!currentRoundData) return
+    setGeneratingBriefing(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai/briefing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      const b = data.briefing
+      if (b.line) setLine(b.line)
+      if (b.read) setRead(b.read)
+      if (b.angle) setAngle(b.angle)
+      if (b.win_condition) setWinCondition(b.win_condition)
+      if (b.questions) setQuestions(b.questions)
+      if (b.mirror) setMirror(b.mirror)
+      if (b.objections) setObjections(b.objections)
+      if (b.do_not) setDoNot(b.do_not)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to generate briefing')
+    }
+    setGeneratingBriefing(false)
+  }
+
   function addQuestion() {
     setQuestions(q => [...q, { layer: 1, variable: '', why: '', text: '' }])
   }
@@ -199,9 +227,20 @@ export default function BriefingPage() {
             Briefing · {selectedRound === 0 ? 'initial' : `round ${selectedRound}`}
           </h2>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">
-            {isLatestRound ? 'current round' : 'historical'}
+        <div className="flex items-center gap-3">
+          {isLatestRound && (
+            <button
+              onClick={handleGenerateBriefing}
+              disabled={generatingBriefing}
+              className="px-4 py-2 border border-stone-500 text-stone-600 text-xs uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
+            >
+              {generatingBriefing ? 'generating…' : '✦ generate briefing'}
+            </button>
+          )}
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">
+              {isLatestRound ? 'current round' : 'historical'}
+            </div>
           </div>
         </div>
       </div>
