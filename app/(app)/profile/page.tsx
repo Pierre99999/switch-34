@@ -129,12 +129,14 @@ function DimensionSection({
   onChange,
   onSave,
   saving,
+  isDirty,
 }: {
   def: DimensionDef
   values: Record<string, string>
   onChange: (key: string, val: string) => void
   onSave: () => void
   saving: boolean
+  isDirty: boolean
 }) {
   const [open, setOpen] = useState(false)
   const total = def.questions.length
@@ -151,6 +153,7 @@ function DimensionSection({
           <span className="text-[10px] uppercase tracking-widest text-stone-500 font-mono hidden sm:block">{def.description.slice(0, 60)}…</span>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+          {isDirty && <span className="text-[10px] uppercase tracking-widest font-mono text-amber-700">unsaved</span>}
           <span className={`text-[10px] uppercase tracking-widest font-mono ${filled === total ? 'text-emerald-700' : filled > 0 ? 'text-amber-700' : 'text-stone-400'}`}>
             {filled}/{total}
           </span>
@@ -176,15 +179,17 @@ function DimensionSection({
               </div>
             ))}
           </div>
-          <div className="mt-5 flex items-center gap-3 pt-4 border-t border-stone-200">
-            <button
-              onClick={onSave}
-              disabled={saving}
-              className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-            >
-              {saving ? 'saving…' : 'save'}
-            </button>
-          </div>
+          {isDirty && (
+            <div className="mt-5 flex items-center gap-3 pt-4 border-t border-stone-200">
+              <button
+                onClick={onSave}
+                disabled={saving}
+                className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+              >
+                {saving ? 'saving…' : 'update'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -196,6 +201,7 @@ function DimensionSection({
 export default function ProfilePage() {
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [dims, setDims] = useState<VendorDimensions>(EMPTY_VENDOR_DIMENSIONS)
+  const [savedDims, setSavedDims] = useState<VendorDimensions>(EMPTY_VENDOR_DIMENSIONS)
   const [savingKey, setSavingKey] = useState<string | null>(null)
 
   // Import state
@@ -211,7 +217,9 @@ export default function ProfilePage() {
     const { data } = await supabase.from('vendors').select('*').eq('user_id', user.id).single()
     if (data) {
       setVendor(data)
-      setDims(deepMerge(EMPTY_VENDOR_DIMENSIONS, data.dimensions ?? {}))
+      const merged = deepMerge(EMPTY_VENDOR_DIMENSIONS, data.dimensions ?? {})
+      setDims(merged)
+      setSavedDims(merged)
     }
   }, [])
 
@@ -227,13 +235,26 @@ export default function ProfilePage() {
     const supabase = createClient()
     const merged = { ...(vendor.dimensions ?? {}), [dimKey]: dims[dimKey] }
     await supabase.from('vendors').update({ dimensions: merged }).eq('id', vendor.id)
+    setSavedDims(d => ({ ...d, [dimKey]: dims[dimKey] }))
     await load()
     setSavingKey(null)
   }
 
-  function applyExtracted(extracted: Partial<VendorDimensions>) {
-    setDims(d => deepMerge(d, extracted))
-    setImportSuccess('Profile pre-filled from import. Review each dimension and save.')
+  async function saveAllDims(newDims: VendorDimensions, currentVendor: Vendor) {
+    const supabase = createClient()
+    await supabase.from('vendors').update({ dimensions: newDims }).eq('id', currentVendor.id)
+    setSavedDims(newDims)
+  }
+
+  async function applyExtracted(extracted: Partial<VendorDimensions>) {
+    const newDims = deepMerge(dims, extracted)
+    setDims(newDims)
+    if (vendor) {
+      await saveAllDims(newDims, vendor)
+      setImportSuccess('Profile imported and saved.')
+    } else {
+      setImportSuccess('Profile pre-filled. Save each dimension to persist.')
+    }
   }
 
   async function handleImportUrl() {
@@ -249,7 +270,7 @@ export default function ProfilePage() {
       })
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
-      applyExtracted(data.dimensions)
+      await applyExtracted(data.dimensions)
     } catch {
       setImportError('Network error — try again')
     } finally {
@@ -269,7 +290,7 @@ export default function ProfilePage() {
       const res = await fetch('/api/profile/from-doc', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
-      applyExtracted(data.dimensions)
+      await applyExtracted(data.dimensions)
     } catch {
       setImportError('Network error — try again')
     } finally {
@@ -367,6 +388,7 @@ export default function ProfilePage() {
             onChange={(subKey, val) => handleChange(def.key, subKey, val)}
             onSave={() => handleSave(def.key)}
             saving={savingKey === def.key}
+            isDirty={JSON.stringify(dims[def.key]) !== JSON.stringify(savedDims[def.key])}
           />
         ))}
       </div>
