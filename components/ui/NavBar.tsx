@@ -56,6 +56,7 @@ export default function NavBar() {
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-11">
         <div className="flex items-center gap-0.5">
           {tab('Pipeline', '/pipeline', pathname === '/pipeline')}
+          {tab('My Profile', '/profile', pathname === '/profile')}
           <span className="text-stone-200 mx-2 select-none">|</span>
           {tab('Dashboard', dealHref('dashboard'), isActive('dashboard'))}
           {tab('Briefing', dealHref('briefing'), isActive('briefing'))}

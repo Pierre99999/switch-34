@@ -2,6 +2,133 @@
 // SCOREJAM TYPES
 // ============================================================
 
+// ── Vendor 9-dimension profile ────────────────────────────────
+
+export type VendorDimensions = {
+  value: {
+    problem: string
+    point_of_view: string
+    value_delivered: string
+    value_reliability: string
+    market_response: string
+    competitive_standing: string
+  }
+  target: {
+    who_youre_for: string
+    positioning: string
+    market_timing: string
+    qualification: string
+    sales_motion: string
+    customer_knowledge: string
+  }
+  product: {
+    current_product: string
+    vision: string
+    roadmap: string
+    defensibility: string
+    user_experience: string
+    technical_foundation: string
+    product_health: string
+  }
+  reach: {
+    gtm_model: string
+    reach_focus: string
+    message_cta: string
+    channels: string
+    execution_capacity: string
+    performance: string
+  }
+  usage: {
+    core_action: string
+    feature_adoption: string
+    retention: string
+    churn: string
+    expansion: string
+    monetization: string
+    instrumentation: string
+  }
+  finance: {
+    revenue: string
+    costs: string
+    capital_runway: string
+    unit_economics: string
+    forecasting: string
+  }
+  scale: {
+    growth_channel: string
+    bottleneck: string
+    investment_focus: string
+    talent_plan: string
+  }
+  playbook: {
+    capture_lessons: string
+    codify: string
+    build_capability: string
+    impact: string
+  }
+  foundations: {
+    vision_purpose: string
+    culture: string
+    team_status: string
+    engagement: string
+    strengths: string
+  }
+}
+
+// ── Prospect 5-dimension profile ─────────────────────────────
+
+export type ProspectDimensions = {
+  company: {
+    core_business: string
+    industry: string
+    size_stage: string
+    geography: string
+  }
+  strategic_context: {
+    priorities: string
+    challenges: string
+    recent_signals: string
+    pressures: string
+  }
+  buying_environment: {
+    decision_process: string
+    budget_signals: string
+    timeline: string
+    history: string
+  }
+  key_contact: {
+    role_accountability: string
+    background: string
+    personal_priorities: string
+    influence_level: string
+  }
+  fit_signals: {
+    problem_mapping: string
+    implementation_readiness: string
+    timing_trigger: string
+  }
+}
+
+export const EMPTY_VENDOR_DIMENSIONS: VendorDimensions = {
+  value: { problem: '', point_of_view: '', value_delivered: '', value_reliability: '', market_response: '', competitive_standing: '' },
+  target: { who_youre_for: '', positioning: '', market_timing: '', qualification: '', sales_motion: '', customer_knowledge: '' },
+  product: { current_product: '', vision: '', roadmap: '', defensibility: '', user_experience: '', technical_foundation: '', product_health: '' },
+  reach: { gtm_model: '', reach_focus: '', message_cta: '', channels: '', execution_capacity: '', performance: '' },
+  usage: { core_action: '', feature_adoption: '', retention: '', churn: '', expansion: '', monetization: '', instrumentation: '' },
+  finance: { revenue: '', costs: '', capital_runway: '', unit_economics: '', forecasting: '' },
+  scale: { growth_channel: '', bottleneck: '', investment_focus: '', talent_plan: '' },
+  playbook: { capture_lessons: '', codify: '', build_capability: '', impact: '' },
+  foundations: { vision_purpose: '', culture: '', team_status: '', engagement: '', strengths: '' },
+}
+
+export const EMPTY_PROSPECT_DIMENSIONS: ProspectDimensions = {
+  company: { core_business: '', industry: '', size_stage: '', geography: '' },
+  strategic_context: { priorities: '', challenges: '', recent_signals: '', pressures: '' },
+  buying_environment: { decision_process: '', budget_signals: '', timeline: '', history: '' },
+  key_contact: { role_accountability: '', background: '', personal_priorities: '', influence_level: '' },
+  fit_signals: { problem_mapping: '', implementation_readiness: '', timing_trigger: '' },
+}
+
 export type Vendor = {
   id: string
   user_id: string
@@ -12,6 +139,7 @@ export type Vendor = {
   differentiators: string | null
   ideal_customer: string | null
   past_wins: string | null
+  dimensions: VendorDimensions | null
   created_at: string
   updated_at: string
 }
@@ -26,6 +154,7 @@ export type Deal = {
   contact_linkedin: string | null
   current_round: number
   status: 'active' | 'won' | 'lost' | 'paused'
+  prospect_dimensions: ProspectDimensions | null
   created_at: string
   updated_at: string
 }
