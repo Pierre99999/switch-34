@@ -4,8 +4,28 @@ import { getLayerVerdict, LAYER_VARIABLES } from '@/lib/types'
 import type { Deal, DealRound } from '@/lib/types'
 import EditableProspectName from '@/components/deal/EditableProspectName'
 
-function VerdictCell({ verdict }: { verdict: ReturnType<typeof getLayerVerdict> }) {
-  const color = {
+function getLayerScore(round: DealRound | null, layer: number): number | null {
+  if (!round) return null
+  const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
+  const scores = vars.map(v => round[v as keyof DealRound] as number | null).filter(s => s !== null) as number[]
+  if (scores.length === 0) return null
+  return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+}
+
+function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: number; label: string }) {
+  const verdict = getLayerVerdict(round, layer)
+  const score = getLayerScore(round, layer)
+
+  const barColor = {
+    PASS: 'bg-emerald-500',
+    HOLD: 'bg-amber-400',
+    'AT RISK': 'bg-rose-500',
+    EMPTY: 'bg-stone-200',
+    EMERGING: 'bg-amber-400',
+    NASCENT: 'bg-amber-300',
+  }[verdict]
+
+  const textColor = {
     PASS: 'text-emerald-700',
     HOLD: 'text-amber-700',
     'AT RISK': 'text-rose-700',
@@ -13,8 +33,21 @@ function VerdictCell({ verdict }: { verdict: ReturnType<typeof getLayerVerdict> 
     EMERGING: 'text-amber-600',
     NASCENT: 'text-amber-500',
   }[verdict]
-  const score = verdict === 'EMPTY' ? '—' : verdict
-  return <span className={`text-[11px] font-mono uppercase tracking-wide ${color}`}>{score}</span>
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-[9px] uppercase tracking-widest text-stone-400 font-mono">{label}</div>
+      <div className={`text-base font-mono font-semibold leading-none ${textColor}`}>
+        {score !== null ? score.toFixed(1) : '—'}
+      </div>
+      <div className="h-1 w-full bg-stone-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full ${barColor} transition-all`}
+          style={{ width: score !== null ? `${(score / 5) * 100}%` : '0%' }}
+        />
+      </div>
+    </div>
+  )
 }
 
 export default async function PipelinePage() {
@@ -91,11 +124,8 @@ export default async function PipelinePage() {
       <div className="grid grid-cols-12 gap-3 px-4 py-2 border-b border-stone-300 text-[10px] uppercase tracking-widest text-stone-500 font-mono">
         <div className="col-span-4">prospect</div>
         <div className="col-span-1">round</div>
-        <div className="col-span-1">opportunity</div>
-        <div className="col-span-1">winability</div>
-        <div className="col-span-1">impact</div>
-        <div className="col-span-1">momentum</div>
-        <div className="col-span-3 text-right">actions</div>
+        <div className="col-span-5">scores · /5</div>
+        <div className="col-span-2 text-right">actions</div>
       </div>
 
       {(deals || []).length === 0 && (
@@ -110,7 +140,7 @@ export default async function PipelinePage() {
       {(deals || []).map((deal: Deal) => {
         const r = latestRound(deal.id)
         return (
-          <div key={deal.id} className="grid grid-cols-12 gap-3 px-4 py-3 border-b border-stone-200 items-center hover:bg-stone-50">
+          <div key={deal.id} className="grid grid-cols-12 gap-3 px-4 py-4 border-b border-stone-200 items-center hover:bg-stone-50">
             <div className="col-span-4">
               <EditableProspectName
                 dealId={deal.id}
@@ -120,17 +150,16 @@ export default async function PipelinePage() {
                 <div className="text-[11px] text-stone-500">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</div>
               )}
             </div>
-            <div className="col-span-1 text-xs font-mono text-stone-700">R{deal.current_round}</div>
-            <div className="col-span-1"><VerdictCell verdict={getLayerVerdict(r, 1)} /></div>
-            <div className="col-span-1"><VerdictCell verdict={getLayerVerdict(r, 2)} /></div>
-            <div className="col-span-1"><VerdictCell verdict={getLayerVerdict(r, 3)} /></div>
-            <div className="col-span-1"><VerdictCell verdict={getLayerVerdict(r, 4)} /></div>
-            <div className="col-span-3 text-right flex items-center justify-end gap-3">
+            <div className="col-span-1 text-xs font-mono text-stone-500">R{deal.current_round}</div>
+            <div className="col-span-5 grid grid-cols-4 gap-3">
+              <ScoreCell round={r} layer={1} label="Opportunity" />
+              <ScoreCell round={r} layer={2} label="Winability" />
+              <ScoreCell round={r} layer={3} label="Impact" />
+              <ScoreCell round={r} layer={4} label="Momentum" />
+            </div>
+            <div className="col-span-2 text-right">
               <Link href={`/deals/${deal.id}/dashboard`} className="text-[11px] uppercase tracking-widest font-mono text-stone-700 hover:text-stone-900">
-                dashboard →
-              </Link>
-              <Link href={`/deals/${deal.id}/context`} className="text-[11px] uppercase tracking-widest font-mono text-stone-700 hover:text-stone-900">
-                context →
+                open →
               </Link>
             </div>
           </div>

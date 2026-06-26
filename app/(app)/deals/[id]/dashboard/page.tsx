@@ -222,9 +222,20 @@ export default function DealDashboardPage() {
     try {
       const supabase = createClient()
       const nextRound = deal.current_round + 1
+      // Carry scores forward from the current round so the new round inherits them
+      const prevRound = rounds.find(r => r.round === deal.current_round)
+      const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
+      const inheritedScores: Record<string, number> = {}
+      if (prevRound) {
+        for (const v of allVars) {
+          const score = prevRound[v as keyof DealRound] as number | null
+          if (score !== null) inheritedScores[v] = score
+        }
+      }
+
       const { data: newRound, error: insertErr } = await supabase
         .from('deal_rounds')
-        .insert({ deal_id: dealId, round: nextRound })
+        .insert({ deal_id: dealId, round: nextRound, ...inheritedScores })
         .select()
         .single()
       if (insertErr || !newRound) throw new Error(insertErr?.message ?? 'Could not create round')

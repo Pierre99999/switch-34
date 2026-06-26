@@ -57,13 +57,17 @@ export default function NavBar() {
         <div className="flex items-center gap-0.5">
           {tab('Pipeline', '/pipeline', pathname === '/pipeline')}
           {tab('My Profile', '/profile', pathname === '/profile')}
-          <span className="text-stone-200 mx-2 select-none">|</span>
-          {tab('Dashboard', dealHref('dashboard'), isActive('dashboard'))}
-          {tab('Briefing', dealHref('briefing'), isActive('briefing'))}
-          {tab('Capture', dealHref('capture'), isActive('capture'))}
-          <span className="text-stone-200 mx-2 select-none">|</span>
-          {tab('Account Context', dealHref('context'), isActive('context'))}
-          {tab('Boxes', dealHref('boxes'), isActive('boxes'))}
+          {dealId && (
+            <>
+              <span className="text-stone-200 mx-2 select-none">|</span>
+              {tab('Dashboard', dealHref('dashboard'), isActive('dashboard'))}
+              {tab('Briefing', dealHref('briefing'), isActive('briefing'))}
+              {tab('Capture', dealHref('capture'), isActive('capture'))}
+              <span className="text-stone-200 mx-2 select-none">|</span>
+              {tab('Account Context', dealHref('context'), isActive('context'))}
+              {tab('Boxes', dealHref('boxes'), isActive('boxes'))}
+            </>
+          )}
         </div>
         <button
           onClick={handleSignOut}
