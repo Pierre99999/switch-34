@@ -13,8 +13,8 @@ const DIMENSIONS: DimensionDef[] = [
   {
     key: 'value', label: '1 · Value', description: 'Whether you have identified a real problem, articulated a distinctive point of view, created value that lands, earned market validation, and understand your competitive standing.',
     questions: [
-      { key: 'problem', label: 'The problem you're solving', hint: 'How real and urgent the pain is, who feels it most, what it costs, current alternatives, and surrounding misconceptions.' },
-      { key: 'point_of_view', label: 'Your point of view and how you're different', hint: 'Your distinctive stance, unique mechanism, positioning, and how clearly that stance comes through.' },
+      { key: 'problem', label: "The problem you're solving", hint: 'How real and urgent the pain is, who feels it most, what it costs, current alternatives, and surrounding misconceptions.' },
+      { key: 'point_of_view', label: "Your point of view and how you're different", hint: 'Your distinctive stance, unique mechanism, positioning, and how clearly that stance comes through.' },
       { key: 'value_delivered', label: 'The value you deliver', hint: 'The before/after transformation, value drivers, measurable impact, and stated promise.' },
       { key: 'value_reliability', label: 'Whether the value reliably lands', hint: 'How fast value appears, what delivery means, what creates early wins, and what enables or blocks realization.' },
       { key: 'market_response', label: 'How the market actually responds', hint: 'Customer reception, proof points, objections, high-value outcomes, and visible success signals.' },
@@ -24,8 +24,8 @@ const DIMENSIONS: DimensionDef[] = [
   {
     key: 'target', label: '2 · Target', description: 'Whether you are going after the right people, at the right time, with the right framing, and whether you qualify, convert, and still understand them.',
     questions: [
-      { key: 'who_youre_for', label: 'Who you're for', hint: 'Target segments, ICP, personas, best-fit and poor-fit customers, fit signals, and prioritized segments.' },
-      { key: 'positioning', label: 'How you're positioned and perceived', hint: 'Market position, perceived angle, messaging surfaces, and the gap between intended and received brand.' },
+      { key: 'who_youre_for', label: "Who you're for", hint: 'Target segments, ICP, personas, best-fit and poor-fit customers, fit signals, and prioritized segments.' },
+      { key: 'positioning', label: "How you're positioned and perceived", hint: 'Market position, perceived angle, messaging surfaces, and the gap between intended and received brand.' },
       { key: 'market_timing', label: 'Why now — market timing', hint: 'Trends, pressures, tech or regulatory shifts, market risk, and the timing thesis behind the opportunity.' },
       { key: 'qualification', label: 'What makes a prospect a fit', hint: 'Qualification logic, decisive fit features, disqualifiers, tier logic, and sales-readiness signals.' },
       { key: 'sales_motion', label: 'How the sales motion converts', hint: 'Sales stages, objections, delays, alternatives, buying process, conversion moments, and proof required.' },
@@ -37,7 +37,7 @@ const DIMENSIONS: DimensionDef[] = [
     questions: [
       { key: 'current_product', label: 'What the product is today', hint: 'Current offering, tiers, core features, modules, and the concrete product as it exists now.' },
       { key: 'vision', label: 'Product vision', hint: 'Clarity, ambition, transformation, positioning, and whether multi-year goals support the vision.' },
-      { key: 'roadmap', label: 'The roadmap and what you're building', hint: 'Current priorities, upcoming releases, beta features, and how the product is evolving.' },
+      { key: 'roadmap', label: "The roadmap and what you're building", hint: 'Current priorities, upcoming releases, beta features, and how the product is evolving.' },
       { key: 'defensibility', label: 'What makes it hard to copy', hint: 'Proprietary mechanisms, moats, switching costs, proof of defensibility, and what competitors cannot easily replicate.' },
       { key: 'user_experience', label: 'The user experience', hint: 'Product structure, navigation, onboarding, time-to-value, key flows, and friction points.' },
       { key: 'technical_foundation', label: 'Technical foundation', hint: 'Scalability, architecture, performance, technical debt, organizational requirements, and known constraints.' },
