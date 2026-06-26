@@ -198,6 +198,12 @@ export default function ProfilePage() {
   const [dims, setDims] = useState<VendorDimensions>(EMPTY_VENDOR_DIMENSIONS)
   const [savingKey, setSavingKey] = useState<string | null>(null)
 
+  // Import state
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importSuccess, setImportSuccess] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -225,6 +231,53 @@ export default function ProfilePage() {
     setSavingKey(null)
   }
 
+  function applyExtracted(extracted: Partial<VendorDimensions>) {
+    setDims(d => deepMerge(d, extracted))
+    setImportSuccess('Profile pre-filled from import. Review each dimension and save.')
+  }
+
+  async function handleImportUrl() {
+    if (!importUrl.trim()) return
+    setImporting(true)
+    setImportError(null)
+    setImportSuccess(null)
+    try {
+      const res = await fetch('/api/profile/from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: importUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
+      applyExtracted(data.dimensions)
+    } catch {
+      setImportError('Network error — try again')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  async function handleImportDoc(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    setImportError(null)
+    setImportSuccess(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/profile/from-doc', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
+      applyExtracted(data.dimensions)
+    } catch {
+      setImportError('Network error — try again')
+    } finally {
+      setImporting(false)
+      e.target.value = ''
+    }
+  }
+
   const totalFilled = DIMENSIONS.reduce((acc, d) => acc + filledCount(dims[d.key] as Record<string, string>), 0)
   const totalQuestions = DIMENSIONS.reduce((acc, d) => acc + d.questions.length, 0)
 
@@ -244,10 +297,63 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Import panel */}
+      <div className="border border-stone-300 bg-stone-50 p-5 mb-8">
+        <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-4">import from</div>
+        <div className="flex flex-col gap-4">
+          {/* URL */}
+          <div>
+            <div className="text-xs text-stone-600 font-mono mb-1.5">Website URL</div>
+            <div className="flex gap-2">
+              <input
+                value={importUrl}
+                onChange={e => setImportUrl(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleImportUrl()}
+                placeholder="yourcompany.com"
+                disabled={importing}
+                className="flex-1 border border-stone-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-stone-900 disabled:opacity-50"
+              />
+              <button
+                onClick={handleImportUrl}
+                disabled={importing || !importUrl.trim()}
+                className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50 disabled:opacity-40 whitespace-nowrap"
+              >
+                {importing ? 'reading…' : '↓ fetch'}
+              </button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-stone-200" />
+            <span className="text-[10px] uppercase tracking-widest text-stone-400 font-mono">or</span>
+            <div className="flex-1 h-px bg-stone-200" />
+          </div>
+
+          {/* Document */}
+          <div>
+            <div className="text-xs text-stone-600 font-mono mb-1.5">Document <span className="text-stone-400">(PDF or .txt)</span></div>
+            <label className={`flex items-center justify-center border border-dashed border-stone-300 bg-white px-4 py-4 cursor-pointer hover:border-stone-600 transition-colors ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
+              <span className="text-xs font-mono text-stone-500">
+                {importing ? 'reading document…' : '↑ click to upload — pitch deck, product doc, company brief'}
+              </span>
+              <input type="file" accept=".pdf,.txt,.md" onChange={handleImportDoc} className="hidden" disabled={importing} />
+            </label>
+          </div>
+        </div>
+
+        {importError && (
+          <p className="mt-3 text-xs font-mono text-rose-700">{importError}</p>
+        )}
+        {importSuccess && (
+          <p className="mt-3 text-xs font-mono text-emerald-700">{importSuccess}</p>
+        )}
+      </div>
+
       <div className="border-l-2 border-stone-900 pl-4 py-2 mb-8 bg-stone-50">
         <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">how to use this</div>
         <p className="text-sm text-stone-800 font-serif italic leading-relaxed">
-          Fill what you know. Leave the rest empty — you can come back. The more complete your profile, the better the engine reads each deal.
+          Import from your website or a document to pre-fill. Then review each dimension and save. The more complete your profile, the better the engine reads each deal.
         </p>
       </div>
 
