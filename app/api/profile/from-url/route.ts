@@ -108,18 +108,37 @@ export async function POST(req: NextRequest) {
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 2048,
     system: SYSTEM_PROMPT,
+    tools: [
+      {
+        name: 'save_vendor_profile',
+        description: 'Save extracted vendor intelligence across 9 dimensions',
+        input_schema: {
+          type: 'object' as const,
+          properties: {
+            value: { type: 'object', properties: { problem: { type: 'string' }, point_of_view: { type: 'string' }, value_delivered: { type: 'string' }, value_reliability: { type: 'string' }, market_response: { type: 'string' }, competitive_standing: { type: 'string' } }, required: [] },
+            target: { type: 'object', properties: { who_youre_for: { type: 'string' }, positioning: { type: 'string' }, market_timing: { type: 'string' }, qualification: { type: 'string' }, sales_motion: { type: 'string' }, customer_knowledge: { type: 'string' } }, required: [] },
+            product: { type: 'object', properties: { current_product: { type: 'string' }, vision: { type: 'string' }, roadmap: { type: 'string' }, defensibility: { type: 'string' }, user_experience: { type: 'string' }, technical_foundation: { type: 'string' }, product_health: { type: 'string' } }, required: [] },
+            reach: { type: 'object', properties: { gtm_model: { type: 'string' }, reach_focus: { type: 'string' }, message_cta: { type: 'string' }, channels: { type: 'string' }, execution_capacity: { type: 'string' }, performance: { type: 'string' } }, required: [] },
+            usage: { type: 'object', properties: { core_action: { type: 'string' }, feature_adoption: { type: 'string' }, retention: { type: 'string' }, churn: { type: 'string' }, expansion: { type: 'string' }, monetization: { type: 'string' }, instrumentation: { type: 'string' } }, required: [] },
+            finance: { type: 'object', properties: { revenue: { type: 'string' }, costs: { type: 'string' }, capital_runway: { type: 'string' }, unit_economics: { type: 'string' }, forecasting: { type: 'string' } }, required: [] },
+            scale: { type: 'object', properties: { growth_channel: { type: 'string' }, bottleneck: { type: 'string' }, investment_focus: { type: 'string' }, talent_plan: { type: 'string' } }, required: [] },
+            playbook: { type: 'object', properties: { capture_lessons: { type: 'string' }, codify: { type: 'string' }, build_capability: { type: 'string' }, impact: { type: 'string' } }, required: [] },
+            foundations: { type: 'object', properties: { vision_purpose: { type: 'string' }, culture: { type: 'string' }, team_status: { type: 'string' }, engagement: { type: 'string' }, strengths: { type: 'string' } }, required: [] },
+          },
+          required: [],
+        },
+      },
+    ],
+    tool_choice: { type: 'any' as const },
     messages: [{
       role: 'user',
-      content: `Extract vendor intelligence from this website content and return the JSON schema below. Only populate fields where the content clearly supports it.\n\nSchema to fill:\n${SCHEMA}\n\nWebsite content:\n${rawText}`,
+      content: `Extract vendor intelligence from this website content and call save_vendor_profile. Only populate fields where the content clearly supports it — leave others as empty string.\n\nWebsite content:\n${rawText}`,
     }],
   })
 
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
-  try {
-    const match = text.match(/\{[\s\S]*\}/)
-    if (!match) throw new Error('No JSON')
-    return NextResponse.json({ dimensions: JSON.parse(match[0]) })
-  } catch {
-    return NextResponse.json({ error: 'Could not parse AI response' }, { status: 500 })
+  const toolUse = message.content.find(b => b.type === 'tool_use')
+  if (!toolUse || toolUse.type !== 'tool_use') {
+    return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
   }
+  return NextResponse.json({ dimensions: toolUse.input })
 }
