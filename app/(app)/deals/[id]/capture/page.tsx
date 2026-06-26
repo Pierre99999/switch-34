@@ -99,6 +99,13 @@ export default function CapturePage() {
       const { error: updateErr } = await supabase.from('deal_rounds').update(update).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 
+      // Update knowledge boxes from this round's capture (non-blocking)
+      fetch('/api/ai/update-boxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+      }).catch(() => {})
+
       router.push(`/deals/${dealId}/dashboard`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to analyze')

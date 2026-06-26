@@ -221,6 +221,8 @@ export default function BoxesPage() {
   const [boxData, setBoxData] = useState<Record<string, BoxEntry[]>>({})
   const [fillingPrepared, setFillingPrepared] = useState(false)
   const [preparedError, setPreparedError] = useState<string | null>(null)
+  const [updatingBoxes, setUpdatingBoxes] = useState(false)
+  const [updateBoxesError, setUpdateBoxesError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -258,6 +260,34 @@ export default function BoxesPage() {
       setPreparedError(e instanceof Error ? e.message : 'Failed')
     }
     setFillingPrepared(false)
+  }
+
+  async function handleUpdateBoxes() {
+    if (!deal) return
+    setUpdatingBoxes(true)
+    setUpdateBoxesError(null)
+    // Use the last round that has capture notes or scores; fall back to latest round
+    const bestRound = [...rounds].reverse().find(r => {
+      const notes = r.capture_notes as Record<string, string> | null
+      const hasNotes = notes && Object.values(notes).some(v => v?.trim())
+      const hasScores = Object.values(r).some(v => typeof v === 'number' && v > 0)
+      return hasNotes || hasScores
+    }) ?? rounds[rounds.length - 1]
+    if (!bestRound) { setUpdatingBoxes(false); return }
+    const currentRound = bestRound
+    try {
+      const res = await fetch('/api/ai/update-boxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRound.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      await load()
+    } catch (e) {
+      setUpdateBoxesError(e instanceof Error ? e.message : 'Failed')
+    }
+    setUpdatingBoxes(false)
   }
 
   async function saveEntries(boxId: string, entries: BoxEntry[]) {
@@ -324,6 +354,20 @@ export default function BoxesPage() {
             <div className="flex items-center justify-between border-b border-stone-300 pb-2 mb-5">
               <div className="text-[10px] uppercase tracking-widest text-stone-600 font-mono">{group.label}</div>
               <div className="flex items-center gap-3">
+                {(group.types[0] === 'collected' || group.types[0] === 'built') && (
+                  <>
+                    {updateBoxesError && (
+                      <span className="text-[10px] font-mono text-rose-700">{updateBoxesError}</span>
+                    )}
+                    <button
+                      onClick={handleUpdateBoxes}
+                      disabled={updatingBoxes}
+                      className="px-3 py-1 border border-stone-500 text-stone-600 text-[10px] uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
+                    >
+                      {updatingBoxes ? 'updating…' : '✦ update from capture'}
+                    </button>
+                  </>
+                )}
                 {group.types[0] === 'prepared' && (
                   <>
                     {preparedError && <span className="text-[10px] font-mono text-rose-700">{preparedError}</span>}
