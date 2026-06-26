@@ -153,6 +153,7 @@ export default function DealDashboardPage() {
   const [addingRound, setAddingRound] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingNarrative, setGeneratingNarrative] = useState(false)
+  const [generatingBriefing, setGeneratingBriefing] = useState(false)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
 
@@ -195,6 +196,25 @@ export default function DealDashboardPage() {
   function handleCancelEdit() {
     setPending({})
     setIsEditing(false)
+  }
+
+  async function handleGenerateFirstBriefing() {
+    if (!currentRoundData) return
+    setGeneratingBriefing(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/ai/briefing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      router.push(`/deals/${dealId}/briefing`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to generate briefing')
+      setGeneratingBriefing(false)
+    }
   }
 
   async function handleGenerateNarrative() {
@@ -248,6 +268,9 @@ export default function DealDashboardPage() {
 
   const isLatestRound = selectedRound === deal.current_round
   const hasPending = Object.keys(pending).length > 0
+
+  const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
+  const hasAnyScore = currentRoundData !== null && allVars.some(v => currentRoundData[v as keyof typeof currentRoundData] !== null)
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-6">
@@ -324,6 +347,35 @@ export default function DealDashboardPage() {
       {!isLatestRound && (
         <div className="mb-6 px-4 py-2 bg-stone-100 border border-stone-300 text-[11px] font-mono text-stone-500 uppercase tracking-widest">
           viewing historical round — scores are read-only
+        </div>
+      )}
+
+      {/* First briefing CTA — shown when no scores exist yet */}
+      {isLatestRound && !hasAnyScore && !isEditing && (
+        <div className="mb-8 border-2 border-dashed border-stone-300 p-8 text-center">
+          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-3">no scores yet</div>
+          <p className="font-serif italic text-stone-700 text-base mb-1">
+            Start by preparing your first briefing.
+          </p>
+          <p className="text-xs text-stone-500 font-mono mb-6">
+            The engine will use your vendor profile and prospect context to generate it.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={handleGenerateFirstBriefing}
+              disabled={generatingBriefing}
+              className="px-6 py-3 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+            >
+              {generatingBriefing ? 'generating briefing…' : '✦ generate first briefing'}
+            </button>
+            <button
+              onClick={() => router.push(`/deals/${dealId}/briefing`)}
+              className="px-6 py-3 border border-stone-300 text-stone-600 text-xs uppercase tracking-widest font-mono hover:border-stone-900 hover:text-stone-900"
+            >
+              write it manually →
+            </button>
+          </div>
+          {error && <p className="mt-4 text-xs font-mono text-rose-700">{error}</p>}
         </div>
       )}
 
