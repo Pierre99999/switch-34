@@ -175,7 +175,7 @@ export default function BriefingPage() {
   }
 
   function addQuestion() {
-    setQuestions(q => [...q, { layer: 1, variable: '', why: '', text: '' }])
+    setQuestions(q => [...q, { layer: 1, variable: '', why: '', text: '', priority: 'pressing' as const }])
   }
   function updateQuestion(i: number, field: keyof BriefingQuestion, val: string | number) {
     setQuestions(q => q.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
@@ -311,63 +311,88 @@ export default function BriefingPage() {
 
       {/* Field Questions */}
       <section className="mb-8">
-        <SectionHeader label="Field Questions" subtitle="ranked" />
-        <div className="space-y-4">
-          {questions.map((q, i) => (
-            <div key={i} className="border-l border-stone-300 pl-4">
-              {isLatestRound ? (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <select
-                      value={q.layer}
-                      onChange={e => updateQuestion(i, 'layer', Number(e.target.value))}
-                      className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none"
-                    >
-                      {[1, 2, 3, 4].map(l => <option key={l} value={l}>L{l}</option>)}
-                    </select>
-                    <input
-                      value={q.variable}
-                      onChange={e => updateQuestion(i, 'variable', e.target.value)}
-                      placeholder="variable"
-                      className="flex-1 border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none"
-                    />
-                    <button
-                      onClick={() => removeQuestion(i)}
-                      className="text-xs font-mono text-stone-400 hover:text-rose-700"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <input
-                    value={q.text}
-                    onChange={e => updateQuestion(i, 'text', e.target.value)}
-                    placeholder="The question you will ask…"
-                    className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none"
-                  />
-                  <input
-                    value={q.why}
-                    onChange={e => updateQuestion(i, 'why', e.target.value)}
-                    placeholder="Why this question matters now"
-                    className="w-full border border-stone-300 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-500"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">
-                    {String(i + 1).padStart(2, '0')} · L{q.layer} · {q.variable}
-                  </div>
-                  <p className="text-sm text-stone-900 font-serif italic mb-1">"{q.text}"</p>
-                  <p className="text-xs text-stone-500">→ {q.why}</p>
-                </div>
-              )}
+        <SectionHeader label="Field Questions" subtitle="sequential by diagnostic layer" />
+
+        {/* Pressing */}
+        {questions.filter(q => q.priority !== 'opportunistic').length > 0 && (
+          <div className="mb-6">
+            <div className="text-[10px] uppercase tracking-widest font-mono text-stone-900 mb-3 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-stone-900" />
+              Pressing — must ask this round
             </div>
-          ))}
-        </div>
+            <div className="space-y-4">
+              {questions.map((q, i) => q.priority === 'opportunistic' ? null : (
+                <div key={i} className="border-l-2 border-stone-900 pl-4">
+                  {isLatestRound ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                          {[1, 2, 3, 4].map(l => <option key={l} value={l}>L{l}</option>)}
+                        </select>
+                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none" />
+                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                          <option value="pressing">pressing</option>
+                          <option value="opportunistic">opportunistic</option>
+                        </select>
+                        <button onClick={() => removeQuestion(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700">×</button>
+                      </div>
+                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="The question you will ask…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none" />
+                      <input value={q.why} onChange={e => updateQuestion(i, 'why', e.target.value)} placeholder="Why this question matters now" className="w-full border border-stone-300 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-500" />
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">L{q.layer} · {q.variable}</div>
+                      <p className="text-sm text-stone-900 font-serif italic mb-1">"{q.text}"</p>
+                      <p className="text-xs text-stone-500">→ {q.why}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Opportunistic */}
+        {questions.filter(q => q.priority === 'opportunistic').length > 0 && (
+          <div className="mb-4">
+            <div className="text-[10px] uppercase tracking-widest font-mono text-stone-400 mb-3 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full border border-stone-400" />
+              Opportunistic — capture if the door opens
+            </div>
+            <div className="space-y-4">
+              {questions.map((q, i) => q.priority !== 'opportunistic' ? null : (
+                <div key={i} className="border-l border-dashed border-stone-300 pl-4">
+                  {isLatestRound ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                          {[1, 2, 3, 4].map(l => <option key={l} value={l}>L{l}</option>)}
+                        </select>
+                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none" />
+                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                          <option value="pressing">pressing</option>
+                          <option value="opportunistic">opportunistic</option>
+                        </select>
+                        <button onClick={() => removeQuestion(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700">×</button>
+                      </div>
+                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="The question you will ask…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none text-stone-600" />
+                      <input value={q.why} onChange={e => updateQuestion(i, 'why', e.target.value)} placeholder="Why this question matters now" className="w-full border border-stone-300 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-400" />
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">L{q.layer} · {q.variable}</div>
+                      <p className="text-sm text-stone-600 font-serif italic mb-1">"{q.text}"</p>
+                      <p className="text-xs text-stone-400">→ {q.why}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {isLatestRound && (
-          <button
-            onClick={addQuestion}
-            className="mt-3 text-xs uppercase tracking-widest font-mono text-stone-500 hover:text-stone-900 border border-dashed border-stone-300 px-3 py-1.5 hover:border-stone-600"
-          >
+          <button onClick={addQuestion} className="mt-3 text-xs uppercase tracking-widest font-mono text-stone-500 hover:text-stone-900 border border-dashed border-stone-300 px-3 py-1.5 hover:border-stone-600">
             + add question
           </button>
         )}

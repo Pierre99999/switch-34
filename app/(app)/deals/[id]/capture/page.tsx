@@ -184,16 +184,17 @@ export default function CapturePage() {
         </div>
       )}
 
-      {/* Questions from briefing */}
+      {/* Questions from briefing — sorted pressing first */}
       {questions.length > 0 ? (
         <div className="space-y-6 mb-8">
-          {questions.map((q, i) => {
+          {/* Pressing */}
+          {questions.filter(q => q.priority !== 'opportunistic').map((q, i) => {
             const key = q.variable || String(i)
             const val = notes[key] ?? ''
             return (
-              <div key={i}>
-                <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">
-                  L{q.layer} · {q.variable}
+              <div key={`p-${i}`} className="border-l-2 border-stone-900 pl-4">
+                <div className="text-[10px] uppercase tracking-widest text-stone-600 font-mono mb-1">
+                  L{q.layer} · {q.variable} · <span className="text-stone-900">pressing</span>
                 </div>
                 <p className="text-sm text-stone-900 font-serif italic mb-2">"{q.text}"</p>
                 {isLatestRound ? (
@@ -212,6 +213,39 @@ export default function CapturePage() {
               </div>
             )
           })}
+          {/* Opportunistic */}
+          {questions.filter(q => q.priority === 'opportunistic').length > 0 && (
+            <div className="pt-4 border-t border-dashed border-stone-200">
+              <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-4">
+                opportunistic — capture if it came up
+              </div>
+              {questions.filter(q => q.priority === 'opportunistic').map((q, i) => {
+                const key = q.variable || `opp-${i}`
+                const val = notes[key] ?? ''
+                return (
+                  <div key={`opp-${i}`} className="border-l border-dashed border-stone-300 pl-4 mb-6">
+                    <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">
+                      L{q.layer} · {q.variable}
+                    </div>
+                    <p className="text-sm text-stone-600 font-serif italic mb-2">"{q.text}"</p>
+                    {isLatestRound ? (
+                      <textarea
+                        value={val}
+                        onChange={e => setNote(key, e.target.value)}
+                        placeholder="[didn't come up · skip]"
+                        rows={2}
+                        className="w-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 font-mono focus:outline-none focus:border-stone-400 resize-none placeholder:text-stone-300"
+                      />
+                    ) : (
+                      <div className="border border-stone-200 bg-white p-3 text-sm text-stone-700 font-mono whitespace-pre-wrap min-h-[2.5rem]">
+                        {val || <span className="text-stone-300">[didn't come up · skip]</span>}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       ) : (
         <div className="mb-8 px-4 py-6 border border-dashed border-stone-300 text-center">

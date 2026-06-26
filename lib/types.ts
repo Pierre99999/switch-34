@@ -207,6 +207,7 @@ export type BriefingQuestion = {
   variable: string
   why: string
   text: string
+  priority: 'pressing' | 'opportunistic'
 }
 
 export type BriefingObjection = {
