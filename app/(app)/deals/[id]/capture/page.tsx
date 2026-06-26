@@ -19,8 +19,6 @@ export default function CapturePage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [suggestingScores, setSuggestingScores] = useState(false)
-  const [scoreSuggestions, setScoreSuggestions] = useState<Record<string, { score: number; rationale: string }> | null>(null)
-  const [applyingScores, setApplyingScores] = useState(false)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -66,40 +64,23 @@ export default function CapturePage() {
     if (!currentRoundData) return
     setSaving(true)
     setError(null)
-    setScoreSuggestions(null)
     const merged = { ...notes, __free__: freeNote }
     const supabase = createClient()
     const { error } = await supabase
       .from('deal_rounds')
       .update({ capture_notes: merged })
       .eq('id', currentRoundData.id)
-    if (error) { setError(error.message); setSaving(false); return }
-    await load()
+    if (error) setError(error.message)
+    else await load()
     setSaving(false)
-    // Auto-trigger score suggestions after save
-    await handleSuggestScores()
   }
 
-  async function handleApplyScores() {
-    if (!currentRoundData || !scoreSuggestions) return
-    setApplyingScores(true)
-    setError(null)
-    const update: Record<string, number> = {}
-    for (const [variable, s] of Object.entries(scoreSuggestions)) {
-      if (s.score !== null) update[variable] = s.score
-    }
-    const supabase = createClient()
-    const { error } = await supabase.from('deal_rounds').update(update).eq('id', currentRoundData.id)
-    if (error) { setError(error.message); setApplyingScores(false); return }
-    router.push(`/deals/${dealId}/dashboard`)
-  }
-
-  async function handleSuggestScores() {
+  async function handleAnalyze() {
     if (!currentRoundData) return
     setSuggestingScores(true)
     setError(null)
-    setScoreSuggestions(null)
     try {
+      // Suggest scores
       const res = await fetch('/api/ai/suggest-scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,11 +88,22 @@ export default function CapturePage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
-      setScoreSuggestions(data.suggestions)
+
+      // Apply immediately
+      const suggestions: Record<string, { score: number; rationale: string }> = data.suggestions
+      const update: Record<string, number> = {}
+      for (const [variable, s] of Object.entries(suggestions)) {
+        if (s.score !== null) update[variable] = s.score
+      }
+      const supabase = createClient()
+      const { error: updateErr } = await supabase.from('deal_rounds').update(update).eq('id', currentRoundData.id)
+      if (updateErr) throw new Error(updateErr.message)
+
+      router.push(`/deals/${dealId}/dashboard`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to suggest scores')
+      setError(e instanceof Error ? e.message : 'Failed to analyze')
+      setSuggestingScores(false)
     }
-    setSuggestingScores(false)
   }
 
   if (!deal) {
@@ -257,37 +249,19 @@ export default function CapturePage() {
             <button
               onClick={handleSave}
               disabled={saving || suggestingScores}
+              className="px-6 py-3 border border-stone-900 text-stone-900 text-sm uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50 disabled:opacity-40"
+            >
+              {saving ? 'saving…' : 'save'}
+            </button>
+            <button
+              onClick={handleAnalyze}
+              disabled={suggestingScores || saving}
               className="bg-stone-900 text-stone-50 px-6 py-3 text-sm uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
             >
-              {saving ? 'saving…' : suggestingScores ? 'analyzing capture…' : 'save + analyze'}
+              {suggestingScores ? 'analyzing…' : '✦ analyze → dashboard'}
             </button>
             {error && <span className="text-xs font-mono text-rose-700">{error}</span>}
           </div>
-          {scoreSuggestions && (
-            <div className="mt-6 border border-stone-300 bg-stone-50 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">score suggestions</div>
-                <button
-                  onClick={handleApplyScores}
-                  disabled={applyingScores}
-                  className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-                >
-                  {applyingScores ? 'applying…' : 'apply scores → dashboard'}
-                </button>
-              </div>
-              <div className="space-y-3">
-                {Object.entries(scoreSuggestions).map(([variable, s]) => (
-                  s.score !== null && (
-                    <div key={variable} className="flex items-start gap-4">
-                      <div className="w-32 shrink-0 text-[10px] uppercase tracking-widest text-stone-500 font-mono pt-0.5">{variable}</div>
-                      <span className="font-mono text-sm text-stone-900 font-bold shrink-0">{s.score}/5</span>
-                      <div className="text-xs text-stone-600 font-serif italic leading-relaxed">{s.rationale}</div>
-                    </div>
-                  )
-                ))}
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>
