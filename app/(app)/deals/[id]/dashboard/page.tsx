@@ -150,7 +150,6 @@ export default function DealDashboardPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [pending, setPending] = useState<Partial<DealRound>>({})
   const [saving, setSaving] = useState(false)
-  const [addingRound, setAddingRound] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingNarrative, setGeneratingNarrative] = useState(false)
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
@@ -198,21 +197,43 @@ export default function DealDashboardPage() {
     setIsEditing(false)
   }
 
-  async function handleGenerateFirstBriefing() {
-    if (!currentRoundData) return
+  async function handleGenerateBriefing(roundId: string) {
     setGeneratingBriefing(true)
     setError(null)
     try {
       const res = await fetch('/api/ai/briefing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+        body: JSON.stringify({ dealId, roundId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
       router.push(`/deals/${dealId}/briefing`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to generate briefing')
+      setGeneratingBriefing(false)
+    }
+  }
+
+  async function handleStartNextRound() {
+    if (!deal) return
+    setGeneratingBriefing(true)
+    setError(null)
+    try {
+      const supabase = createClient()
+      const nextRound = deal.current_round + 1
+      const { data: newRound, error: insertErr } = await supabase
+        .from('deal_rounds')
+        .insert({ deal_id: dealId, round: nextRound })
+        .select()
+        .single()
+      if (insertErr || !newRound) throw new Error(insertErr?.message ?? 'Could not create round')
+      await supabase.from('deals').update({ current_round: nextRound }).eq('id', dealId)
+      await load()
+      setSelectedRound(nextRound)
+      await handleGenerateBriefing(newRound.id)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start next round')
       setGeneratingBriefing(false)
     }
   }
@@ -236,21 +257,6 @@ export default function DealDashboardPage() {
     setGeneratingNarrative(false)
   }
 
-  async function handleAddRound() {
-    if (!deal) return
-    setAddingRound(true)
-    setError(null)
-    const supabase = createClient()
-    const nextRound = deal.current_round + 1
-    const { error: insertErr } = await supabase
-      .from('deal_rounds')
-      .insert({ deal_id: dealId, round: nextRound })
-    if (insertErr) { setError(insertErr.message); setAddingRound(false); return }
-    await supabase.from('deals').update({ current_round: nextRound }).eq('id', dealId)
-    await load()
-    setSelectedRound(nextRound)
-    setAddingRound(false)
-  }
 
   if (!deal) {
     return (
@@ -268,9 +274,11 @@ export default function DealDashboardPage() {
 
   const isLatestRound = selectedRound === deal.current_round
   const hasPending = Object.keys(pending).length > 0
-
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
   const hasAnyScore = currentRoundData !== null && allVars.some(v => currentRoundData[v as keyof typeof currentRoundData] !== null)
+  const hasBriefing = !!(currentRoundData?.briefing_line)
+  // Round state machine: UNSTARTED → BRIEFED → SCORED
+  const roundState = !hasBriefing ? 'UNSTARTED' : !hasAnyScore ? 'BRIEFED' : 'SCORED'
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-6">
@@ -293,17 +301,77 @@ export default function DealDashboardPage() {
         </div>
       </div>
 
-      {/* Round timeline */}
+      {/* Round timeline — no manual "+ next", progression is via "start next round" */}
       <RoundTimeline
         nodes={nodes}
         currentRound={selectedRound}
         onSelect={r => { setSelectedRound(r); setPending({}); setIsEditing(false) }}
-        onAddRound={isLatestRound && !isEditing ? handleAddRound : undefined}
-        addingRound={addingRound}
       />
 
-      {/* Edit toolbar */}
-      {isLatestRound && (
+      {/* Historical notice */}
+      {!isLatestRound && (
+        <div className="mb-6 px-4 py-2 bg-stone-100 border border-stone-300 text-[11px] font-mono text-stone-500 uppercase tracking-widest">
+          viewing historical round — scores are read-only
+        </div>
+      )}
+
+      {/* ── State machine for latest round ── */}
+      {isLatestRound && roundState === 'UNSTARTED' && (
+        <div className="mb-8 border-2 border-dashed border-stone-300 p-8 text-center">
+          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-3">
+            round {selectedRound === 0 ? '0 · initial' : selectedRound} · no briefing yet
+          </div>
+          <p className="font-serif italic text-stone-700 text-base mb-1">
+            Prepare your briefing before the conversation.
+          </p>
+          <p className="text-xs text-stone-500 font-mono mb-6">
+            The engine will use your vendor profile and prospect context.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
+              disabled={generatingBriefing || !currentRoundData}
+              className="px-6 py-3 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+            >
+              {generatingBriefing ? 'generating briefing…' : '✦ generate briefing'}
+            </button>
+            <button
+              onClick={() => router.push(`/deals/${dealId}/briefing`)}
+              className="px-6 py-3 border border-stone-300 text-stone-600 text-xs uppercase tracking-widest font-mono hover:border-stone-900 hover:text-stone-900"
+            >
+              write it manually →
+            </button>
+          </div>
+          {error && <p className="mt-4 text-xs font-mono text-rose-700">{error}</p>}
+        </div>
+      )}
+
+      {isLatestRound && roundState === 'BRIEFED' && (
+        <div className="mb-6 border border-stone-300 bg-stone-50 px-6 py-5 flex items-center justify-between">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">briefing ready</div>
+            <p className="text-sm font-serif italic text-stone-700">
+              Go into the conversation, then capture the responses.
+            </p>
+          </div>
+          <div className="flex gap-3 flex-shrink-0 ml-6">
+            <button
+              onClick={() => router.push(`/deals/${dealId}/briefing`)}
+              className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50"
+            >
+              → briefing
+            </button>
+            <button
+              onClick={() => router.push(`/deals/${dealId}/capture`)}
+              className="px-4 py-2 border border-stone-500 text-stone-600 text-xs uppercase tracking-widest font-mono hover:bg-stone-100"
+            >
+              → capture
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLatestRound && roundState === 'SCORED' && (
         <div className="flex items-center gap-3 mb-6">
           {!isEditing ? (
             <>
@@ -319,6 +387,14 @@ export default function DealDashboardPage() {
                 className="px-4 py-2 border border-stone-500 text-stone-600 text-xs uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
               >
                 {generatingNarrative ? 'generating…' : '✦ narrative'}
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={handleStartNextRound}
+                disabled={generatingBriefing}
+                className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+              >
+                {generatingBriefing ? 'generating briefing…' : `✦ start round ${deal.current_round + 1} →`}
               </button>
             </>
           ) : (
@@ -343,57 +419,21 @@ export default function DealDashboardPage() {
         </div>
       )}
 
-      {/* Viewing older round notice */}
-      {!isLatestRound && (
-        <div className="mb-6 px-4 py-2 bg-stone-100 border border-stone-300 text-[11px] font-mono text-stone-500 uppercase tracking-widest">
-          viewing historical round — scores are read-only
-        </div>
-      )}
-
-      {/* First briefing CTA — shown when no scores exist yet */}
-      {isLatestRound && !hasAnyScore && !isEditing && (
-        <div className="mb-8 border-2 border-dashed border-stone-300 p-8 text-center">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-3">no scores yet</div>
-          <p className="font-serif italic text-stone-700 text-base mb-1">
-            Start by preparing your first briefing.
-          </p>
-          <p className="text-xs text-stone-500 font-mono mb-6">
-            The engine will use your vendor profile and prospect context to generate it.
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={handleGenerateFirstBriefing}
-              disabled={generatingBriefing}
-              className="px-6 py-3 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-            >
-              {generatingBriefing ? 'generating briefing…' : '✦ generate first briefing'}
-            </button>
-            <button
-              onClick={() => router.push(`/deals/${dealId}/briefing`)}
-              className="px-6 py-3 border border-stone-300 text-stone-600 text-xs uppercase tracking-widest font-mono hover:border-stone-900 hover:text-stone-900"
-            >
-              write it manually →
-            </button>
-          </div>
-          {error && <p className="mt-4 text-xs font-mono text-rose-700">{error}</p>}
-        </div>
-      )}
-
-      {/* Layer cards */}
+      {/* Layer cards — always visible */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {[1, 2, 3, 4].map(layer => (
           <LayerCard
             key={layer}
             layer={layer}
             round={currentRoundData}
-            isEditing={isEditing && isLatestRound}
+            isEditing={isEditing && isLatestRound && roundState === 'SCORED'}
             pending={pending}
             onScore={handleScore}
           />
         ))}
       </div>
 
-      {/* Narrative placeholder */}
+      {/* Engine narrative */}
       {currentRoundData?.narrative && (
         <div className="mt-8 p-5 border border-stone-300 bg-stone-50">
           <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-2">engine narrative</div>

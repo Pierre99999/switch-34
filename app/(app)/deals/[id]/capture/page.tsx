@@ -20,6 +20,7 @@ export default function CapturePage() {
   const [error, setError] = useState<string | null>(null)
   const [suggestingScores, setSuggestingScores] = useState(false)
   const [scoreSuggestions, setScoreSuggestions] = useState<Record<string, { score: number; rationale: string }> | null>(null)
+  const [applyingScores, setApplyingScores] = useState(false)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -65,15 +66,32 @@ export default function CapturePage() {
     if (!currentRoundData) return
     setSaving(true)
     setError(null)
+    setScoreSuggestions(null)
     const merged = { ...notes, __free__: freeNote }
     const supabase = createClient()
     const { error } = await supabase
       .from('deal_rounds')
       .update({ capture_notes: merged })
       .eq('id', currentRoundData.id)
-    if (error) setError(error.message)
-    else await load()
+    if (error) { setError(error.message); setSaving(false); return }
+    await load()
     setSaving(false)
+    // Auto-trigger score suggestions after save
+    await handleSuggestScores()
+  }
+
+  async function handleApplyScores() {
+    if (!currentRoundData || !scoreSuggestions) return
+    setApplyingScores(true)
+    setError(null)
+    const update: Record<string, number> = {}
+    for (const [variable, s] of Object.entries(scoreSuggestions)) {
+      if (s.score !== null) update[variable] = s.score
+    }
+    const supabase = createClient()
+    const { error } = await supabase.from('deal_rounds').update(update).eq('id', currentRoundData.id)
+    if (error) { setError(error.message); setApplyingScores(false); return }
+    router.push(`/deals/${dealId}/dashboard`)
   }
 
   async function handleSuggestScores() {
@@ -99,6 +117,8 @@ export default function CapturePage() {
   if (!deal) {
     return <div className="max-w-4xl mx-auto py-12 px-6 text-xs font-mono text-stone-400">Loading…</div>
   }
+
+  const hasBriefing = !!(currentRoundData?.briefing_line)
 
   const nodes = rounds.map(r => ({
     round: r.round,
@@ -135,8 +155,28 @@ export default function CapturePage() {
         </div>
       )}
 
+      {/* Briefing required blocker */}
+      {isLatestRound && !hasBriefing && (
+        <div className="mb-8 border-2 border-dashed border-stone-300 p-8 text-center">
+          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-3">briefing required</div>
+          <p className="font-serif italic text-stone-700 text-base mb-1">
+            Generate a briefing before capturing this conversation.
+          </p>
+          <p className="text-xs text-stone-500 font-mono mb-6">
+            The briefing structures what to look for — capture follows it.
+          </p>
+          <button
+            onClick={() => router.push(`/deals/${dealId}/dashboard`)}
+            className="px-6 py-3 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800"
+          >
+            → go to dashboard
+          </button>
+        </div>
+      )}
+
+      {/* Capture form — only when briefing exists (or viewing history) */}
       {/* Instruction */}
-      {isLatestRound && (
+      {isLatestRound && hasBriefing && (
         <div className="border-l-2 border-stone-900 pl-4 py-2 mb-8 bg-stone-50">
           <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">log conversation</div>
           <p className="text-sm text-stone-800 font-serif italic">
@@ -211,44 +251,36 @@ export default function CapturePage() {
       </div>
 
       {/* Save + next action */}
-      {isLatestRound && (
+      {isLatestRound && hasBriefing && (
         <>
           <div className="flex items-center gap-3 pt-2 border-t border-stone-300">
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || suggestingScores}
               className="bg-stone-900 text-stone-50 px-6 py-3 text-sm uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
             >
-              {saving ? 'saving…' : 'save capture'}
-            </button>
-            <button
-              onClick={handleSuggestScores}
-              disabled={suggestingScores}
-              className="px-6 py-3 border border-stone-500 text-stone-600 text-sm uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
-            >
-              {suggestingScores ? 'analyzing…' : '✦ suggest scores'}
-            </button>
-            <button
-              onClick={() => router.push(`/deals/${dealId}/dashboard`)}
-              className="px-6 py-3 border border-stone-300 text-stone-600 text-sm uppercase tracking-widest font-mono hover:border-stone-900 hover:text-stone-900"
-            >
-              → update scores
+              {saving ? 'saving…' : suggestingScores ? 'analyzing capture…' : 'save + analyze'}
             </button>
             {error && <span className="text-xs font-mono text-rose-700">{error}</span>}
           </div>
           {scoreSuggestions && (
             <div className="mt-6 border border-stone-300 bg-stone-50 p-5">
-              <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-4">
-                score suggestions — review and apply manually on the dashboard
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">score suggestions</div>
+                <button
+                  onClick={handleApplyScores}
+                  disabled={applyingScores}
+                  className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+                >
+                  {applyingScores ? 'applying…' : 'apply scores → dashboard'}
+                </button>
               </div>
               <div className="space-y-3">
                 {Object.entries(scoreSuggestions).map(([variable, s]) => (
                   s.score !== null && (
                     <div key={variable} className="flex items-start gap-4">
                       <div className="w-32 shrink-0 text-[10px] uppercase tracking-widest text-stone-500 font-mono pt-0.5">{variable}</div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-mono text-sm text-stone-900 font-bold">{s.score}/5</span>
-                      </div>
+                      <span className="font-mono text-sm text-stone-900 font-bold shrink-0">{s.score}/5</span>
                       <div className="text-xs text-stone-600 font-serif italic leading-relaxed">{s.rationale}</div>
                     </div>
                   )
