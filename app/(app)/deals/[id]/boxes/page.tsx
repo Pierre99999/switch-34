@@ -49,11 +49,15 @@ function BoxCard({
   box,
   entries,
   onAdd,
+  onUpdate,
+  onDelete,
   rounds,
 }: {
   box: BoxDef
   entries: BoxEntry[]
   onAdd: (text: string, round: number) => Promise<void>
+  onUpdate: (index: number, text: string) => Promise<void>
+  onDelete: (index: number) => Promise<void>
   rounds: DealRound[]
 }) {
   const ts = TYPE_STYLE[box.type]
@@ -61,6 +65,9 @@ function BoxCard({
   const [text, setText] = useState('')
   const [round, setRound] = useState(rounds[rounds.length - 1]?.round ?? 0)
   const [saving, setSaving] = useState(false)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editText, setEditText] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
 
   async function submit() {
     if (!text.trim()) return
@@ -69,6 +76,19 @@ function BoxCard({
     setText('')
     setSaving(false)
     setOpen(false)
+  }
+
+  function startEdit(i: number) {
+    setEditingIndex(i)
+    setEditText(entries[i].text)
+  }
+
+  async function submitEdit(i: number) {
+    if (!editText.trim()) return
+    setEditSaving(true)
+    await onUpdate(i, editText.trim())
+    setEditingIndex(null)
+    setEditSaving(false)
   }
 
   return (
@@ -86,11 +106,56 @@ function BoxCard({
       ) : (
         <div className="space-y-2 mb-3">
           {entries.map((entry, i) => (
-            <div key={i} className={`border-l-2 pl-3 ${ts.bar}`}>
-              <div className="text-[9px] uppercase tracking-widest text-stone-400 font-mono mb-0.5">
-                {entry.round === 0 ? 'Initial' : `R${entry.round}`}
-              </div>
-              <p className="text-xs text-stone-700 leading-relaxed">{entry.text}</p>
+            <div key={i} className={`border-l-2 pl-3 group ${ts.bar}`}>
+              {editingIndex === i ? (
+                <div className="space-y-1.5">
+                  <textarea
+                    value={editText}
+                    onChange={e => setEditText(e.target.value)}
+                    rows={3}
+                    autoFocus
+                    className="w-full border border-stone-300 bg-white px-2 py-1.5 text-xs font-mono focus:outline-none resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => submitEdit(i)}
+                      disabled={editSaving || !editText.trim()}
+                      className="px-3 py-1 bg-stone-900 text-stone-50 text-[10px] uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+                    >
+                      {editSaving ? 'saving…' : 'save'}
+                    </button>
+                    <button
+                      onClick={() => setEditingIndex(null)}
+                      className="px-3 py-1 border border-stone-300 text-stone-500 text-[10px] uppercase tracking-widest font-mono hover:border-stone-600"
+                    >
+                      cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-[9px] uppercase tracking-widest text-stone-400 font-mono mb-0.5 flex-shrink-0">
+                      {entry.round === 0 ? 'Initial' : `R${entry.round}`}
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <button
+                        onClick={() => startEdit(i)}
+                        className="text-[9px] font-mono text-stone-400 hover:text-stone-700"
+                      >
+                        edit
+                      </button>
+                      <button
+                        onClick={() => onDelete(i)}
+                        className="text-[9px] font-mono text-stone-300 hover:text-rose-700"
+                      >
+                        remove
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-stone-700 leading-relaxed">{entry.text}</p>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -154,6 +219,8 @@ export default function BoxesPage() {
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [boxData, setBoxData] = useState<Record<string, BoxEntry[]>>({})
+  const [fillingPrepared, setFillingPrepared] = useState(false)
+  const [preparedError, setPreparedError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -175,17 +242,46 @@ export default function BoxesPage() {
 
   useEffect(() => { load() }, [load])
 
-  async function handleAddEntry(boxId: string, text: string, round: number) {
-    const supabase = createClient()
-    const existing = boxData[boxId] ?? []
-    const newEntries: BoxEntry[] = [...existing, { round, text }]
+  async function handleFillPrepared() {
+    setFillingPrepared(true)
+    setPreparedError(null)
+    try {
+      const res = await fetch('/api/ai/fill-prepared-boxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      await load()
+    } catch (e) {
+      setPreparedError(e instanceof Error ? e.message : 'Failed')
+    }
+    setFillingPrepared(false)
+  }
 
-    // Upsert: insert or update the box row
+  async function saveEntries(boxId: string, entries: BoxEntry[]) {
+    const supabase = createClient()
     const { error } = await supabase
       .from('deal_boxes')
-      .upsert({ deal_id: dealId, box_id: boxId, entries: newEntries }, { onConflict: 'deal_id,box_id' })
-
+      .upsert({ deal_id: dealId, box_id: boxId, entries }, { onConflict: 'deal_id,box_id' })
     if (!error) await load()
+  }
+
+  async function handleAddEntry(boxId: string, text: string, round: number) {
+    const existing = boxData[boxId] ?? []
+    await saveEntries(boxId, [...existing, { round, text }])
+  }
+
+  async function handleUpdateEntry(boxId: string, index: number, text: string) {
+    const existing = [...(boxData[boxId] ?? [])]
+    existing[index] = { ...existing[index], text }
+    await saveEntries(boxId, existing)
+  }
+
+  async function handleDeleteEntry(boxId: string, index: number) {
+    const existing = boxData[boxId] ?? []
+    await saveEntries(boxId, existing.filter((_, i) => i !== index))
   }
 
   if (!deal) {
@@ -225,9 +321,23 @@ export default function BoxesPage() {
         const filledCount = boxes.filter(b => (boxData[b.id] ?? []).length > 0).length
         return (
           <section key={group.label} className="mb-12">
-            <div className="flex items-baseline justify-between border-b border-stone-300 pb-2 mb-5">
+            <div className="flex items-center justify-between border-b border-stone-300 pb-2 mb-5">
               <div className="text-[10px] uppercase tracking-widest text-stone-600 font-mono">{group.label}</div>
-              <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono">{filledCount}/{boxes.length} filled</div>
+              <div className="flex items-center gap-3">
+                {group.types[0] === 'prepared' && (
+                  <>
+                    {preparedError && <span className="text-[10px] font-mono text-rose-700">{preparedError}</span>}
+                    <button
+                      onClick={handleFillPrepared}
+                      disabled={fillingPrepared}
+                      className="px-3 py-1 border border-stone-500 text-stone-600 text-[10px] uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
+                    >
+                      {fillingPrepared ? 'generating…' : '✦ fill from profile'}
+                    </button>
+                  </>
+                )}
+                <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono">{filledCount}/{boxes.length} filled</div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {boxes.map(box => (
@@ -237,6 +347,8 @@ export default function BoxesPage() {
                   entries={boxData[box.id] ?? []}
                   rounds={rounds}
                   onAdd={(text, round) => handleAddEntry(box.id, text, round)}
+                  onUpdate={(index, text) => handleUpdateEntry(box.id, index, text)}
+                  onDelete={(index) => handleDeleteEntry(box.id, index)}
                 />
               ))}
             </div>

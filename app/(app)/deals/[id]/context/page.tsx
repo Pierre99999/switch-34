@@ -77,13 +77,14 @@ function deepMerge(base: ProspectDimensions, saved: Partial<ProspectDimensions>)
 // ── Dimension section ────────────────────────────────────────
 
 function DimensionSection({
-  def, values, onChange, onSave, saving,
+  def, values, onChange, onSave, saving, isDirty,
 }: {
   def: DimDef
   values: Record<string, string>
   onChange: (key: string, val: string) => void
   onSave: () => void
   saving: boolean
+  isDirty: boolean
 }) {
   const [open, setOpen] = useState(false)
   const filled = filledCount(values)
@@ -97,6 +98,7 @@ function DimensionSection({
       >
         <span className="font-serif italic text-stone-900 text-base">{def.label}</span>
         <div className="flex items-center gap-3">
+          {isDirty && <span className="text-[10px] uppercase tracking-widest font-mono text-amber-700">unsaved</span>}
           <span className={`text-[10px] uppercase tracking-widest font-mono ${filled === total ? 'text-emerald-700' : filled > 0 ? 'text-amber-700' : 'text-stone-400'}`}>
             {filled}/{total}
           </span>
@@ -118,15 +120,17 @@ function DimensionSection({
               />
             </div>
           ))}
-          <div className="pt-4 border-t border-stone-200">
-            <button
-              onClick={onSave}
-              disabled={saving}
-              className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-            >
-              {saving ? 'saving…' : 'save'}
-            </button>
-          </div>
+          {isDirty && (
+            <div className="pt-4 border-t border-stone-200">
+              <button
+                onClick={onSave}
+                disabled={saving}
+                className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+              >
+                {saving ? 'saving…' : 'update'}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -143,9 +147,20 @@ export default function AccountContextPage() {
   const [deal, setDeal] = useState<Deal | null>(null)
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([])
   const [dims, setDims] = useState<ProspectDimensions>(EMPTY_PROSPECT_DIMENSIONS)
+  const [savedDims, setSavedDims] = useState<ProspectDimensions>(EMPTY_PROSPECT_DIMENSIONS)
   const [savingDim, setSavingDim] = useState<string | null>(null)
-  const [scraping, setScraping] = useState(false)
-  const [scrapeError, setScrapeError] = useState<string | null>(null)
+
+  // Company import state
+  const [companyUrl, setCompanyUrl] = useState('')
+  const [importingCompany, setImportingCompany] = useState(false)
+  const [companyImportError, setCompanyImportError] = useState<string | null>(null)
+  const [companyImportSuccess, setCompanyImportSuccess] = useState<string | null>(null)
+
+  // LinkedIn import state
+  const [linkedinUrl, setLinkedinUrl] = useState('')
+  const [importingLinkedin, setImportingLinkedin] = useState(false)
+  const [linkedinError, setLinkedinError] = useState<string | null>(null)
+  const [linkedinSuccess, setLinkedinSuccess] = useState<string | null>(null)
 
   // Stakeholder form
   const [newStk, setNewStk] = useState({ name: '', role: '', actor_type: 'unknown' as Stakeholder['actor_type'], notes: '' })
@@ -159,7 +174,9 @@ export default function AccountContextPage() {
     ])
     if (dealData) {
       setDeal(dealData)
-      setDims(deepMerge(EMPTY_PROSPECT_DIMENSIONS, dealData.prospect_dimensions ?? {}))
+      const merged = deepMerge(EMPTY_PROSPECT_DIMENSIONS, dealData.prospect_dimensions ?? {})
+      setDims(merged)
+      setSavedDims(merged)
     }
     if (stkData) setStakeholders(stkData)
   }, [dealId])
@@ -176,44 +193,87 @@ export default function AccountContextPage() {
     const supabase = createClient()
     const merged = { ...(deal.prospect_dimensions ?? {}), [dimKey]: dims[dimKey] }
     await supabase.from('deals').update({ prospect_dimensions: merged }).eq('id', dealId)
+    setSavedDims(d => ({ ...d, [dimKey]: dims[dimKey] }))
     await load()
     setSavingDim(null)
   }
 
-  async function handleScrape() {
-    if (!deal?.prospect_url) return
-    setScraping(true)
-    setScrapeError(null)
+  async function saveAllDims(newDims: ProspectDimensions) {
+    const supabase = createClient()
+    await supabase.from('deals').update({ prospect_dimensions: newDims }).eq('id', dealId)
+    setSavedDims(newDims)
+  }
+
+  async function handleImportCompanyUrl() {
+    if (!companyUrl.trim()) return
+    setImportingCompany(true)
+    setCompanyImportError(null)
+    setCompanyImportSuccess(null)
     try {
-      const res = await fetch('/api/context/scrape', {
+      const res = await fetch('/api/context/from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: deal.prospect_url }),
+        body: JSON.stringify({ url: companyUrl.trim() }),
       })
       const data = await res.json()
-      if (!res.ok || data.error) { setScrapeError(data.error ?? 'Failed'); setScraping(false); return }
-
-      const { extracted } = data
-      // Pre-fill company + strategic_context dims from extracted data
-      setDims(d => ({
-        ...d,
-        company: {
-          core_business: extracted.core_business || d.company.core_business,
-          industry: extracted.industry || d.company.industry,
-          size_stage: extracted.size_stage || d.company.size_stage,
-          geography: extracted.geography || d.company.geography,
-        },
-        strategic_context: {
-          priorities: extracted.priorities || d.strategic_context.priorities,
-          challenges: extracted.challenges || d.strategic_context.challenges,
-          recent_signals: extracted.recent_signals || d.strategic_context.recent_signals,
-          pressures: extracted.pressures || d.strategic_context.pressures,
-        },
-      }))
+      if (!res.ok || data.error) { setCompanyImportError(data.error ?? 'Failed'); return }
+      const newDims = deepMerge(dims, data.dimensions)
+      setDims(newDims)
+      await saveAllDims(newDims)
+      setCompanyImportSuccess('Company context imported and saved.')
     } catch {
-      setScrapeError('Network error — try again')
+      setCompanyImportError('Network error — try again')
+    } finally {
+      setImportingCompany(false)
     }
-    setScraping(false)
+  }
+
+  async function handleImportCompanyDoc(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportingCompany(true)
+    setCompanyImportError(null)
+    setCompanyImportSuccess(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/context/from-doc', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok || data.error) { setCompanyImportError(data.error ?? 'Failed'); return }
+      const newDims = deepMerge(dims, data.dimensions)
+      setDims(newDims)
+      await saveAllDims(newDims)
+      setCompanyImportSuccess('Company context imported and saved.')
+    } catch {
+      setCompanyImportError('Network error — try again')
+    } finally {
+      setImportingCompany(false)
+      e.target.value = ''
+    }
+  }
+
+  async function handleImportLinkedin() {
+    if (!linkedinUrl.trim()) return
+    setImportingLinkedin(true)
+    setLinkedinError(null)
+    setLinkedinSuccess(null)
+    try {
+      const res = await fetch('/api/context/from-linkedin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: linkedinUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) { setLinkedinError(data.error ?? 'Failed'); return }
+      const newDims = deepMerge(dims, data.dimensions)
+      setDims(newDims)
+      await saveAllDims(newDims)
+      setLinkedinSuccess('Contact context imported and saved.')
+    } catch {
+      setLinkedinError('Network error — try again')
+    } finally {
+      setImportingLinkedin(false)
+    }
   }
 
   async function handleAddStakeholder() {
@@ -239,6 +299,7 @@ export default function AccountContextPage() {
 
   const totalFilled = DIMENSIONS.reduce((acc, d) => acc + filledCount(dims[d.key] as Record<string, string>), 0)
   const totalQ = DIMENSIONS.reduce((acc, d) => acc + d.questions.length, 0)
+  const importing = importingCompany || importingLinkedin
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-6">
@@ -259,23 +320,72 @@ export default function AccountContextPage() {
         </div>
       </div>
 
-      {/* Fetch from website */}
-      {deal.prospect_url && (
-        <div className="mb-8 flex items-center gap-4 p-4 border border-dashed border-stone-300 bg-stone-50">
-          <div className="flex-1">
-            <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-0.5">auto-fill from website</div>
-            <div className="text-xs font-mono text-stone-700">{deal.prospect_url}</div>
+      {/* Import panel */}
+      <div className="border border-stone-300 bg-stone-50 p-5 mb-8">
+        <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-5">import context</div>
+
+        {/* Company context — URL + doc */}
+        <div className="mb-5">
+          <div className="text-xs font-mono text-stone-700 mb-2">Company context <span className="text-stone-400">(fills dims 1–3)</span></div>
+          <div className="flex gap-2 mb-2">
+            <input
+              value={companyUrl}
+              onChange={e => setCompanyUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleImportCompanyUrl()}
+              placeholder="prospect-company.com"
+              disabled={importing}
+              className="flex-1 border border-stone-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-stone-900 disabled:opacity-50"
+            />
+            <button
+              onClick={handleImportCompanyUrl}
+              disabled={importing || !companyUrl.trim()}
+              className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50 disabled:opacity-40 whitespace-nowrap"
+            >
+              {importingCompany ? 'reading…' : '↓ fetch'}
+            </button>
           </div>
-          <button
-            onClick={handleScrape}
-            disabled={scraping}
-            className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50 disabled:opacity-40 flex-shrink-0"
-          >
-            {scraping ? 'fetching…' : '↓ fetch context'}
-          </button>
-          {scrapeError && <span className="text-xs font-mono text-rose-700">{scrapeError}</span>}
+          <label className={`flex items-center justify-center border border-dashed border-stone-300 bg-white px-4 py-3 cursor-pointer hover:border-stone-600 transition-colors ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
+            <span className="text-xs font-mono text-stone-500">
+              {importingCompany ? 'reading document…' : '↑ upload document — annual report, press release, company brief (PDF or .txt)'}
+            </span>
+            <input type="file" accept=".pdf,.txt,.md" onChange={handleImportCompanyDoc} className="hidden" disabled={importing} />
+          </label>
+          {companyImportError && <p className="mt-2 text-xs font-mono text-rose-700">{companyImportError}</p>}
+          {companyImportSuccess && <p className="mt-2 text-xs font-mono text-emerald-700">{companyImportSuccess}</p>}
         </div>
-      )}
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex-1 h-px bg-stone-200" />
+          <span className="text-[10px] uppercase tracking-widest text-stone-400 font-mono">contact</span>
+          <div className="flex-1 h-px bg-stone-200" />
+        </div>
+
+        {/* LinkedIn — key contact */}
+        <div>
+          <div className="text-xs font-mono text-stone-700 mb-2">Key contact LinkedIn <span className="text-stone-400">(fills dim 4)</span></div>
+          <div className="flex gap-2">
+            <input
+              value={linkedinUrl}
+              onChange={e => setLinkedinUrl(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleImportLinkedin()}
+              placeholder="linkedin.com/in/contact-name"
+              disabled={importing}
+              className="flex-1 border border-stone-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-stone-900 disabled:opacity-50"
+            />
+            <button
+              onClick={handleImportLinkedin}
+              disabled={importing || !linkedinUrl.trim()}
+              className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50 disabled:opacity-40 whitespace-nowrap"
+            >
+              {importingLinkedin ? 'reading…' : '↓ fetch'}
+            </button>
+          </div>
+          <p className="mt-1.5 text-[10px] font-mono text-stone-400">LinkedIn often blocks scrapers. If it fails, fill the Key Contact dimension manually.</p>
+          {linkedinError && <p className="mt-2 text-xs font-mono text-rose-700">{linkedinError}</p>}
+          {linkedinSuccess && <p className="mt-2 text-xs font-mono text-emerald-700">{linkedinSuccess}</p>}
+        </div>
+      </div>
 
       {/* Prospect dimensions */}
       <section className="mb-10">
@@ -289,6 +399,7 @@ export default function AccountContextPage() {
               onChange={(subKey, val) => handleChange(def.key, subKey, val)}
               onSave={() => handleSaveDim(def.key)}
               saving={savingDim === def.key}
+              isDirty={JSON.stringify(dims[def.key]) !== JSON.stringify(savedDims[def.key])}
             />
           ))}
         </div>
