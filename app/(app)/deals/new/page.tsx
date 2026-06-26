@@ -10,10 +10,8 @@ export default function NewDealPage() {
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
     prospect_name: '',
-    prospect_url: '',
     contact_name: '',
     contact_title: '',
-    contact_linkedin: '',
   })
 
   function set(field: string, value: string) {
@@ -48,7 +46,7 @@ export default function NewDealPage() {
       <div className="mb-10">
         <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">ScoreJam · new deal</div>
         <h1 className="font-serif text-3xl text-stone-900 italic">Start a deal diagnostic</h1>
-        <p className="text-sm text-stone-500 mt-2">Enter what you know. You can fill in more later.</p>
+        <p className="text-sm text-stone-500 mt-2">Name the prospect and contact. Add context and URLs from the account context tab.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -57,14 +55,6 @@ export default function NewDealPage() {
           <input
             type="text" value={form.prospect_name} onChange={e => set('prospect_name', e.target.value)} required
             placeholder="Acme Manufacturing"
-            className="mt-1 w-full border border-stone-300 bg-white px-3 py-2 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
-          />
-        </div>
-        <div>
-          <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Prospect URL</label>
-          <input
-            type="text" value={form.prospect_url} onChange={e => set('prospect_url', e.target.value)}
-            placeholder="acme.com"
             className="mt-1 w-full border border-stone-300 bg-white px-3 py-2 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
           />
         </div>
@@ -86,15 +76,6 @@ export default function NewDealPage() {
             />
           </div>
         </div>
-        <div>
-          <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Contact LinkedIn URL</label>
-          <input
-            type="text" value={form.contact_linkedin} onChange={e => set('contact_linkedin', e.target.value)}
-            placeholder="linkedin.com/in/sarah-chen"
-            className="mt-1 w-full border border-stone-300 bg-white px-3 py-2 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
-          />
-        </div>
-
         {error && <p className="text-xs text-rose-700 font-mono">{error}</p>}
 
         <div className="flex gap-3">
