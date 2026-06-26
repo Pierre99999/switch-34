@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { getLayerVerdict, LAYER_VARIABLES } from '@/lib/types'
 import type { Deal, DealRound } from '@/lib/types'
+import EditableProspectName from '@/components/deal/EditableProspectName'
 
 function VerdictCell({ verdict }: { verdict: ReturnType<typeof getLayerVerdict> }) {
   const color = {
@@ -111,7 +112,10 @@ export default async function PipelinePage() {
         return (
           <div key={deal.id} className="grid grid-cols-12 gap-3 px-4 py-3 border-b border-stone-200 items-center hover:bg-stone-50">
             <div className="col-span-4">
-              <div className="font-serif italic text-stone-900 text-sm">{deal.prospect_name}</div>
+              <EditableProspectName
+                dealId={deal.id}
+                name={deal.prospect_name}
+              />
               {deal.contact_name && (
                 <div className="text-[11px] text-stone-500">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</div>
               )}
