@@ -1,6 +1,6 @@
 // Shared helpers for building AI prompts from deal + vendor context
 
-import { type Vendor, type Deal, type DealRound, LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS, getLayerVerdict } from './types'
+import { type Vendor, type Deal, type DealRound, type EvidenceLevel, LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS, EVIDENCE_LABELS, getLayerVerdict } from './types'
 
 export function buildVendorContext(vendor: Vendor): string {
   const d = vendor.dimensions
@@ -43,9 +43,11 @@ export function buildScoresContext(round: DealRound): string {
   for (const [layer, vars] of Object.entries(LAYER_VARIABLES)) {
     const verdict = getLayerVerdict(round, Number(layer))
     lines.push(`\nLayer ${layer} — ${LAYER_LABELS[Number(layer)]} [${verdict}]`)
-    for (const v of vars as string[]) {
+    for (const v of vars as readonly string[]) {
       const score = round[v as keyof DealRound] as number | null
-      lines.push(`  ${VARIABLE_LABELS[v]}: ${score !== null ? `${score}/5` : 'not scored'}`)
+      const ev = (round.evidence_levels ?? {})[v] as EvidenceLevel | undefined
+      const evLabel = ev ? ` [${EVIDENCE_LABELS[ev]}]` : ''
+      lines.push(`  ${VARIABLE_LABELS[v]}: ${score !== null ? `${score}/5${evLabel}` : 'not scored'}`)
     }
   }
   return lines.join('\n')

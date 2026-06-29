@@ -347,7 +347,7 @@ export default function BoxesPage() {
 
       {/* Groups */}
       {GROUPS.map(group => {
-        const boxes = BOXES.filter(b => (group.types as string[]).includes(b.type))
+        const boxes = BOXES.filter(b => (group.types as readonly string[]).includes(b.type))
         const filledCount = boxes.filter(b => (boxData[b.id] ?? []).length > 0).length
         return (
           <section key={group.label} className="mb-12">

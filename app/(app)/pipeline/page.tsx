@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { getLayerVerdict, LAYER_VARIABLES } from '@/lib/types'
+import { getLayerVerdict, LAYER_VARIABLES, type EvidenceLevel, EVIDENCE_LABELS } from '@/lib/types'
 import type { Deal, DealRound } from '@/lib/types'
 import EditableProspectName from '@/components/deal/EditableProspectName'
 
@@ -12,9 +12,27 @@ function getLayerScore(round: DealRound | null, layer: number): number | null {
   return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
 }
 
+const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
+const EVIDENCE_SHORT: Record<EvidenceLevel, string> = { declared: 'D', corroborated: 'C', verified: 'V' }
+const EVIDENCE_COLOR: Record<EvidenceLevel, string> = {
+  declared: 'text-amber-500',
+  corroborated: 'text-blue-500',
+  verified: 'text-emerald-500',
+}
+
+function getLayerMinEvidence(round: DealRound | null, layer: number): EvidenceLevel | null {
+  if (!round) return null
+  const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
+  const ev = round.evidence_levels ?? {}
+  const levels = vars.map(v => ev[v] as EvidenceLevel | undefined).filter(Boolean) as EvidenceLevel[]
+  if (levels.length === 0) return null
+  return EVIDENCE_ORDER[Math.min(...levels.map(l => EVIDENCE_ORDER.indexOf(l)))]
+}
+
 function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: number; label: string }) {
   const verdict = getLayerVerdict(round, layer)
   const score = getLayerScore(round, layer)
+  const minEvidence = getLayerMinEvidence(round, layer)
 
   const barColor = {
     PASS: 'bg-emerald-500',
@@ -37,8 +55,15 @@ function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: nu
   return (
     <div className="flex flex-col gap-1">
       <div className="text-[9px] uppercase tracking-widest text-stone-400 font-mono">{label}</div>
-      <div className={`text-base font-mono font-semibold leading-none ${textColor}`}>
-        {score !== null ? score.toFixed(1) : '—'}
+      <div className="flex items-baseline gap-1">
+        <div className={`text-base font-mono font-semibold leading-none ${textColor}`}>
+          {score !== null ? score.toFixed(1) : '—'}
+        </div>
+        {minEvidence && (
+          <span className={`text-[9px] font-mono ${EVIDENCE_COLOR[minEvidence]}`} title={EVIDENCE_LABELS[minEvidence]}>
+            {EVIDENCE_SHORT[minEvidence]}
+          </span>
+        )}
       </div>
       <div className="h-1 w-full bg-stone-100 rounded-full overflow-hidden">
         <div

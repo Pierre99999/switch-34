@@ -198,6 +198,7 @@ export type DealRound = {
   briefing_mirror: string[]
   briefing_objections: BriefingObjection[]
   briefing_win_condition: string | null
+  evidence_levels: Record<string, EvidenceLevel>
   created_at: string
   updated_at: string
 }
@@ -254,6 +255,34 @@ export type MirrorTerm = {
   deal_id: string
   term: string
   round: number | null
+}
+
+// ============================================================
+// EVIDENCE LEVELS — cap how high a score can go
+// ============================================================
+
+export type EvidenceLevel = 'declared' | 'corroborated' | 'verified'
+
+export const EVIDENCE_CAP: Record<EvidenceLevel, number> = {
+  declared: 3,
+  corroborated: 4,
+  verified: 5,
+}
+
+export const EVIDENCE_LABELS: Record<EvidenceLevel, string> = {
+  declared: 'Declared',
+  corroborated: 'Corroborated',
+  verified: 'Verified',
+}
+
+export const EVIDENCE_DESCRIPTIONS: Record<EvidenceLevel, string> = {
+  declared: 'One person said it, no proof',
+  corroborated: 'Multiple sources or repeated across rounds',
+  verified: 'Hard data, documents, or metrics shared',
+}
+
+export function capScore(score: number, evidence: EvidenceLevel): number {
+  return Math.min(score, EVIDENCE_CAP[evidence])
 }
 
 // ============================================================

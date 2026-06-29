@@ -4,62 +4,110 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
-  type Deal, type DealRound,
+  type Deal, type DealRound, type EvidenceLevel,
   LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS,
-  getLayerVerdict,
+  EVIDENCE_CAP, EVIDENCE_LABELS, EVIDENCE_DESCRIPTIONS,
+  getLayerVerdict, capScore,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 
 // ── Score bar display ────────────────────────────────────────
 
-function ScoreBar({ score }: { score: number | null }) {
+const EVIDENCE_COLORS: Record<EvidenceLevel, string> = {
+  declared: 'text-amber-600 bg-amber-50 border-amber-200',
+  corroborated: 'text-blue-600 bg-blue-50 border-blue-200',
+  verified: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+}
+
+function ScoreBar({ score, evidence }: { score: number | null; evidence?: EvidenceLevel }) {
   if (score === null) return <span className="font-mono text-sm text-stone-400">— · · · · ·</span>
-  const blocks = [1, 2, 3, 4, 5].map(i => i <= score ? '█' : '░').join('')
-  return <span className="font-mono text-sm text-stone-800">{blocks} <span className="text-stone-500">{score}/5</span></span>
+  const cap = evidence ? EVIDENCE_CAP[evidence] : 5
+  const blocks = [1, 2, 3, 4, 5].map(i =>
+    i <= score ? '█' : i <= cap ? '░' : '·'
+  ).join('')
+  return (
+    <span className="font-mono text-sm text-stone-800">
+      {blocks} <span className="text-stone-500">{score}/5</span>
+      {evidence && (
+        <span className={`ml-2 text-[10px] px-1.5 py-0.5 border rounded ${EVIDENCE_COLORS[evidence]}`}>
+          {EVIDENCE_LABELS[evidence]}
+        </span>
+      )}
+    </span>
+  )
 }
 
 // ── Clickable score selector (1–5 dots) ──────────────────────
 
 function ScorePicker({
   value,
+  evidence,
   onChange,
+  onEvidenceChange,
   disabled,
 }: {
   value: number | null
+  evidence: EvidenceLevel
   onChange: (v: number | null) => void
+  onEvidenceChange: (v: EvidenceLevel) => void
   disabled: boolean
 }) {
+  const cap = EVIDENCE_CAP[evidence]
   return (
-    <div className="flex gap-1 mt-1">
-      {[1, 2, 3, 4, 5].map(i => (
-        <button
-          key={i}
-          disabled={disabled}
-          onClick={() => onChange(value === i ? null : i)}
-          title={`Score ${i}`}
-          className={`w-6 h-6 border text-xs font-mono transition-colors ${
-            value !== null && i <= value
-              ? i <= 2
-                ? 'bg-rose-700 border-rose-700 text-white'
-                : i === 3
-                  ? 'bg-amber-600 border-amber-600 text-white'
-                  : 'bg-emerald-700 border-emerald-700 text-white'
-              : 'border-stone-300 text-stone-400 hover:border-stone-600 hover:text-stone-700'
-          } disabled:opacity-40`}
-        >
-          {i}
-        </button>
-      ))}
-      {value !== null && (
-        <button
-          disabled={disabled}
-          onClick={() => onChange(null)}
-          className="ml-1 text-[10px] font-mono text-stone-400 hover:text-stone-700 disabled:opacity-40"
-          title="Clear"
-        >
-          ×
-        </button>
-      )}
+    <div className="mt-1 space-y-1">
+      <div className="flex gap-1 items-center">
+        {[1, 2, 3, 4, 5].map(i => (
+          <button
+            key={i}
+            disabled={disabled || i > cap}
+            onClick={() => onChange(value === i ? null : i)}
+            title={i > cap ? `Capped by ${evidence} evidence (max ${cap})` : `Score ${i}`}
+            className={`w-6 h-6 border text-xs font-mono transition-colors ${
+              i > cap
+                ? 'border-stone-200 text-stone-200 cursor-not-allowed'
+                : value !== null && i <= value
+                  ? i <= 2
+                    ? 'bg-rose-700 border-rose-700 text-white'
+                    : i === 3
+                      ? 'bg-amber-600 border-amber-600 text-white'
+                      : 'bg-emerald-700 border-emerald-700 text-white'
+                  : 'border-stone-300 text-stone-400 hover:border-stone-600 hover:text-stone-700'
+            } disabled:opacity-40`}
+          >
+            {i}
+          </button>
+        ))}
+        {value !== null && (
+          <button
+            disabled={disabled}
+            onClick={() => onChange(null)}
+            className="ml-1 text-[10px] font-mono text-stone-400 hover:text-stone-700 disabled:opacity-40"
+            title="Clear"
+          >
+            ×
+          </button>
+        )}
+      </div>
+      <div className="flex gap-1">
+        {(['declared', 'corroborated', 'verified'] as EvidenceLevel[]).map(ev => (
+          <button
+            key={ev}
+            disabled={disabled}
+            onClick={() => {
+              onEvidenceChange(ev)
+              if (value !== null && value > EVIDENCE_CAP[ev]) onChange(EVIDENCE_CAP[ev])
+            }}
+            title={EVIDENCE_DESCRIPTIONS[ev]}
+            className={`text-[10px] px-1.5 py-0.5 border rounded font-mono transition-colors ${
+              evidence === ev
+                ? EVIDENCE_COLORS[ev]
+                : 'border-stone-200 text-stone-400 hover:border-stone-400'
+            } disabled:opacity-40`}
+          >
+            {EVIDENCE_LABELS[ev]} ≤{EVIDENCE_CAP[ev]}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -78,13 +126,17 @@ function LayerCard({
   round,
   isEditing,
   pending,
+  pendingEvidence,
   onScore,
+  onEvidence,
 }: {
   layer: number
   round: DealRound | null
   isEditing: boolean
   pending: Partial<DealRound>
+  pendingEvidence: Record<string, EvidenceLevel>
   onScore: (field: string, value: number | null) => void
+  onEvidence: (field: string, value: EvidenceLevel) => void
 }) {
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
   const verdict = getLayerVerdict(round ? { ...round, ...pending } as DealRound : null, layer)
@@ -117,17 +169,21 @@ function LayerCard({
         {vars.map(v => {
           const field = v as keyof DealRound
           const currentValue = (pending[field] !== undefined ? pending[field] : round?.[field]) as number | null
+          const evidenceLevels = round?.evidence_levels ?? {}
+          const currentEvidence: EvidenceLevel = pendingEvidence[v] ?? evidenceLevels[v] ?? 'declared'
           return (
             <div key={v}>
               <div className="text-xs text-stone-700 font-medium">{VARIABLE_LABELS[v]}</div>
               {isEditing ? (
                 <ScorePicker
                   value={currentValue}
+                  evidence={currentEvidence}
                   onChange={val => onScore(v, val)}
+                  onEvidenceChange={val => onEvidence(v, val)}
                   disabled={false}
                 />
               ) : (
-                <ScoreBar score={currentValue} />
+                <ScoreBar score={currentValue} evidence={currentEvidence} />
               )}
             </div>
           )
@@ -149,6 +205,7 @@ export default function DealDashboardPage() {
   const [selectedRound, setSelectedRound] = useState<number>(0)
   const [isEditing, setIsEditing] = useState(false)
   const [pending, setPending] = useState<Partial<DealRound>>({})
+  const [pendingEvidence, setPendingEvidence] = useState<Record<string, EvidenceLevel>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingNarrative, setGeneratingNarrative] = useState(false)
@@ -172,11 +229,13 @@ export default function DealDashboardPage() {
         const latestHasScores = allScoreVars.some(v => latest[v as keyof DealRound] !== null)
         const prevHasScores = allScoreVars.some(v => prev[v as keyof DealRound] !== null)
         if (!latestHasScores && prevHasScores) {
-          const inherited: Record<string, number> = {}
+          const inherited: Record<string, unknown> = {}
           for (const v of allScoreVars) {
             const score = prev[v as keyof DealRound] as number | null
             if (score !== null) inherited[v] = score
           }
+          const prevEvidence = (prev.evidence_levels ?? {}) as Record<string, string>
+          if (Object.keys(prevEvidence).length > 0) inherited.evidence_levels = prevEvidence
           await supabase.from('deal_rounds').update(inherited).eq('id', latest.id)
           // Re-fetch after backfill
           const { data: refreshed } = await supabase
@@ -195,24 +254,31 @@ export default function DealDashboardPage() {
     setPending(p => ({ ...p, [field]: value }))
   }
 
+  function handleEvidence(field: string, value: EvidenceLevel) {
+    setPendingEvidence(p => ({ ...p, [field]: value }))
+  }
+
   async function handleSave() {
     if (!currentRoundData) return
     setSaving(true)
     setError(null)
     const supabase = createClient()
+    const mergedEvidence = { ...(currentRoundData.evidence_levels ?? {}), ...pendingEvidence }
     const { error } = await supabase
       .from('deal_rounds')
-      .update(pending)
+      .update({ ...pending, evidence_levels: mergedEvidence })
       .eq('id', currentRoundData.id)
     if (error) { setError(error.message); setSaving(false); return }
     await load()
     setPending({})
+    setPendingEvidence({})
     setIsEditing(false)
     setSaving(false)
   }
 
   function handleCancelEdit() {
     setPending({})
+    setPendingEvidence({})
     setIsEditing(false)
   }
 
@@ -244,12 +310,14 @@ export default function DealDashboardPage() {
       // Carry scores forward from the current round so the new round inherits them
       const prevRound = rounds.find(r => r.round === deal.current_round)
       const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
-      const inheritedScores: Record<string, number> = {}
+      const inheritedScores: Record<string, unknown> = {}
       if (prevRound) {
         for (const v of allVars) {
           const score = prevRound[v as keyof DealRound] as number | null
           if (score !== null) inheritedScores[v] = score
         }
+        const prevEvidence = (prevRound.evidence_levels ?? {}) as Record<string, string>
+        if (Object.keys(prevEvidence).length > 0) inheritedScores.evidence_levels = prevEvidence
       }
 
       const { data: newRound, error: insertErr } = await supabase
@@ -303,7 +371,7 @@ export default function DealDashboardPage() {
   }))
 
   const isLatestRound = selectedRound === deal.current_round
-  const hasPending = Object.keys(pending).length > 0
+  const hasPending = Object.keys(pending).length > 0 || Object.keys(pendingEvidence).length > 0
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
   const hasAnyScore = currentRoundData !== null && allVars.some(v => currentRoundData[v as keyof typeof currentRoundData] !== null)
   const hasBriefing = !!(currentRoundData?.briefing_line)
@@ -340,7 +408,7 @@ export default function DealDashboardPage() {
       <RoundTimeline
         nodes={nodes}
         currentRound={selectedRound}
-        onSelect={r => { setSelectedRound(r); setPending({}); setIsEditing(false) }}
+        onSelect={r => { setSelectedRound(r); setPending({}); setPendingEvidence({}); setIsEditing(false) }}
       />
 
       {/* Historical notice */}
@@ -463,7 +531,9 @@ export default function DealDashboardPage() {
             round={currentRoundData}
             isEditing={isEditing && isLatestRound && roundState === 'SCORED'}
             pending={pending}
+            pendingEvidence={pendingEvidence}
             onScore={handleScore}
+            onEvidence={handleEvidence}
           />
         ))}
       </div>

@@ -89,14 +89,16 @@ export default function CapturePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
 
-      // Apply immediately
-      const suggestions: Record<string, { score: number; rationale: string }> = data.suggestions
-      const update: Record<string, number> = {}
+      // Apply scores and evidence levels
+      const suggestions: Record<string, { score: number; evidence: string; rationale: string }> = data.suggestions
+      const scoreUpdate: Record<string, number> = {}
+      const evidenceLevels: Record<string, string> = { ...(currentRoundData.evidence_levels ?? {}) }
       for (const [variable, s] of Object.entries(suggestions)) {
-        if (s.score !== null) update[variable] = s.score
+        if (s.score !== null) scoreUpdate[variable] = s.score
+        if (s.evidence) evidenceLevels[variable] = s.evidence
       }
       const supabase = createClient()
-      const { error: updateErr } = await supabase.from('deal_rounds').update(update).eq('id', currentRoundData.id)
+      const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels }).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 
       // Update knowledge boxes from this round's capture (non-blocking)
