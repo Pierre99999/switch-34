@@ -9,52 +9,52 @@ import {
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Collapsible section ─────────────────────────────────────
 
-function SectionHeader({ label, subtitle }: { label: string; subtitle?: string }) {
+function Section({ title, subtitle, defaultOpen = true, accent, children }: {
+  title: string; subtitle?: string; defaultOpen?: boolean; accent?: string; children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="flex items-baseline justify-between border-b border-stone-300 pb-2 mb-4">
-      <h3 className="font-serif text-lg text-stone-900 italic">{label}</h3>
-      {subtitle && <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{subtitle}</div>}
+    <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm mb-5">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          {accent && <span className={`w-1 h-6 rounded-full ${accent}`} />}
+          <div>
+            <h3 className="text-base font-semibold text-neutral-800">{title}</h3>
+            {subtitle && <p className="text-xs text-neutral-400 mt-0.5">{subtitle}</p>}
+          </div>
+        </div>
+        <span className={`text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+      </button>
+      {open && <div className="px-6 pb-5 border-t border-neutral-100 pt-4">{children}</div>}
     </div>
   )
 }
 
-function Textarea({
-  value,
-  onChange,
-  placeholder,
-  rows = 3,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-  rows?: number
-}) {
-  return (
-    <textarea
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={rows}
-      className="w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 font-mono focus:outline-none focus:border-stone-900 resize-none"
-    />
-  )
-}
+// ── Status band for the 4 layers ────────────────────────────
 
-// ── Status band for the 4 layers ─────────────────────────────
+const LAYER_BAND_COLORS: Record<number, string> = { 1: 'bg-orange-500', 2: 'bg-blue-500', 3: 'bg-violet-500', 4: 'bg-cyan-500' }
 
 function StatusBand({ layer, verdict }: { layer: number; verdict: string }) {
-  const colorClass =
-    verdict === 'PASS' ? 'text-emerald-800'
-    : verdict === 'AT RISK' ? 'text-rose-800'
-    : verdict === 'EMPTY' ? 'text-stone-400'
-    : 'text-amber-800'
+  const verdictStyle = verdict === 'PASS'
+    ? 'text-emerald-600 bg-emerald-50'
+    : verdict === 'AT RISK'
+      ? 'text-rose-600 bg-rose-50'
+      : verdict === 'EMPTY'
+        ? 'text-neutral-400 bg-neutral-50'
+        : 'text-amber-600 bg-amber-50'
   return (
-    <div className="border border-stone-300 bg-white p-3">
-      <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Layer {layer}</div>
-      <div className="text-xs font-serif italic text-stone-900 mt-0.5">{LAYER_LABELS[layer]}</div>
-      <div className={`text-xs font-mono mt-1 ${colorClass}`}>{verdict}</div>
+    <div className="bg-white rounded-xl border border-neutral-200 p-3 text-center">
+      <div className="flex items-center justify-center gap-1.5 mb-1">
+        <span className={`w-1.5 h-1.5 rounded-full ${LAYER_BAND_COLORS[layer]}`} />
+        <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">L{layer}</span>
+      </div>
+      <div className="text-xs font-medium text-neutral-700">{LAYER_LABELS[layer]}</div>
+      <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${verdictStyle}`}>{verdict}</span>
     </div>
   )
 }
@@ -73,7 +73,6 @@ export default function BriefingPage() {
   const [error, setError] = useState<string | null>(null)
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
 
-  // Local editable state — always reflects the selected round
   const [line, setLine] = useState('')
   const [read, setRead] = useState('')
   const [angle, setAngle] = useState('')
@@ -118,8 +117,7 @@ export default function BriefingPage() {
 
   function handleSelectRound(r: number) {
     setSelectedRound(r)
-    const found = rounds.find(rd => rd.round === r) ?? null
-    populateFromRound(found)
+    populateFromRound(rounds.find(rd => rd.round === r) ?? null)
   }
 
   async function handleSave() {
@@ -130,22 +128,15 @@ export default function BriefingPage() {
     const { error } = await supabase
       .from('deal_rounds')
       .update({
-        briefing_line: line,
-        briefing_read: read,
-        briefing_angle: angle,
-        briefing_win_condition: winCondition,
-        briefing_questions: questions,
-        briefing_do_not: doNot,
-        briefing_mirror: mirror,
-        briefing_objections: objections,
+        briefing_line: line, briefing_read: read, briefing_angle: angle,
+        briefing_win_condition: winCondition, briefing_questions: questions,
+        briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
       })
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
     else await load()
     setSaving(false)
   }
-
-  // ── List helpers ────────────────────────────────────────────
 
   async function handleGenerateBriefing() {
     if (!currentRoundData) return
@@ -174,32 +165,29 @@ export default function BriefingPage() {
     setGeneratingBriefing(false)
   }
 
+  // ── List helpers ──────────────────────────────────────────
+
   function addQuestion() {
     setQuestions(q => [...q, { layer: 1, variable: '', intent: '', text: '', sub_questions: [], priority: 'pressing' as const }])
   }
   function updateQuestion(i: number, field: keyof BriefingQuestion, val: string | number | string[]) {
     setQuestions(q => q.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
   }
-  function removeQuestion(i: number) {
-    setQuestions(q => q.filter((_, idx) => idx !== i))
-  }
+  function removeQuestion(i: number) { setQuestions(q => q.filter((_, idx) => idx !== i)) }
   function updateSubQuestion(qi: number, si: number, val: string) {
     setQuestions(q => q.map((item, idx) => idx === qi
       ? { ...item, sub_questions: item.sub_questions.map((s, sidx) => sidx === si ? val : s) }
-      : item
-    ))
+      : item))
   }
   function addSubQuestion(qi: number) {
     setQuestions(q => q.map((item, idx) => idx === qi
       ? { ...item, sub_questions: [...(item.sub_questions ?? []), ''] }
-      : item
-    ))
+      : item))
   }
   function removeSubQuestion(qi: number, si: number) {
     setQuestions(q => q.map((item, idx) => idx === qi
       ? { ...item, sub_questions: item.sub_questions.filter((_, sidx) => sidx !== si) }
-      : item
-    ))
+      : item))
   }
 
   function addDoNot() { setDoNot(d => [...d, '']) }
@@ -216,166 +204,157 @@ export default function BriefingPage() {
   }
   function removeObjection(i: number) { setObjections(o => o.filter((_, idx) => idx !== i)) }
 
-  // ── Render ──────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────
 
   if (!deal) {
-    return <div className="max-w-4xl mx-auto py-12 px-6 text-xs font-mono text-stone-400">Loading…</div>
+    return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">Loading…</div>
   }
 
-  const nodes = rounds.map(r => ({
-    round: r.round,
-    created_at: r.created_at,
-    roundData: r,
-  }))
-
+  const nodes = rounds.map(r => ({ round: r.round, created_at: r.created_at, roundData: r }))
   const verdicts = currentRoundData
     ? [1, 2, 3, 4].map(l => getLayerVerdict(currentRoundData, l))
     : ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY']
 
+  const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-6">
       {/* Header */}
-      <div className="flex items-baseline justify-between pb-4 mb-6 border-b border-stone-300">
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono">
-            <button onClick={() => router.push('/pipeline')} className="hover:text-stone-900 mr-2">← pipeline</button>
-            {deal.prospect_name}
-          </div>
-          <h2 className="font-serif text-xl text-stone-900 italic mt-1">
-            Briefing · {selectedRound === 0 ? 'initial' : `round ${selectedRound}`}
-          </h2>
+          <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
+            ← Back to pipeline
+          </button>
+          <h1 className="text-2xl font-bold text-neutral-900">
+            Briefing · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
+          </h1>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            Round {selectedRound === 0 ? '0 (initial)' : selectedRound}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           {isLatestRound && (
             <button
               onClick={handleGenerateBriefing}
               disabled={generatingBriefing}
-              className="px-4 py-2 border border-stone-500 text-stone-600 text-xs uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
+              className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
             >
-              {generatingBriefing ? 'generating…' : '✦ generate briefing'}
+              {generatingBriefing ? 'Generating…' : '✦ Generate briefing'}
             </button>
           )}
-          <div className="text-right">
-            <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">
-              {isLatestRound ? 'current round' : 'historical'}
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Round timeline */}
-      <RoundTimeline
-        nodes={nodes}
-        currentRound={selectedRound}
-        onSelect={handleSelectRound}
-      />
+      <RoundTimeline nodes={nodes} currentRound={selectedRound} onSelect={handleSelectRound} />
 
-      {/* Read-only notice for historical rounds */}
+      {/* Historical notice */}
       {!isLatestRound && (
-        <div className="mb-6 px-4 py-2 bg-stone-100 border border-stone-300 text-[11px] font-mono text-stone-500 uppercase tracking-widest">
-          viewing historical briefing — read only
+        <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
+          Viewing historical briefing — read only
         </div>
       )}
 
       {/* The Line */}
-      <section className="border-2 border-stone-900 p-6 mb-8 bg-stone-50">
-        <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-3">the line</div>
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 mb-5 text-white shadow-lg shadow-blue-500/20">
+        <div className="text-xs font-semibold uppercase tracking-wide text-blue-200 mb-3">The Line</div>
         {isLatestRound ? (
-          <Textarea
+          <textarea
             value={line}
-            onChange={setLine}
+            onChange={e => setLine(e.target.value)}
             placeholder="One sentence that frames the entire conversation…"
             rows={2}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-lg placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
           />
         ) : (
-          <h2 className="font-serif text-2xl text-stone-900 italic leading-snug">"{line || '—'}"</h2>
+          <p className="text-xl font-medium leading-snug">"{line || '—'}"</p>
         )}
         <div className="grid grid-cols-4 gap-2 mt-4">
           {[1, 2, 3, 4].map((l, i) => (
             <StatusBand key={l} layer={l} verdict={verdicts[i]} />
           ))}
         </div>
-      </section>
+      </div>
 
       {/* The Read */}
-      <section className="mb-8">
-        <SectionHeader label="The Read" subtitle="where the deal stands" />
+      <Section title="The Read" subtitle="Where the deal stands" accent="bg-neutral-400">
         {isLatestRound ? (
-          <Textarea
+          <textarea
             value={read}
-            onChange={setRead}
+            onChange={e => setRead(e.target.value)}
             placeholder="Where the deal stands, honestly. What do you know, what is missing?"
             rows={4}
+            className={inputClass}
           />
         ) : (
-          <p className="text-sm text-stone-800 font-serif italic leading-relaxed border-l-2 border-stone-900 pl-4">{read || '—'}</p>
+          <p className="text-sm text-neutral-700 leading-relaxed">{read || '—'}</p>
         )}
-      </section>
+      </Section>
 
       {/* The Angle */}
-      <section className="mb-8">
-        <SectionHeader label="The Angle" subtitle="how to walk in" />
+      <Section title="The Angle" subtitle="What needs to be accomplished" accent="bg-orange-400">
         {isLatestRound ? (
-          <Textarea
+          <textarea
             value={angle}
-            onChange={setAngle}
-            placeholder="Your opening posture. How will you position yourself for this conversation?"
+            onChange={e => setAngle(e.target.value)}
+            placeholder="The diagnostic objective — what must be resolved in this conversation."
             rows={3}
+            className={inputClass}
           />
         ) : (
-          <p className="text-sm text-stone-800 leading-relaxed border-l-2 border-orange-700 pl-4">{angle || '—'}</p>
+          <p className="text-sm text-neutral-700 leading-relaxed">{angle || '—'}</p>
         )}
-      </section>
+      </Section>
 
       {/* Field Questions */}
-      <section className="mb-8">
-        <SectionHeader label="Field Questions" subtitle="sequential by diagnostic layer" />
-
+      <Section title="Field Questions" subtitle="Sequential by diagnostic layer" accent="bg-violet-400" defaultOpen={true}>
         {/* Pressing */}
         {questions.filter(q => q.priority !== 'opportunistic').length > 0 && (
           <div className="mb-6">
-            <div className="text-[10px] uppercase tracking-widest font-mono text-stone-900 mb-3 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-stone-900" />
-              Pressing — must ask this round
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full bg-neutral-800" />
+              <span className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">Pressing — must ask this round</span>
             </div>
             <div className="space-y-4">
               {questions.map((q, i) => q.priority === 'opportunistic' ? null : (
-                <div key={i} className="border-l-2 border-stone-900 pl-4">
+                <div key={i} className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
                   {isLatestRound ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex gap-2">
-                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                           {[1, 2, 3, 4].map(l => <option key={l} value={l}>L{l}</option>)}
                         </select>
-                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none" />
-                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20">
                           <option value="pressing">pressing</option>
                           <option value="opportunistic">opportunistic</option>
                         </select>
-                        <button onClick={() => removeQuestion(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700">×</button>
+                        <button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors">✕</button>
                       </div>
-                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent — what are you trying to establish?" className="w-full border border-stone-200 bg-stone-50 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-500 italic" />
-                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none" />
-                      <div className="pl-4 space-y-1">
+                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent — what are you trying to establish?" className="w-full bg-amber-50 border border-amber-200 text-xs px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 text-amber-800 italic placeholder:text-amber-300" />
+                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full bg-white border border-neutral-200 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium" />
+                      <div className="pl-4 space-y-1.5">
                         {(q.sub_questions ?? []).map((sq, si) => (
-                          <div key={si} className="flex gap-1 items-center">
-                            <span className="text-stone-300 text-xs">↳</span>
-                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 border border-stone-200 text-xs font-mono px-2 py-1 focus:outline-none text-stone-600" />
-                            <button onClick={() => removeSubQuestion(i, si)} className="text-[10px] text-stone-300 hover:text-rose-500">×</button>
+                          <div key={si} className="flex gap-1.5 items-center">
+                            <span className="text-neutral-300 text-xs">↳</span>
+                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 bg-white border border-neutral-200 text-xs px-2.5 py-1.5 rounded-lg focus:outline-none text-neutral-600" />
+                            <button onClick={() => removeSubQuestion(i, si)} className="text-neutral-300 hover:text-rose-500 text-xs transition-colors">✕</button>
                           </div>
                         ))}
-                        <button onClick={() => addSubQuestion(i)} className="text-[10px] uppercase tracking-widest font-mono text-stone-400 hover:text-stone-700">+ sub-question</button>
+                        <button onClick={() => addSubQuestion(i)} className="text-[11px] font-medium text-neutral-400 hover:text-blue-500 transition-colors">+ sub-question</button>
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">L{q.layer} · {q.variable}</div>
-                      {q.intent && <p className="text-[11px] text-stone-500 font-mono italic mb-2">Intent: {q.intent}</p>}
-                      <p className="text-sm text-stone-900 font-serif italic mb-2">"{q.text}"</p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">L{q.layer} · {q.variable}</span>
+                      </div>
+                      {q.intent && <p className="text-xs text-amber-700 italic mb-2 bg-amber-50 px-3 py-1.5 rounded-lg inline-block">→ {q.intent}</p>}
+                      <p className="text-sm text-neutral-800 font-medium mb-2">"{q.text}"</p>
                       {(q.sub_questions ?? []).length > 0 && (
                         <ul className="space-y-1 pl-3">
                           {q.sub_questions.map((sq, si) => (
-                            <li key={si} className="text-xs text-stone-600 before:content-['↳'] before:mr-2 before:text-stone-300">{sq}</li>
+                            <li key={si} className="text-xs text-neutral-500 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
                           ))}
                         </ul>
                       )}
@@ -390,48 +369,48 @@ export default function BriefingPage() {
         {/* Opportunistic */}
         {questions.filter(q => q.priority === 'opportunistic').length > 0 && (
           <div className="mb-4">
-            <div className="text-[10px] uppercase tracking-widest font-mono text-stone-400 mb-3 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full border border-stone-400" />
-              Opportunistic — capture if the door opens
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full border-2 border-neutral-300" />
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Opportunistic — if the door opens</span>
             </div>
             <div className="space-y-4">
               {questions.map((q, i) => q.priority !== 'opportunistic' ? null : (
-                <div key={i} className="border-l border-dashed border-stone-300 pl-4">
+                <div key={i} className="bg-neutral-50/50 rounded-xl p-4 border border-dashed border-neutral-200">
                   {isLatestRound ? (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                       <div className="flex gap-2">
-                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none">
                           {[1, 2, 3, 4].map(l => <option key={l} value={l}>L{l}</option>)}
                         </select>
-                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none" />
-                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="border border-stone-300 text-xs font-mono px-2 py-1 focus:outline-none">
+                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none" />
+                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none">
                           <option value="pressing">pressing</option>
                           <option value="opportunistic">opportunistic</option>
                         </select>
-                        <button onClick={() => removeQuestion(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700">×</button>
+                        <button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors">✕</button>
                       </div>
-                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent…" className="w-full border border-stone-200 bg-stone-50 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-400 italic" />
-                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none text-stone-600" />
-                      <div className="pl-4 space-y-1">
+                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent…" className="w-full bg-amber-50/50 border border-amber-100 text-xs px-3 py-2 rounded-lg focus:outline-none text-amber-700 italic placeholder:text-amber-200" />
+                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full bg-white border border-neutral-200 text-sm px-3 py-2.5 rounded-lg focus:outline-none text-neutral-600" />
+                      <div className="pl-4 space-y-1.5">
                         {(q.sub_questions ?? []).map((sq, si) => (
-                          <div key={si} className="flex gap-1 items-center">
-                            <span className="text-stone-300 text-xs">↳</span>
-                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 border border-stone-200 text-xs font-mono px-2 py-1 focus:outline-none text-stone-500" />
-                            <button onClick={() => removeSubQuestion(i, si)} className="text-[10px] text-stone-300 hover:text-rose-500">×</button>
+                          <div key={si} className="flex gap-1.5 items-center">
+                            <span className="text-neutral-300 text-xs">↳</span>
+                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 bg-white border border-neutral-200 text-xs px-2.5 py-1.5 rounded-lg focus:outline-none text-neutral-500" />
+                            <button onClick={() => removeSubQuestion(i, si)} className="text-neutral-300 hover:text-rose-500 text-xs transition-colors">✕</button>
                           </div>
                         ))}
-                        <button onClick={() => addSubQuestion(i)} className="text-[10px] uppercase tracking-widest font-mono text-stone-400 hover:text-stone-700">+ sub-question</button>
+                        <button onClick={() => addSubQuestion(i)} className="text-[11px] font-medium text-neutral-400 hover:text-blue-500 transition-colors">+ sub-question</button>
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">L{q.layer} · {q.variable}</div>
-                      {q.intent && <p className="text-[11px] text-stone-400 font-mono italic mb-2">Intent: {q.intent}</p>}
-                      <p className="text-sm text-stone-600 font-serif italic mb-2">"{q.text}"</p>
+                      <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">L{q.layer} · {q.variable}</div>
+                      {q.intent && <p className="text-xs text-amber-600 italic mb-2">→ {q.intent}</p>}
+                      <p className="text-sm text-neutral-600 mb-2">"{q.text}"</p>
                       {(q.sub_questions ?? []).length > 0 && (
                         <ul className="space-y-1 pl-3">
                           {q.sub_questions.map((sq, si) => (
-                            <li key={si} className="text-xs text-stone-500 before:content-['↳'] before:mr-2 before:text-stone-300">{sq}</li>
+                            <li key={si} className="text-xs text-neutral-400 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
                           ))}
                         </ul>
                       )}
@@ -444,47 +423,40 @@ export default function BriefingPage() {
         )}
 
         {isLatestRound && (
-          <button onClick={addQuestion} className="mt-3 text-xs uppercase tracking-widest font-mono text-stone-500 hover:text-stone-900 border border-dashed border-stone-300 px-3 py-1.5 hover:border-stone-600">
-            + add question
+          <button onClick={addQuestion} className="text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">
+            + Add question
           </button>
         )}
-      </section>
+      </Section>
 
       {/* Mirror terms */}
-      <section className="mb-8">
-        <SectionHeader label="Mirror Vocabulary" subtitle="prospect's words to echo" />
+      <Section title="Mirror Vocabulary" subtitle="Prospect's words to echo" accent="bg-cyan-400" defaultOpen={false}>
         <div className="flex flex-wrap gap-2 mb-3">
           {mirror.map((term, i) => (
             isLatestRound ? (
-              <div key={i} className="flex items-center gap-1 border border-stone-400 px-2 py-1 bg-white">
+              <div key={i} className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 px-3 py-1.5 rounded-full">
                 <input
                   value={term}
                   onChange={e => updateMirror(i, e.target.value)}
-                  className="text-xs font-mono text-stone-700 w-24 focus:outline-none bg-transparent"
+                  className="text-sm text-cyan-700 w-28 focus:outline-none bg-transparent font-medium"
                 />
-                <button onClick={() => removeMirror(i)} className="text-stone-400 hover:text-rose-700 text-xs">×</button>
+                <button onClick={() => removeMirror(i)} className="text-cyan-300 hover:text-rose-500 text-xs transition-colors">✕</button>
               </div>
             ) : (
-              <span key={i} className="border border-stone-400 px-2 py-1 text-xs font-mono text-stone-700 bg-white">{term}</span>
+              <span key={i} className="bg-cyan-50 border border-cyan-200 px-3 py-1.5 rounded-full text-sm text-cyan-700 font-medium">{term}</span>
             )
           ))}
         </div>
         {isLatestRound && (
-          <button
-            onClick={addMirror}
-            className="text-xs uppercase tracking-widest font-mono text-stone-500 hover:text-stone-900 border border-dashed border-stone-300 px-3 py-1.5 hover:border-stone-600"
-          >
-            + add term
-          </button>
+          <button onClick={addMirror} className="text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">+ Add term</button>
         )}
-      </section>
+      </Section>
 
       {/* Objections */}
-      <section className="mb-8">
-        <SectionHeader label="Objection Ready" subtitle="expected pushback" />
+      <Section title="Objection Ready" subtitle="Expected pushback" accent="bg-amber-400" defaultOpen={false}>
         <div className="space-y-3">
           {objections.map((o, i) => (
-            <div key={i} className="border-l border-amber-700 pl-4">
+            <div key={i} className="bg-amber-50 rounded-xl p-4 border border-amber-200">
               {isLatestRound ? (
                 <div className="space-y-2">
                   <div className="flex gap-2 items-start">
@@ -492,94 +464,90 @@ export default function BriefingPage() {
                       value={o.likely}
                       onChange={e => updateObjection(i, 'likely', e.target.value)}
                       placeholder="Likely objection…"
-                      className="flex-1 border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none"
+                      className="flex-1 bg-white border border-amber-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 font-medium"
                     />
-                    <button onClick={() => removeObjection(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700 mt-1.5">×</button>
+                    <button onClick={() => removeObjection(i)} className="text-amber-300 hover:text-rose-500 transition-colors mt-2">✕</button>
                   </div>
                   <input
                     value={o.frame}
                     onChange={e => updateObjection(i, 'frame', e.target.value)}
                     placeholder="How to reframe it"
-                    className="w-full border border-stone-300 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-500"
+                    className="w-full bg-white border border-amber-200 text-xs px-3 py-2 rounded-lg focus:outline-none text-neutral-600"
                   />
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm text-stone-900 font-serif italic mb-1">{o.likely}</p>
-                  <p className="text-xs text-stone-700">→ {o.frame}</p>
+                  <p className="text-sm text-neutral-800 font-medium mb-1">{o.likely}</p>
+                  <p className="text-xs text-amber-700">→ {o.frame}</p>
                 </div>
               )}
             </div>
           ))}
         </div>
         {isLatestRound && (
-          <button
-            onClick={addObjection}
-            className="mt-3 text-xs uppercase tracking-widest font-mono text-stone-500 hover:text-stone-900 border border-dashed border-stone-300 px-3 py-1.5 hover:border-stone-600"
-          >
-            + add objection
-          </button>
+          <button onClick={addObjection} className="mt-3 text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">+ Add objection</button>
         )}
-      </section>
+      </Section>
 
       {/* Do Not */}
-      <section className="mb-8">
-        <SectionHeader label="Do Not" subtitle="avoid in this conversation" />
+      <Section title="Do Not" subtitle="Avoid in this conversation" accent="bg-rose-400" defaultOpen={false}>
         <div className="space-y-2">
           {doNot.map((item, i) => (
-            <div key={i} className="border-l border-rose-700 pl-4 flex gap-2 items-center">
+            <div key={i} className="flex gap-2 items-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 flex-shrink-0" />
               {isLatestRound ? (
                 <>
                   <input
                     value={item}
                     onChange={e => updateDoNot(i, e.target.value)}
                     placeholder="Something to avoid…"
-                    className="flex-1 border border-stone-300 text-sm px-3 py-1.5 focus:outline-none"
+                    className="flex-1 bg-rose-50 border border-rose-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20"
                   />
-                  <button onClick={() => removeDoNot(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700">×</button>
+                  <button onClick={() => removeDoNot(i)} className="text-rose-300 hover:text-rose-500 transition-colors">✕</button>
                 </>
               ) : (
-                <p className="text-sm text-stone-700">{item}</p>
+                <p className="text-sm text-neutral-700">{item}</p>
               )}
             </div>
           ))}
         </div>
         {isLatestRound && (
-          <button
-            onClick={addDoNot}
-            className="mt-3 text-xs uppercase tracking-widest font-mono text-rose-700 hover:text-rose-900 border border-dashed border-rose-300 px-3 py-1.5 hover:border-rose-600"
-          >
-            + add item
-          </button>
+          <button onClick={addDoNot} className="mt-3 text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">+ Add item</button>
         )}
-      </section>
+      </Section>
 
       {/* Win Condition */}
-      <section className="mb-8 border-t border-stone-300 pt-6">
-        <SectionHeader label="Win Condition" subtitle="what success looks like after this round" />
+      <Section title="Win Condition" subtitle="What success looks like after this round" accent="bg-emerald-400" defaultOpen={true}>
         {isLatestRound ? (
-          <Textarea
+          <textarea
             value={winCondition}
-            onChange={setWinCondition}
+            onChange={e => setWinCondition(e.target.value)}
             placeholder="What specific outcome would make this conversation a success?"
             rows={2}
+            className={inputClass}
           />
         ) : (
-          <p className="text-sm text-stone-800 leading-relaxed border-l-2 border-emerald-800 pl-4">{winCondition || '—'}</p>
+          <p className="text-sm text-neutral-700 leading-relaxed">{winCondition || '—'}</p>
         )}
-      </section>
+      </Section>
 
       {/* Save */}
       {isLatestRound && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pt-4">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-stone-900 text-stone-50 px-6 py-3 text-sm uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+            className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
           >
-            {saving ? 'saving…' : 'save briefing'}
+            {saving ? 'Saving…' : 'Save briefing'}
           </button>
-          {error && <span className="text-xs font-mono text-rose-700">{error}</span>}
+          <button
+            onClick={() => router.push(`/deals/${dealId}/capture`)}
+            className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm transition-all"
+          >
+            → Go to capture
+          </button>
+          {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>
       )}
     </div>

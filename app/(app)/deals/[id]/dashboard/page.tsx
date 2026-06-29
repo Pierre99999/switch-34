@@ -11,33 +11,48 @@ import {
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 
+// ── Layer color system ──────────────────────────────────────
+
+const LAYER_COLORS: Record<number, { accent: string; bg: string; border: string; badge: string }> = {
+  1: { accent: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-500' },
+  2: { accent: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', badge: 'bg-blue-500' },
+  3: { accent: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200', badge: 'bg-violet-500' },
+  4: { accent: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-200', badge: 'bg-cyan-500' },
+}
+
 // ── Score bar display ────────────────────────────────────────
 
-const EVIDENCE_COLORS: Record<EvidenceLevel, string> = {
-  declared: 'text-amber-600 bg-amber-50 border-amber-200',
-  corroborated: 'text-blue-600 bg-blue-50 border-blue-200',
-  verified: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+const EVIDENCE_PILL: Record<EvidenceLevel, string> = {
+  declared: 'text-amber-700 bg-amber-100',
+  corroborated: 'text-blue-700 bg-blue-100',
+  verified: 'text-emerald-700 bg-emerald-100',
 }
 
 function ScoreBar({ score, evidence }: { score: number | null; evidence?: EvidenceLevel }) {
-  if (score === null) return <span className="font-mono text-sm text-stone-400">— · · · · ·</span>
+  if (score === null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
   const cap = evidence ? EVIDENCE_CAP[evidence] : 5
-  const blocks = [1, 2, 3, 4, 5].map(i =>
-    i <= score ? '█' : i <= cap ? '░' : '·'
-  ).join('')
+  const pct = (score / 5) * 100
+  const capPct = (cap / 5) * 100
+  const barColor = score <= 2 ? 'bg-rose-500' : score === 3 ? 'bg-amber-400' : 'bg-emerald-500'
   return (
-    <span className="font-mono text-sm text-stone-800">
-      {blocks} <span className="text-stone-500">{score}/5</span>
+    <div className="mt-1 space-y-1">
+      <div className="flex items-center gap-2">
+        <div className="h-2 flex-1 bg-neutral-100 rounded-full overflow-hidden relative">
+          {cap < 5 && <div className="absolute right-0 top-0 h-full bg-neutral-200/60 rounded-r-full" style={{ width: `${100 - capPct}%` }} />}
+          <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-xs font-semibold text-neutral-700 w-8 text-right">{score}/5</span>
+      </div>
       {evidence && (
-        <span className={`ml-2 text-[10px] px-1.5 py-0.5 border rounded ${EVIDENCE_COLORS[evidence]}`}>
+        <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${EVIDENCE_PILL[evidence]}`}>
           {EVIDENCE_LABELS[evidence]}
         </span>
       )}
-    </span>
+    </div>
   )
 }
 
-// ── Clickable score selector (1–5 dots) ──────────────────────
+// ── Clickable score selector ────────────────────────────────
 
 function ScorePicker({
   value,
@@ -54,24 +69,24 @@ function ScorePicker({
 }) {
   const cap = EVIDENCE_CAP[evidence]
   return (
-    <div className="mt-1 space-y-1">
-      <div className="flex gap-1 items-center">
+    <div className="mt-1.5 space-y-2">
+      <div className="flex gap-1.5 items-center">
         {[1, 2, 3, 4, 5].map(i => (
           <button
             key={i}
             disabled={disabled || i > cap}
             onClick={() => onChange(value === i ? null : i)}
             title={i > cap ? `Capped by ${evidence} evidence (max ${cap})` : `Score ${i}`}
-            className={`w-6 h-6 border text-xs font-mono transition-colors ${
+            className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
               i > cap
-                ? 'border-stone-200 text-stone-200 cursor-not-allowed'
+                ? 'bg-neutral-50 text-neutral-200 cursor-not-allowed border border-neutral-100'
                 : value !== null && i <= value
                   ? i <= 2
-                    ? 'bg-rose-700 border-rose-700 text-white'
+                    ? 'bg-rose-500 text-white shadow-sm'
                     : i === 3
-                      ? 'bg-amber-600 border-amber-600 text-white'
-                      : 'bg-emerald-700 border-emerald-700 text-white'
-                  : 'border-stone-300 text-stone-400 hover:border-stone-600 hover:text-stone-700'
+                      ? 'bg-amber-400 text-white shadow-sm'
+                      : 'bg-emerald-500 text-white shadow-sm'
+                  : 'bg-white border border-neutral-200 text-neutral-400 hover:border-neutral-400 hover:text-neutral-700'
             } disabled:opacity-40`}
           >
             {i}
@@ -81,14 +96,14 @@ function ScorePicker({
           <button
             disabled={disabled}
             onClick={() => onChange(null)}
-            className="ml-1 text-[10px] font-mono text-stone-400 hover:text-stone-700 disabled:opacity-40"
+            className="ml-1 text-xs text-neutral-300 hover:text-neutral-600 disabled:opacity-40"
             title="Clear"
           >
-            ×
+            ✕
           </button>
         )}
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-1.5">
         {(['declared', 'corroborated', 'verified'] as EvidenceLevel[]).map(ev => (
           <button
             key={ev}
@@ -98,10 +113,10 @@ function ScorePicker({
               if (value !== null && value > EVIDENCE_CAP[ev]) onChange(EVIDENCE_CAP[ev])
             }}
             title={EVIDENCE_DESCRIPTIONS[ev]}
-            className={`text-[10px] px-1.5 py-0.5 border rounded font-mono transition-colors ${
+            className={`text-[10px] font-medium px-2.5 py-1 rounded-full transition-all ${
               evidence === ev
-                ? EVIDENCE_COLORS[ev]
-                : 'border-stone-200 text-stone-400 hover:border-stone-400'
+                ? EVIDENCE_PILL[ev]
+                : 'bg-neutral-50 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
             } disabled:opacity-40`}
           >
             {EVIDENCE_LABELS[ev]} ≤{EVIDENCE_CAP[ev]}
@@ -140,32 +155,34 @@ function LayerCard({
 }) {
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
   const verdict = getLayerVerdict(round ? { ...round, ...pending } as DealRound : null, layer)
+  const colors = LAYER_COLORS[layer]
 
-  const verdictColor = verdict === 'PASS'
-    ? 'text-emerald-800'
+  const verdictStyle = verdict === 'PASS'
+    ? 'text-emerald-600 bg-emerald-50'
     : verdict === 'AT RISK'
-      ? 'text-rose-800'
+      ? 'text-rose-600 bg-rose-50'
       : verdict === 'EMPTY'
-        ? 'text-stone-400'
-        : 'text-amber-800'
+        ? 'text-neutral-400 bg-neutral-50'
+        : 'text-amber-600 bg-amber-50'
 
   return (
-    <div className={`bg-stone-50 border p-5 ${layer === 1 ? 'border-l-4 border-l-orange-700 border-stone-300' : 'border-stone-300'}`}>
-      <div className="flex items-baseline justify-between mb-4 pb-3 border-b border-stone-300">
+    <div className={`bg-white rounded-2xl border ${colors.border} overflow-hidden shadow-sm`}>
+      <div className={`${colors.bg} px-5 py-4 flex items-center justify-between`}>
         <div>
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono">Layer {layer}</div>
-          <h3 className="font-serif text-lg text-stone-900 italic mt-1">
-            {LAYER_LABELS[layer]} — {LAYER_QUESTIONS[layer]}
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${colors.badge}`} />
+            <span className={`text-xs font-semibold tracking-wide uppercase ${colors.accent}`}>Layer {layer}</span>
+          </div>
+          <h3 className="text-base font-semibold text-neutral-800 mt-1">
+            {LAYER_LABELS[layer]} <span className="font-normal text-neutral-500">— {LAYER_QUESTIONS[layer]}</span>
           </h3>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">verdict</div>
-          <div className={`font-mono text-sm mt-1 ${verdictColor}`}>{verdict}</div>
-          {layer === 1 && <div className="text-[10px] uppercase tracking-widest text-orange-700 font-mono mt-1">· active ·</div>}
-        </div>
+        <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${verdictStyle}`}>
+          {verdict}
+        </span>
       </div>
 
-      <div className="space-y-4">
+      <div className="px-5 py-4 space-y-4">
         {vars.map(v => {
           const field = v as keyof DealRound
           const currentValue = (pending[field] !== undefined ? pending[field] : round?.[field]) as number | null
@@ -173,7 +190,7 @@ function LayerCard({
           const currentEvidence: EvidenceLevel = pendingEvidence[v] ?? evidenceLevels[v] ?? 'declared'
           return (
             <div key={v}>
-              <div className="text-xs text-stone-700 font-medium">{VARIABLE_LABELS[v]}</div>
+              <div className="text-sm text-neutral-700 font-medium">{VARIABLE_LABELS[v]}</div>
               {isEditing ? (
                 <ScorePicker
                   value={currentValue}
@@ -190,6 +207,24 @@ function LayerCard({
         })}
       </div>
     </div>
+  )
+}
+
+// ── Buttons ─────────────────────────────────────────────────
+
+function PrimaryButton({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} disabled={disabled} className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all">
+      {children}
+    </button>
+  )
+}
+
+function SecondaryButton({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} disabled={disabled} className="px-5 py-2.5 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all">
+      {children}
+    </button>
   )
 }
 
@@ -221,7 +256,6 @@ export default function DealDashboardPage() {
     ])
     if (dealData) setDeal(dealData)
     if (roundData) {
-      // If the latest round has no scores but the previous round does, inherit them
       const allScoreVars = Object.values(LAYER_VARIABLES).flat() as string[]
       const latest = roundData[roundData.length - 1]
       const prev = roundData.length >= 2 ? roundData[roundData.length - 2] : null
@@ -237,7 +271,6 @@ export default function DealDashboardPage() {
           const prevEvidence = (prev.evidence_levels ?? {}) as Record<string, string>
           if (Object.keys(prevEvidence).length > 0) inherited.evidence_levels = prevEvidence
           await supabase.from('deal_rounds').update(inherited).eq('id', latest.id)
-          // Re-fetch after backfill
           const { data: refreshed } = await supabase
             .from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true })
           if (refreshed) { setRounds(refreshed); setSelectedRound(refreshed[refreshed.length - 1].round); return }
@@ -307,7 +340,6 @@ export default function DealDashboardPage() {
     try {
       const supabase = createClient()
       const nextRound = deal.current_round + 1
-      // Carry scores forward from the current round so the new round inherits them
       const prevRound = rounds.find(r => r.round === deal.current_round)
       const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
       const inheritedScores: Record<string, unknown> = {}
@@ -355,11 +387,10 @@ export default function DealDashboardPage() {
     setGeneratingNarrative(false)
   }
 
-
   if (!deal) {
     return (
       <div className="max-w-5xl mx-auto py-12 px-6">
-        <div className="text-xs font-mono text-stone-400">Loading…</div>
+        <div className="text-sm text-neutral-400">Loading…</div>
       </div>
     )
   }
@@ -379,32 +410,28 @@ export default function DealDashboardPage() {
     const notes = currentRoundData.capture_notes as Record<string, string> | null
     return notes && Object.keys(notes).some(k => k !== '__free__' && notes[k]?.trim())
   })()
-  // Round state machine: UNSTARTED → BRIEFED → SCORED
-  // Use capture notes (not scores) because inherited scores would skip the BRIEFED state
   const roundState = !hasBriefing ? 'UNSTARTED' : !hasCapture ? 'BRIEFED' : 'SCORED'
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-6">
       {/* Header */}
-      <div className="flex items-baseline justify-between pb-4 mb-6 border-b border-stone-300">
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono">
-            <button onClick={() => router.push('/pipeline')} className="hover:text-stone-900 mr-2">← pipeline</button>
-            {deal.prospect_name}
-          </div>
-          <h2 className="font-serif text-xl text-stone-900 italic mt-1">
-            {deal.contact_name ?? 'Deal dashboard'}
-          </h2>
+          <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
+            ← Back to pipeline
+          </button>
+          <h1 className="text-2xl font-bold text-neutral-900">{deal.prospect_name}</h1>
+          {deal.contact_name && <p className="text-sm text-neutral-500 mt-0.5">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</p>}
         </div>
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">round</div>
-          <div className="font-mono text-2xl text-stone-900">
-            {selectedRound === 0 ? '0 · initial' : selectedRound}
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Round</div>
+          <div className="text-3xl font-bold text-neutral-900 leading-none">
+            {selectedRound === 0 ? '0' : selectedRound}
           </div>
         </div>
       </div>
 
-      {/* Round timeline — no manual "+ next", progression is via "start next round" */}
+      {/* Round timeline */}
       <RoundTimeline
         nodes={nodes}
         currentRound={selectedRound}
@@ -413,63 +440,56 @@ export default function DealDashboardPage() {
 
       {/* Historical notice */}
       {!isLatestRound && (
-        <div className="mb-6 px-4 py-2 bg-stone-100 border border-stone-300 text-[11px] font-mono text-stone-500 uppercase tracking-widest">
-          viewing historical round — scores are read-only
+        <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
+          Viewing historical round — scores are read-only
         </div>
       )}
 
       {/* ── State machine for latest round ── */}
       {isLatestRound && roundState === 'UNSTARTED' && (
-        <div className="mb-8 border-2 border-dashed border-stone-300 p-8 text-center">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-3">
-            round {selectedRound === 0 ? '0 · initial' : selectedRound} · no briefing yet
+        <div className="mb-8 bg-white rounded-2xl border-2 border-dashed border-neutral-200 p-10 text-center">
+          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">✦</span>
           </div>
-          <p className="font-serif italic text-stone-700 text-base mb-1">
-            Prepare your briefing before the conversation.
-          </p>
-          <p className="text-xs text-stone-500 font-mono mb-6">
-            The engine will use your vendor profile and prospect context.
+          <h3 className="text-lg font-semibold text-neutral-800 mb-1">
+            Prepare your briefing
+          </h3>
+          <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
+            The engine will analyze your vendor profile and prospect context to generate a conversation plan.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <button
+            <PrimaryButton
               onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
               disabled={generatingBriefing || !currentRoundData}
-              className="px-6 py-3 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
             >
-              {generatingBriefing ? 'generating briefing…' : '✦ generate briefing'}
-            </button>
-            <button
-              onClick={() => router.push(`/deals/${dealId}/briefing`)}
-              className="px-6 py-3 border border-stone-300 text-stone-600 text-xs uppercase tracking-widest font-mono hover:border-stone-900 hover:text-stone-900"
-            >
-              write it manually →
-            </button>
+              {generatingBriefing ? 'Generating…' : '✦ Generate briefing'}
+            </PrimaryButton>
+            <SecondaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>
+              Write manually
+            </SecondaryButton>
           </div>
-          {error && <p className="mt-4 text-xs font-mono text-rose-700">{error}</p>}
+          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
         </div>
       )}
 
       {isLatestRound && roundState === 'BRIEFED' && (
-        <div className="mb-6 border border-stone-300 bg-stone-50 px-6 py-5 flex items-center justify-between">
+        <div className="mb-6 bg-white rounded-2xl border border-neutral-200 px-6 py-5 flex items-center justify-between shadow-sm">
           <div>
-            <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">briefing ready</div>
-            <p className="text-sm font-serif italic text-stone-700">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Briefing ready</span>
+            </div>
+            <p className="text-sm text-neutral-600">
               Go into the conversation, then capture the responses.
             </p>
           </div>
           <div className="flex gap-3 flex-shrink-0 ml-6">
-            <button
-              onClick={() => router.push(`/deals/${dealId}/briefing`)}
-              className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50"
-            >
-              → briefing
-            </button>
-            <button
-              onClick={() => router.push(`/deals/${dealId}/capture`)}
-              className="px-4 py-2 border border-stone-500 text-stone-600 text-xs uppercase tracking-widest font-mono hover:bg-stone-100"
-            >
-              → capture
-            </button>
+            <SecondaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>
+              → Briefing
+            </SecondaryButton>
+            <PrimaryButton onClick={() => router.push(`/deals/${dealId}/capture`)}>
+              → Capture
+            </PrimaryButton>
           </div>
         </div>
       )}
@@ -478,51 +498,28 @@ export default function DealDashboardPage() {
         <div className="flex items-center gap-3 mb-6">
           {!isEditing ? (
             <>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50"
-              >
-                edit scores
-              </button>
-              <button
-                onClick={handleGenerateNarrative}
-                disabled={generatingNarrative}
-                className="px-4 py-2 border border-stone-500 text-stone-600 text-xs uppercase tracking-widest font-mono hover:bg-stone-100 disabled:opacity-40"
-              >
-                {generatingNarrative ? 'generating…' : '✦ narrative'}
-              </button>
+              <SecondaryButton onClick={() => setIsEditing(true)}>Edit scores</SecondaryButton>
+              <SecondaryButton onClick={handleGenerateNarrative} disabled={generatingNarrative}>
+                {generatingNarrative ? 'Generating…' : '✦ Narrative'}
+              </SecondaryButton>
               <div className="flex-1" />
-              <button
-                onClick={handleStartNextRound}
-                disabled={generatingBriefing}
-                className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-              >
-                {generatingBriefing ? 'generating briefing…' : `✦ start round ${deal.current_round + 1} →`}
-              </button>
+              <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
+                {generatingBriefing ? 'Generating…' : `✦ Start round ${deal.current_round + 1} →`}
+              </PrimaryButton>
             </>
           ) : (
             <>
-              <button
-                onClick={handleSave}
-                disabled={saving || !hasPending}
-                className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-              >
-                {saving ? 'saving…' : 'save'}
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                disabled={saving}
-                className="px-4 py-2 border border-stone-300 text-stone-600 text-xs uppercase tracking-widest font-mono hover:border-stone-600"
-              >
-                cancel
-              </button>
+              <PrimaryButton onClick={handleSave} disabled={saving || !hasPending}>
+                {saving ? 'Saving…' : 'Save changes'}
+              </PrimaryButton>
+              <SecondaryButton onClick={handleCancelEdit} disabled={saving}>Cancel</SecondaryButton>
             </>
           )}
-          {error && <span className="text-xs font-mono text-rose-700">{error}</span>}
+          {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>
       )}
 
-      {/* Layer cards — always visible */}
+      {/* Layer cards */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {[1, 2, 3, 4].map(layer => (
           <LayerCard
@@ -540,9 +537,12 @@ export default function DealDashboardPage() {
 
       {/* Engine narrative */}
       {currentRoundData?.narrative && (
-        <div className="mt-8 p-5 border border-stone-300 bg-stone-50">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-2">engine narrative</div>
-          <p className="text-sm text-stone-700 leading-relaxed">{currentRoundData.narrative}</p>
+        <div className="mt-8 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-sm">✦</span>
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Engine narrative</span>
+          </div>
+          <p className="text-sm text-neutral-700 leading-relaxed">{currentRoundData.narrative}</p>
         </div>
       )}
     </div>

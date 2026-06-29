@@ -23,7 +23,6 @@ export default function CapturePage() {
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
 
-  // Questions to capture against come from the briefing of the same round
   const questions: BriefingQuestion[] = currentRoundData?.briefing_questions ?? []
 
   function populateFromRound(r: DealRound | null) {
@@ -52,8 +51,7 @@ export default function CapturePage() {
 
   function handleSelectRound(r: number) {
     setSelectedRound(r)
-    const found = rounds.find(rd => rd.round === r) ?? null
-    populateFromRound(found)
+    populateFromRound(rounds.find(rd => rd.round === r) ?? null)
   }
 
   function setNote(key: string, val: string) {
@@ -80,7 +78,6 @@ export default function CapturePage() {
     setSuggestingScores(true)
     setError(null)
     try {
-      // Suggest scores
       const res = await fetch('/api/ai/suggest-scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,7 +86,6 @@ export default function CapturePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
 
-      // Apply scores and evidence levels
       const suggestions: Record<string, { score: number; evidence: string; rationale: string }> = data.suggestions
       const scoreUpdate: Record<string, number> = {}
       const evidenceLevels: Record<string, string> = { ...(currentRoundData.evidence_levels ?? {}) }
@@ -101,7 +97,6 @@ export default function CapturePage() {
       const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels }).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 
-      // Update knowledge boxes from this round's capture (non-blocking)
       fetch('/api/ai/update-boxes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,164 +111,167 @@ export default function CapturePage() {
   }
 
   if (!deal) {
-    return <div className="max-w-4xl mx-auto py-12 px-6 text-xs font-mono text-stone-400">Loading…</div>
+    return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">Loading…</div>
   }
 
   const hasBriefing = !!(currentRoundData?.briefing_line)
+  const nodes = rounds.map(r => ({ round: r.round, created_at: r.created_at, roundData: r }))
 
-  const nodes = rounds.map(r => ({
-    round: r.round,
-    created_at: r.created_at,
-    roundData: r,
-  }))
+  const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-6">
       {/* Header */}
-      <div className="flex items-baseline justify-between pb-4 mb-6 border-b border-stone-300">
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono">
-            <button onClick={() => router.push('/pipeline')} className="hover:text-stone-900 mr-2">← pipeline</button>
-            {deal.prospect_name}
-          </div>
-          <h2 className="font-serif text-xl text-stone-900 italic mt-1">
-            Conversation log · {selectedRound === 0 ? 'initial' : `round ${selectedRound}`}
-          </h2>
+          <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
+            ← Back to pipeline
+          </button>
+          <h1 className="text-2xl font-bold text-neutral-900">
+            Capture · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
+          </h1>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            Round {selectedRound === 0 ? '0 (initial)' : selectedRound}
+          </p>
         </div>
       </div>
 
       {/* Round timeline */}
-      <RoundTimeline
-        nodes={nodes}
-        currentRound={selectedRound}
-        onSelect={handleSelectRound}
-      />
+      <RoundTimeline nodes={nodes} currentRound={selectedRound} onSelect={handleSelectRound} />
 
       {/* Historical notice */}
       {!isLatestRound && (
-        <div className="mb-6 px-4 py-2 bg-stone-100 border border-stone-300 text-[11px] font-mono text-stone-500 uppercase tracking-widest">
-          viewing historical capture — read only
+        <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
+          Viewing historical capture — read only
         </div>
       )}
 
       {/* Briefing required blocker */}
       {isLatestRound && !hasBriefing && (
-        <div className="mb-8 border-2 border-dashed border-stone-300 p-8 text-center">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-3">briefing required</div>
-          <p className="font-serif italic text-stone-700 text-base mb-1">
-            Generate a briefing before capturing this conversation.
-          </p>
-          <p className="text-xs text-stone-500 font-mono mb-6">
-            The briefing structures what to look for — capture follows it.
+        <div className="mb-8 bg-white rounded-2xl border-2 border-dashed border-neutral-200 p-10 text-center">
+          <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">📋</span>
+          </div>
+          <h3 className="text-lg font-semibold text-neutral-800 mb-1">Briefing required</h3>
+          <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
+            Generate a briefing before capturing this conversation. The briefing structures what to look for.
           </p>
           <button
             onClick={() => router.push(`/deals/${dealId}/dashboard`)}
-            className="px-6 py-3 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800"
+            className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
           >
-            → go to dashboard
+            → Go to dashboard
           </button>
         </div>
       )}
 
-      {/* Capture form — only when briefing exists (or viewing history) */}
       {/* Instruction */}
       {isLatestRound && hasBriefing && (
-        <div className="border-l-2 border-stone-900 pl-4 py-2 mb-8 bg-stone-50">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">log conversation</div>
-          <p className="text-sm text-stone-800 font-serif italic">
+        <div className="bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4 mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-violet-400" />
+            <span className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Log conversation</span>
+          </div>
+          <p className="text-sm text-violet-700">
             Type what was actually said, in the prospect's words. Skip what didn't come up. Don't reframe — log it raw.
           </p>
         </div>
       )}
 
-      {/* Questions from briefing — sorted pressing first */}
+      {/* Questions from briefing */}
       {questions.length > 0 ? (
-        <div className="space-y-6 mb-8">
+        <div className="space-y-5 mb-8">
           {/* Pressing */}
           {questions.filter(q => q.priority !== 'opportunistic').map((q, i) => {
             const key = q.variable || String(i)
             const val = notes[key] ?? ''
             return (
-              <div key={`p-${i}`} className="border-l-2 border-stone-900 pl-4">
-                <div className="text-[10px] uppercase tracking-widest text-stone-600 font-mono mb-1">
-                  L{q.layer} · {q.variable} · <span className="text-stone-900">pressing</span>
-                </div>
-                {q.intent && <p className="text-[11px] text-stone-500 font-mono italic mb-1">→ {q.intent}</p>}
-                <p className="text-sm text-stone-900 font-serif italic mb-1">"{q.text}"</p>
-                {(q.sub_questions ?? []).length > 0 && (
-                  <ul className="mb-2 space-y-0.5 pl-3">
-                    {q.sub_questions.map((sq, si) => (
-                      <li key={si} className="text-[11px] text-stone-500 font-mono before:content-['↳'] before:mr-1.5 before:text-stone-300">{sq}</li>
-                    ))}
-                  </ul>
-                )}
-                {isLatestRound ? (
-                  <textarea
-                    value={val}
-                    onChange={e => setNote(key, e.target.value)}
-                    placeholder="[didn't come up · skip]"
-                    rows={3}
-                    className="w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 font-mono focus:outline-none focus:border-stone-900 resize-none placeholder:text-stone-300"
-                  />
-                ) : (
-                  <div className="border border-stone-300 bg-white p-3 text-sm text-stone-800 font-mono whitespace-pre-wrap min-h-[3rem]">
-                    {val || <span className="text-stone-400">[didn't come up · skip]</span>}
+              <div key={`p-${i}`} className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
+                <div className="bg-neutral-50 px-5 py-3 border-b border-neutral-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-neutral-800" />
+                    <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">L{q.layer} · {q.variable} · pressing</span>
                   </div>
-                )}
+                  {q.intent && <p className="text-xs text-amber-700 italic bg-amber-50 px-2.5 py-1 rounded-lg inline-block mt-1">→ {q.intent}</p>}
+                  <p className="text-sm text-neutral-800 font-medium mt-2">"{q.text}"</p>
+                  {(q.sub_questions ?? []).length > 0 && (
+                    <ul className="mt-1.5 space-y-0.5 pl-3">
+                      {q.sub_questions.map((sq, si) => (
+                        <li key={si} className="text-xs text-neutral-500 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="px-5 py-4">
+                  {isLatestRound ? (
+                    <textarea
+                      value={val}
+                      onChange={e => setNote(key, e.target.value)}
+                      placeholder="What did they say? Skip if it didn't come up."
+                      rows={3}
+                      className={inputClass}
+                    />
+                  ) : (
+                    <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-700 whitespace-pre-wrap min-h-[3rem]">
+                      {val || <span className="text-neutral-300">Nothing captured</span>}
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}
+
           {/* Opportunistic */}
           {questions.filter(q => q.priority === 'opportunistic').length > 0 && (
-            <div className="pt-4 border-t border-dashed border-stone-200">
-              <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-4">
-                opportunistic — capture if it came up
+            <>
+              <div className="flex items-center gap-2 pt-2">
+                <span className="w-2 h-2 rounded-full border-2 border-neutral-300" />
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Opportunistic — capture if it came up</span>
               </div>
               {questions.filter(q => q.priority === 'opportunistic').map((q, i) => {
                 const key = q.variable || `opp-${i}`
                 const val = notes[key] ?? ''
                 return (
-                  <div key={`opp-${i}`} className="border-l border-dashed border-stone-300 pl-4 mb-6">
-                    <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">
-                      L{q.layer} · {q.variable}
+                  <div key={`opp-${i}`} className="bg-white rounded-2xl border border-dashed border-neutral-200 overflow-hidden">
+                    <div className="bg-neutral-50/50 px-5 py-3 border-b border-neutral-100">
+                      <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">L{q.layer} · {q.variable}</span>
+                      {q.intent && <p className="text-xs text-amber-600 italic mt-1">→ {q.intent}</p>}
+                      <p className="text-sm text-neutral-600 mt-2">"{q.text}"</p>
+                      {(q.sub_questions ?? []).length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5 pl-3">
+                          {q.sub_questions.map((sq, si) => (
+                            <li key={si} className="text-xs text-neutral-400 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                    {q.intent && <p className="text-[11px] text-stone-400 font-mono italic mb-1">→ {q.intent}</p>}
-                    <p className="text-sm text-stone-600 font-serif italic mb-1">"{q.text}"</p>
-                    {(q.sub_questions ?? []).length > 0 && (
-                      <ul className="mb-2 space-y-0.5 pl-3">
-                        {q.sub_questions.map((sq, si) => (
-                          <li key={si} className="text-[11px] text-stone-400 font-mono before:content-['↳'] before:mr-1.5 before:text-stone-300">{sq}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {isLatestRound ? (
-                      <textarea
-                        value={val}
-                        onChange={e => setNote(key, e.target.value)}
-                        placeholder="[didn't come up · skip]"
-                        rows={2}
-                        className="w-full border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 font-mono focus:outline-none focus:border-stone-400 resize-none placeholder:text-stone-300"
-                      />
-                    ) : (
-                      <div className="border border-stone-200 bg-white p-3 text-sm text-stone-700 font-mono whitespace-pre-wrap min-h-[2.5rem]">
-                        {val || <span className="text-stone-300">[didn't come up · skip]</span>}
-                      </div>
-                    )}
+                    <div className="px-5 py-4">
+                      {isLatestRound ? (
+                        <textarea
+                          value={val}
+                          onChange={e => setNote(key, e.target.value)}
+                          placeholder="Only if it came up naturally."
+                          rows={2}
+                          className={inputClass}
+                        />
+                      ) : (
+                        <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-600 whitespace-pre-wrap min-h-[2.5rem]">
+                          {val || <span className="text-neutral-300">Nothing captured</span>}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )
               })}
-            </div>
+            </>
           )}
         </div>
       ) : (
-        <div className="mb-8 px-4 py-6 border border-dashed border-stone-300 text-center">
-          <p className="text-xs font-mono text-stone-400 uppercase tracking-widest">No briefing questions yet</p>
-          <p className="text-xs text-stone-500 mt-1">
+        <div className="mb-8 bg-white rounded-2xl border border-dashed border-neutral-200 p-8 text-center">
+          <p className="text-sm text-neutral-400 font-medium">No briefing questions yet</p>
+          <p className="text-xs text-neutral-400 mt-1">
             Add field questions in the{' '}
-            <button
-              onClick={() => router.push(`/deals/${dealId}/briefing`)}
-              className="underline hover:text-stone-900"
-            >
+            <button onClick={() => router.push(`/deals/${dealId}/briefing`)} className="text-blue-500 hover:text-blue-600 underline">
               briefing tab
             </button>{' '}
             first.
@@ -282,19 +280,19 @@ export default function CapturePage() {
       )}
 
       {/* Free-form note */}
-      <div className="mb-8">
-        <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-2">other signals · anything else that came up</div>
+      <div className="bg-white rounded-2xl border border-neutral-200 p-5 mb-8 shadow-sm">
+        <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">Other signals</div>
         {isLatestRound ? (
           <textarea
             value={freeNote}
             onChange={e => setFreeNote(e.target.value)}
             placeholder="Tone shifts, unexpected topics, off-script moments, body language reads…"
             rows={4}
-            className="w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 font-mono focus:outline-none focus:border-stone-900 resize-none placeholder:text-stone-400"
+            className={inputClass}
           />
         ) : (
           freeNote && (
-            <div className="border border-stone-300 bg-white p-3 text-sm text-stone-800 font-mono whitespace-pre-wrap">
+            <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-700 whitespace-pre-wrap">
               {freeNote}
             </div>
           )
@@ -303,25 +301,23 @@ export default function CapturePage() {
 
       {/* Save + next action */}
       {isLatestRound && hasBriefing && (
-        <>
-          <div className="flex items-center gap-3 pt-2 border-t border-stone-300">
-            <button
-              onClick={handleSave}
-              disabled={saving || suggestingScores}
-              className="px-6 py-3 border border-stone-900 text-stone-900 text-sm uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50 disabled:opacity-40"
-            >
-              {saving ? 'saving…' : 'save'}
-            </button>
-            <button
-              onClick={handleAnalyze}
-              disabled={suggestingScores || saving}
-              className="bg-stone-900 text-stone-50 px-6 py-3 text-sm uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-            >
-              {suggestingScores ? 'analyzing…' : '✦ analyze → dashboard'}
-            </button>
-            {error && <span className="text-xs font-mono text-rose-700">{error}</span>}
-          </div>
-        </>
+        <div className="flex items-center gap-3 pt-4">
+          <button
+            onClick={handleSave}
+            disabled={saving || suggestingScores}
+            className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            onClick={handleAnalyze}
+            disabled={suggestingScores || saving}
+            className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
+          >
+            {suggestingScores ? 'Analyzing…' : '✦ Analyze → Dashboard'}
+          </button>
+          {error && <span className="text-sm text-rose-600">{error}</span>}
+        </div>
       )}
     </div>
   )
