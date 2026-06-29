@@ -205,8 +205,9 @@ export type DealRound = {
 export type BriefingQuestion = {
   layer: number
   variable: string
-  why: string
-  text: string
+  intent: string           // what this question is trying to establish
+  text: string             // the main question to ask
+  sub_questions: string[]  // follow-up probes if the main question opens a thread
   priority: 'pressing' | 'opportunistic'
 }
 

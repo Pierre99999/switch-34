@@ -307,8 +307,13 @@ export default function DealDashboardPage() {
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
   const hasAnyScore = currentRoundData !== null && allVars.some(v => currentRoundData[v as keyof typeof currentRoundData] !== null)
   const hasBriefing = !!(currentRoundData?.briefing_line)
+  const hasCapture = currentRoundData !== null && (() => {
+    const notes = currentRoundData.capture_notes as Record<string, string> | null
+    return notes && Object.keys(notes).some(k => k !== '__free__' && notes[k]?.trim())
+  })()
   // Round state machine: UNSTARTED → BRIEFED → SCORED
-  const roundState = !hasBriefing ? 'UNSTARTED' : !hasAnyScore ? 'BRIEFED' : 'SCORED'
+  // Use capture notes (not scores) because inherited scores would skip the BRIEFED state
+  const roundState = !hasBriefing ? 'UNSTARTED' : !hasCapture ? 'BRIEFED' : 'SCORED'
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-6">

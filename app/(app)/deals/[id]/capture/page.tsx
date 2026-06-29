@@ -196,7 +196,15 @@ export default function CapturePage() {
                 <div className="text-[10px] uppercase tracking-widest text-stone-600 font-mono mb-1">
                   L{q.layer} · {q.variable} · <span className="text-stone-900">pressing</span>
                 </div>
-                <p className="text-sm text-stone-900 font-serif italic mb-2">"{q.text}"</p>
+                {q.intent && <p className="text-[11px] text-stone-500 font-mono italic mb-1">→ {q.intent}</p>}
+                <p className="text-sm text-stone-900 font-serif italic mb-1">"{q.text}"</p>
+                {(q.sub_questions ?? []).length > 0 && (
+                  <ul className="mb-2 space-y-0.5 pl-3">
+                    {q.sub_questions.map((sq, si) => (
+                      <li key={si} className="text-[11px] text-stone-500 font-mono before:content-['↳'] before:mr-1.5 before:text-stone-300">{sq}</li>
+                    ))}
+                  </ul>
+                )}
                 {isLatestRound ? (
                   <textarea
                     value={val}
@@ -227,7 +235,15 @@ export default function CapturePage() {
                     <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">
                       L{q.layer} · {q.variable}
                     </div>
-                    <p className="text-sm text-stone-600 font-serif italic mb-2">"{q.text}"</p>
+                    {q.intent && <p className="text-[11px] text-stone-400 font-mono italic mb-1">→ {q.intent}</p>}
+                    <p className="text-sm text-stone-600 font-serif italic mb-1">"{q.text}"</p>
+                    {(q.sub_questions ?? []).length > 0 && (
+                      <ul className="mb-2 space-y-0.5 pl-3">
+                        {q.sub_questions.map((sq, si) => (
+                          <li key={si} className="text-[11px] text-stone-400 font-mono before:content-['↳'] before:mr-1.5 before:text-stone-300">{sq}</li>
+                        ))}
+                      </ul>
+                    )}
                     {isLatestRound ? (
                       <textarea
                         value={val}

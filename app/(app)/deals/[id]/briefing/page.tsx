@@ -175,13 +175,31 @@ export default function BriefingPage() {
   }
 
   function addQuestion() {
-    setQuestions(q => [...q, { layer: 1, variable: '', why: '', text: '', priority: 'pressing' as const }])
+    setQuestions(q => [...q, { layer: 1, variable: '', intent: '', text: '', sub_questions: [], priority: 'pressing' as const }])
   }
-  function updateQuestion(i: number, field: keyof BriefingQuestion, val: string | number) {
+  function updateQuestion(i: number, field: keyof BriefingQuestion, val: string | number | string[]) {
     setQuestions(q => q.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
   }
   function removeQuestion(i: number) {
     setQuestions(q => q.filter((_, idx) => idx !== i))
+  }
+  function updateSubQuestion(qi: number, si: number, val: string) {
+    setQuestions(q => q.map((item, idx) => idx === qi
+      ? { ...item, sub_questions: item.sub_questions.map((s, sidx) => sidx === si ? val : s) }
+      : item
+    ))
+  }
+  function addSubQuestion(qi: number) {
+    setQuestions(q => q.map((item, idx) => idx === qi
+      ? { ...item, sub_questions: [...(item.sub_questions ?? []), ''] }
+      : item
+    ))
+  }
+  function removeSubQuestion(qi: number, si: number) {
+    setQuestions(q => q.map((item, idx) => idx === qi
+      ? { ...item, sub_questions: item.sub_questions.filter((_, sidx) => sidx !== si) }
+      : item
+    ))
   }
 
   function addDoNot() { setDoNot(d => [...d, '']) }
@@ -336,14 +354,31 @@ export default function BriefingPage() {
                         </select>
                         <button onClick={() => removeQuestion(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700">×</button>
                       </div>
-                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="The question you will ask…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none" />
-                      <input value={q.why} onChange={e => updateQuestion(i, 'why', e.target.value)} placeholder="Why this question matters now" className="w-full border border-stone-300 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-500" />
+                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent — what are you trying to establish?" className="w-full border border-stone-200 bg-stone-50 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-500 italic" />
+                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none" />
+                      <div className="pl-4 space-y-1">
+                        {(q.sub_questions ?? []).map((sq, si) => (
+                          <div key={si} className="flex gap-1 items-center">
+                            <span className="text-stone-300 text-xs">↳</span>
+                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 border border-stone-200 text-xs font-mono px-2 py-1 focus:outline-none text-stone-600" />
+                            <button onClick={() => removeSubQuestion(i, si)} className="text-[10px] text-stone-300 hover:text-rose-500">×</button>
+                          </div>
+                        ))}
+                        <button onClick={() => addSubQuestion(i)} className="text-[10px] uppercase tracking-widest font-mono text-stone-400 hover:text-stone-700">+ sub-question</button>
+                      </div>
                     </div>
                   ) : (
                     <div>
                       <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">L{q.layer} · {q.variable}</div>
-                      <p className="text-sm text-stone-900 font-serif italic mb-1">"{q.text}"</p>
-                      <p className="text-xs text-stone-500">→ {q.why}</p>
+                      {q.intent && <p className="text-[11px] text-stone-500 font-mono italic mb-2">Intent: {q.intent}</p>}
+                      <p className="text-sm text-stone-900 font-serif italic mb-2">"{q.text}"</p>
+                      {(q.sub_questions ?? []).length > 0 && (
+                        <ul className="space-y-1 pl-3">
+                          {q.sub_questions.map((sq, si) => (
+                            <li key={si} className="text-xs text-stone-600 before:content-['↳'] before:mr-2 before:text-stone-300">{sq}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )}
                 </div>
@@ -375,14 +410,31 @@ export default function BriefingPage() {
                         </select>
                         <button onClick={() => removeQuestion(i)} className="text-xs font-mono text-stone-400 hover:text-rose-700">×</button>
                       </div>
-                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="The question you will ask…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none text-stone-600" />
-                      <input value={q.why} onChange={e => updateQuestion(i, 'why', e.target.value)} placeholder="Why this question matters now" className="w-full border border-stone-300 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-400" />
+                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent…" className="w-full border border-stone-200 bg-stone-50 text-xs font-mono px-3 py-1.5 focus:outline-none text-stone-400 italic" />
+                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full border border-stone-300 text-sm font-serif italic px-3 py-1.5 focus:outline-none text-stone-600" />
+                      <div className="pl-4 space-y-1">
+                        {(q.sub_questions ?? []).map((sq, si) => (
+                          <div key={si} className="flex gap-1 items-center">
+                            <span className="text-stone-300 text-xs">↳</span>
+                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 border border-stone-200 text-xs font-mono px-2 py-1 focus:outline-none text-stone-500" />
+                            <button onClick={() => removeSubQuestion(i, si)} className="text-[10px] text-stone-300 hover:text-rose-500">×</button>
+                          </div>
+                        ))}
+                        <button onClick={() => addSubQuestion(i)} className="text-[10px] uppercase tracking-widest font-mono text-stone-400 hover:text-stone-700">+ sub-question</button>
+                      </div>
                     </div>
                   ) : (
                     <div>
                       <div className="text-[10px] uppercase tracking-widest text-stone-400 font-mono mb-1">L{q.layer} · {q.variable}</div>
-                      <p className="text-sm text-stone-600 font-serif italic mb-1">"{q.text}"</p>
-                      <p className="text-xs text-stone-400">→ {q.why}</p>
+                      {q.intent && <p className="text-[11px] text-stone-400 font-mono italic mb-2">Intent: {q.intent}</p>}
+                      <p className="text-sm text-stone-600 font-serif italic mb-2">"{q.text}"</p>
+                      {(q.sub_questions ?? []).length > 0 && (
+                        <ul className="space-y-1 pl-3">
+                          {q.sub_questions.map((sq, si) => (
+                            <li key={si} className="text-xs text-stone-500 before:content-['↳'] before:mr-2 before:text-stone-300">{sq}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )}
                 </div>

@@ -71,11 +71,13 @@ The ACTIVE LAYER for this round is Layer ${activeLayer} — ${activeLayerLabel}.
 Gate question: ${gateDescription}
 
 Question generation rules:
-- Generate 4–6 PRESSING questions targeting Layer ${activeLayer} variables that are empty or weakest.
-- Generate 1–2 OPPORTUNISTIC questions for Layer ${nextLayer} (${nextLayerLabel}) — only ask if the conversation naturally opens there.
-- Do NOT generate questions for layers above ${nextLayer}. They are premature.
-- Questions must be in natural conversational language — never a form field.
-- Each question's "why" must explicitly link to the score gap or diagnostic gap it closes.
+- Generate exactly 2–3 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
+- Generate exactly 1 OPPORTUNISTIC question for Layer ${nextLayer} (${nextLayerLabel}). Only if the conversation naturally opens there.
+- Maximum 4 questions total. If you feel the urge to write more, cut the weakest ones.
+- Each question has ONE main question (open, natural) and 2–3 sub-questions (probes to go deeper on the same thread).
+- The intent explains what the main question is trying to establish — one sentence, for the seller's eyes only.
+- Do NOT generate questions for layers above ${nextLayer}. They are premature until lower layers are solid.
+- Questions must sound like a human conversation, never a form or an interrogation.
 
 Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.`,
     tools: [
@@ -87,21 +89,22 @@ Be specific — reference actual prospect details, actual scores, actual capture
           properties: {
             line: { type: 'string', description: `One sentence framing the entire conversation — what the active layer (L${activeLayer}: ${activeLayerLabel}) needs to resolve.` },
             read: { type: 'string', description: 'Where the deal stands honestly. What you know, what is missing, what the scores reveal. 3–5 sentences.' },
-            angle: { type: 'string', description: 'How to walk into the conversation — opening posture and framing aligned with the active layer focus.' },
+            angle: { type: 'string', description: 'What needs to be accomplished in this conversation — the diagnostic objective stated plainly. Not a posture description but a clear statement of what must be resolved: "Establish whether X is true, confirm that Y exists, determine if Z is real." 3–5 sentences.' },
             win_condition: { type: 'string', description: `What would make this conversation a success for Layer ${activeLayer}. Be specific.` },
             questions: {
               type: 'array',
-              description: `Pressing questions for Layer ${activeLayer} first, then 1–2 opportunistic questions for Layer ${nextLayer}.`,
+              description: `2–3 pressing questions for Layer ${activeLayer}, then 1 opportunistic question for Layer ${nextLayer}. Maximum 4 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
               items: {
                 type: 'object',
                 properties: {
                   layer: { type: 'number', description: 'Layer number (1–4)' },
                   variable: { type: 'string', description: 'The score variable this question targets' },
-                  text: { type: 'string', description: 'The question in natural conversational language' },
-                  why: { type: 'string', description: 'Why this question matters now — link to the score gap' },
-                  priority: { type: 'string', enum: ['pressing', 'opportunistic'], description: `pressing = Layer ${activeLayer} (must ask), opportunistic = Layer ${nextLayer} (ask if the door opens)` },
+                  intent: { type: 'string', description: 'One sentence: what this question is trying to establish or diagnose. The seller reads this, not the prospect.' },
+                  text: { type: 'string', description: 'The single main question to ask — open, conversational, non-leading.' },
+                  sub_questions: { type: 'array', items: { type: 'string' }, description: '2–3 follow-up probes to use if the main question opens a thread. Short, natural, each targeting a deeper dimension of the same variable.' },
+                  priority: { type: 'string', enum: ['pressing', 'opportunistic'], description: `pressing = Layer ${activeLayer} (must ask this round), opportunistic = Layer ${nextLayer} (only if the door opens naturally)` },
                 },
-                required: ['layer', 'variable', 'text', 'why', 'priority'],
+                required: ['layer', 'variable', 'intent', 'text', 'sub_questions', 'priority'],
               },
             },
             mirror: {
