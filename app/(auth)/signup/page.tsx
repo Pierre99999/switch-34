@@ -27,7 +27,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-white px-6">
       <div className="w-full max-w-sm">
         <div className="mb-10">
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">ScoreJam</div>
+          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">Switch</div>
           <h1 className="font-serif text-3xl text-stone-900 italic">Create account</h1>
           <p className="text-sm text-stone-500 mt-2">You'll set up your company profile next.</p>
         </div>

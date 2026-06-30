@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     const normalized = url.startsWith('http') ? url : `https://${url}`
     const res = await fetch(normalized, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ScoreJam/1.0)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Switch/1.0)' },
       signal: AbortSignal.timeout(10000),
     })
     const html = await res.text()

@@ -67,10 +67,10 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-white">
       <div className="max-w-2xl mx-auto py-12 px-6">
         <div className="mb-10">
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">ScoreJam · setup</div>
+          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">Switch · setup</div>
           <h1 className="font-serif text-3xl text-stone-900 italic">Your company profile</h1>
           <p className="text-sm text-stone-500 mt-2 leading-relaxed">
-            This is filled once. ScoreJam uses it to pre-score deals and generate briefings that position your product correctly.
+            This is filled once. Switch uses it to pre-score deals and generate briefings that position your product correctly.
           </p>
         </div>
 
@@ -81,7 +81,7 @@ export default function OnboardingPage() {
           {field('Value proposition', 'value_proposition', 'Why should someone buy from you rather than do nothing?', true)}
           {field('Key differentiators', 'differentiators', 'What makes you concretely different from alternatives?', true)}
           {field('Ideal customer profile', 'ideal_customer', 'Who are you best for? Industry, size, situation.', true)}
-          {field('2-3 recent wins (brief)', 'past_wins', 'Customer type, problem solved, outcome. ScoreJam uses these to pre-score Concerns Fit.', true)}
+          {field('2-3 recent wins (brief)', 'past_wins', 'Customer type, problem solved, outcome. Switch uses these to pre-score Concerns Fit.', true)}
 
           {error && <p className="text-xs text-rose-700 font-mono">{error}</p>}
 

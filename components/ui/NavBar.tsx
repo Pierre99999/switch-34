@@ -64,7 +64,7 @@ export default function NavBar() {
     <nav className="border-b border-neutral-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
         <div className="flex items-center gap-1">
-          <span className="text-lg font-bold text-blue-500 mr-4 tracking-tight">ScoreJam</span>
+          <span className="text-lg font-bold text-blue-500 mr-4 tracking-tight">Switch</span>
           {tab('Pipeline', '/pipeline', pathname === '/pipeline')}
           {tab('My Profile', '/profile', pathname === '/profile')}
           {dealId && (

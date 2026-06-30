@@ -44,7 +44,7 @@ export default function NewDealPage() {
   return (
     <div className="max-w-2xl mx-auto py-12 px-6">
       <div className="mb-10">
-        <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">ScoreJam · new deal</div>
+        <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">Switch · new deal</div>
         <h1 className="font-serif text-3xl text-stone-900 italic">Start a deal diagnostic</h1>
         <p className="text-sm text-stone-500 mt-2">Name the prospect and contact. Add context and URLs from the account context tab.</p>
       </div>

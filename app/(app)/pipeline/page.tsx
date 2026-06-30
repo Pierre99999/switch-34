@@ -110,7 +110,7 @@ export default async function PipelinePage() {
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>
-          <p className="text-sm text-neutral-400 mb-1">ScoreJam</p>
+          <p className="text-sm text-neutral-400 mb-1">Switch</p>
           <h1 className="text-2xl font-bold text-neutral-900">Pipeline</h1>
         </div>
         <Link

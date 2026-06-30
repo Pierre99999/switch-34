@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ScoreJam",
+  title: "Switch",
   description: "Diagnostic CRM built on the Sales Unlocked methodology",
 };
 

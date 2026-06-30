@@ -308,7 +308,7 @@ export default function ProfilePage() {
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>
-          <p className="text-sm text-neutral-400 mb-1">ScoreJam · Vendor profile</p>
+          <p className="text-sm text-neutral-400 mb-1">Switch · Vendor profile</p>
           <h1 className="text-2xl font-bold text-neutral-900">{vendor?.company_name ?? '...'}</h1>
         </div>
         <div className="text-right">
