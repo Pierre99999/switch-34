@@ -277,37 +277,37 @@ export default function BriefingPage() {
       </div>
 
       {/* The Read */}
-      <Section title="The Read" subtitle="Where the deal stands" accent="bg-neutral-400">
+      <Section title="The Read" subtitle="Where the deal stands" accent="bg-neutral-400" defaultOpen={true}>
         {isLatestRound ? (
           <textarea
             value={read}
-            onChange={e => setRead(e.target.value)}
+            onChange={e => { setRead(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             placeholder="Where the deal stands, honestly. What do you know, what is missing?"
-            rows={4}
-            className={inputClass}
+            className={inputClass + ' overflow-hidden'}
           />
         ) : (
-          <p className="text-sm text-neutral-700 leading-relaxed">{read || '—'}</p>
+          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{read || '—'}</p>
         )}
       </Section>
 
       {/* The Angle */}
-      <Section title="The Angle" subtitle="What needs to be accomplished" accent="bg-orange-400">
+      <Section title="The Angle" subtitle="What needs to be accomplished" accent="bg-orange-400" defaultOpen={false}>
         {isLatestRound ? (
           <textarea
             value={angle}
-            onChange={e => setAngle(e.target.value)}
+            onChange={e => { setAngle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             placeholder="The diagnostic objective — what must be resolved in this conversation."
-            rows={3}
-            className={inputClass}
+            className={inputClass + ' overflow-hidden'}
           />
         ) : (
-          <p className="text-sm text-neutral-700 leading-relaxed">{angle || '—'}</p>
+          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{angle || '—'}</p>
         )}
       </Section>
 
       {/* Field Questions */}
-      <Section title="Field Questions" subtitle="Sequential by diagnostic layer" accent="bg-violet-400" defaultOpen={true}>
+      <Section title="Field Questions" subtitle="Sequential by diagnostic layer" accent="bg-violet-400" defaultOpen={false}>
         {/* Pressing */}
         {questions.filter(q => q.priority !== 'opportunistic').length > 0 && (
           <div className="mb-6">
@@ -517,17 +517,17 @@ export default function BriefingPage() {
       </Section>
 
       {/* Win Condition */}
-      <Section title="Win Condition" subtitle="What success looks like after this round" accent="bg-emerald-400" defaultOpen={true}>
+      <Section title="Win Condition" subtitle="What success looks like after this round" accent="bg-emerald-400" defaultOpen={false}>
         {isLatestRound ? (
           <textarea
             value={winCondition}
-            onChange={e => setWinCondition(e.target.value)}
+            onChange={e => { setWinCondition(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
             placeholder="What specific outcome would make this conversation a success?"
-            rows={2}
-            className={inputClass}
+            className={inputClass + ' overflow-hidden'}
           />
         ) : (
-          <p className="text-sm text-neutral-700 leading-relaxed">{winCondition || '—'}</p>
+          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{winCondition || '—'}</p>
         )}
       </Section>
 
