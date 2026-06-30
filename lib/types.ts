@@ -281,8 +281,18 @@ export const EVIDENCE_DESCRIPTIONS: Record<EvidenceLevel, string> = {
   verified: 'Hard data, documents, or metrics shared',
 }
 
+export const EVIDENCE_WEIGHT: Record<EvidenceLevel, number> = {
+  declared: 0.6,
+  corroborated: 0.85,
+  verified: 1.0,
+}
+
 export function capScore(score: number, evidence: EvidenceLevel): number {
   return Math.min(score, EVIDENCE_CAP[evidence])
+}
+
+export function weightedScore(score: number, evidence: EvidenceLevel): number {
+  return Math.min(score, EVIDENCE_CAP[evidence]) * EVIDENCE_WEIGHT[evidence]
 }
 
 // ============================================================
@@ -331,9 +341,16 @@ export const VARIABLE_LABELS: Record<string, string> = {
 export function getLayerAverage(round: DealRound | null, layer: number): number | null {
   if (!round) return null
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
-  const scores = vars.map(v => round[v as keyof DealRound] as number | null).filter(s => s !== null) as number[]
-  if (scores.length === 0) return null
-  return scores.reduce((a, b) => a + b, 0) / scores.length
+  const evidenceLevels = (round.evidence_levels ?? {}) as Record<string, EvidenceLevel>
+  const weighted: number[] = []
+  for (const v of vars) {
+    const raw = round[v as keyof DealRound] as number | null
+    if (raw === null) continue
+    const ev: EvidenceLevel = evidenceLevels[v] ?? 'declared'
+    weighted.push(weightedScore(raw, ev))
+  }
+  if (weighted.length === 0) return null
+  return weighted.reduce((a, b) => a + b, 0) / weighted.length
 }
 
 export function getLayerVerdict(round: DealRound | null, layer: number): LayerVerdict {
