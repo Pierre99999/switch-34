@@ -7,7 +7,7 @@ import {
   type Deal, type DealRound, type EvidenceLevel,
   LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS,
   EVIDENCE_CAP, EVIDENCE_LABELS, EVIDENCE_DESCRIPTIONS,
-  getLayerVerdict, capScore,
+  getLayerVerdict, getLayerAverage, capScore,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 
@@ -154,7 +154,9 @@ function LayerCard({
   onEvidence: (field: string, value: EvidenceLevel) => void
 }) {
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
-  const verdict = getLayerVerdict(round ? { ...round, ...pending } as DealRound : null, layer)
+  const merged = round ? { ...round, ...pending } as DealRound : null
+  const verdict = getLayerVerdict(merged, layer)
+  const avg = getLayerAverage(merged, layer)
   const colors = LAYER_COLORS[layer]
 
   const verdictStyle = verdict === 'PASS'
@@ -177,9 +179,14 @@ function LayerCard({
             {LAYER_LABELS[layer]} <span className="font-normal text-neutral-500">— {LAYER_QUESTIONS[layer]}</span>
           </h3>
         </div>
-        <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${verdictStyle}`}>
-          {verdict}
-        </span>
+        <div className="flex items-center gap-2">
+          {avg !== null && (
+            <span className="text-sm font-bold text-neutral-700">{avg.toFixed(1)}<span className="text-neutral-400 font-normal">/5</span></span>
+          )}
+          <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${verdictStyle}`}>
+            {verdict}
+          </span>
+        </div>
       </div>
 
       <div className="px-5 py-4 space-y-4">

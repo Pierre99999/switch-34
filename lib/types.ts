@@ -328,13 +328,18 @@ export const VARIABLE_LABELS: Record<string, string> = {
   external_friction: 'External Friction',
 }
 
-export function getLayerVerdict(round: DealRound | null, layer: number): LayerVerdict {
-  if (!round) return 'EMPTY'
+export function getLayerAverage(round: DealRound | null, layer: number): number | null {
+  if (!round) return null
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
   const scores = vars.map(v => round[v as keyof DealRound] as number | null).filter(s => s !== null) as number[]
-  if (scores.length === 0) return 'EMPTY'
-  const min = Math.min(...scores)
-  if (min >= 4) return 'PASS'
-  if (min <= 2) return 'AT RISK'
+  if (scores.length === 0) return null
+  return scores.reduce((a, b) => a + b, 0) / scores.length
+}
+
+export function getLayerVerdict(round: DealRound | null, layer: number): LayerVerdict {
+  const avg = getLayerAverage(round, layer)
+  if (avg === null) return 'EMPTY'
+  if (avg >= 3.5) return 'PASS'
+  if (avg < 2.5) return 'AT RISK'
   return 'HOLD'
 }
