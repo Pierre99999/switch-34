@@ -7,7 +7,7 @@ import {
   type Deal, type DealRound, type EvidenceLevel,
   LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS,
   EVIDENCE_CAP, EVIDENCE_LABELS, EVIDENCE_DESCRIPTIONS,
-  getLayerVerdict, getLayerAverage, capScore,
+  getLayerVerdict, getLayerAverage, capScore, weightedScore,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 
@@ -30,18 +30,17 @@ const EVIDENCE_PILL: Record<EvidenceLevel, string> = {
 
 function ScoreBar({ score, evidence }: { score: number | null; evidence?: EvidenceLevel }) {
   if (score === null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
-  const cap = evidence ? EVIDENCE_CAP[evidence] : 5
-  const pct = (score / 5) * 100
-  const capPct = (cap / 5) * 100
-  const barColor = score <= 2 ? 'bg-rose-500' : score === 3 ? 'bg-amber-400' : 'bg-emerald-500'
+  const ev = evidence ?? 'declared'
+  const effective = weightedScore(score, ev)
+  const pct = (effective / 5) * 100
+  const barColor = effective <= 2 ? 'bg-rose-500' : effective <= 3 ? 'bg-amber-400' : 'bg-emerald-500'
   return (
     <div className="mt-1 space-y-1">
       <div className="flex items-center gap-2">
         <div className="h-2 flex-1 bg-neutral-100 rounded-full overflow-hidden relative">
-          {cap < 5 && <div className="absolute right-0 top-0 h-full bg-neutral-200/60 rounded-r-full" style={{ width: `${100 - capPct}%` }} />}
           <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
         </div>
-        <span className="text-xs font-semibold text-neutral-700 w-8 text-right">{score}/5</span>
+        <span className="text-xs font-semibold text-neutral-700 w-8 text-right">{effective.toFixed(1)}/5</span>
       </div>
       {evidence && (
         <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${EVIDENCE_PILL[evidence]}`}>
