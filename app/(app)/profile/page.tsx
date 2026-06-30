@@ -109,6 +109,8 @@ const DIMENSIONS: DimensionDef[] = [
 
 // ── Helpers ──────────────────────────────────────────────────
 
+const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
+
 function filledCount(dim: Record<string, string>): number {
   return Object.values(dim).filter(v => v.trim().length > 0).length
 }
@@ -143,50 +145,50 @@ function DimensionSection({
   const filled = filledCount(values)
 
   return (
-    <div className="border border-stone-300 bg-white">
+    <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-stone-50 transition-colors"
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-neutral-50/50 transition-colors"
       >
-        <div className="flex items-baseline gap-4">
-          <span className="font-serif italic text-stone-900 text-base">{def.label}</span>
-          <span className="text-[10px] uppercase tracking-widest text-stone-500 font-mono hidden sm:block">{def.description.slice(0, 60)}…</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-neutral-800">{def.label}</span>
+          <span className="text-xs text-neutral-400 hidden sm:block max-w-sm truncate">{def.description}</span>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-          {isDirty && <span className="text-[10px] uppercase tracking-widest font-mono text-amber-700">unsaved</span>}
-          <span className={`text-[10px] uppercase tracking-widest font-mono ${filled === total ? 'text-emerald-700' : filled > 0 ? 'text-amber-700' : 'text-stone-400'}`}>
+          {isDirty && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Unsaved</span>}
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${filled === total ? 'text-emerald-600 bg-emerald-50' : filled > 0 ? 'text-amber-600 bg-amber-50' : 'text-neutral-400 bg-neutral-100'}`}>
             {filled}/{total}
           </span>
-          <span className="text-stone-400 font-mono text-sm">{open ? '▲' : '▼'}</span>
+          <span className="text-neutral-300 text-sm">{open ? '▲' : '▼'}</span>
         </div>
       </button>
 
       {open && (
-        <div className="border-t border-stone-200 px-5 py-5">
-          <p className="text-xs text-stone-500 leading-relaxed mb-6 border-l-2 border-stone-200 pl-3">{def.description}</p>
+        <div className="border-t border-neutral-100 px-5 py-5">
+          <p className="text-xs text-neutral-500 leading-relaxed mb-6 bg-neutral-50 rounded-xl px-4 py-3">{def.description}</p>
           <div className="space-y-5">
             {def.questions.map(q => (
               <div key={q.key}>
-                <label className="text-xs font-medium text-stone-800">{q.label}</label>
-                <p className="text-[11px] text-stone-400 mt-0.5 mb-1.5">{q.hint}</p>
+                <label className="text-sm font-medium text-neutral-700">{q.label}</label>
+                <p className="text-xs text-neutral-400 mt-0.5 mb-2">{q.hint}</p>
                 <textarea
                   value={values[q.key] ?? ''}
                   onChange={e => onChange(q.key, e.target.value)}
                   rows={3}
-                  placeholder="…"
-                  className="w-full border border-stone-300 bg-stone-50 px-3 py-2 text-sm text-stone-900 font-mono focus:outline-none focus:border-stone-900 focus:bg-white resize-none"
+                  placeholder="..."
+                  className={inputClass}
                 />
               </div>
             ))}
           </div>
           {isDirty && (
-            <div className="mt-5 flex items-center gap-3 pt-4 border-t border-stone-200">
+            <div className="mt-5 flex items-center gap-3 pt-4 border-t border-neutral-100">
               <button
                 onClick={onSave}
                 disabled={saving}
-                className="px-4 py-2 bg-stone-900 text-stone-50 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
+                className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
               >
-                {saving ? 'saving…' : 'update'}
+                {saving ? 'Saving...' : 'Save changes'}
               </button>
             </div>
           )}
@@ -204,7 +206,6 @@ export default function ProfilePage() {
   const [savedDims, setSavedDims] = useState<VendorDimensions>(EMPTY_VENDOR_DIMENSIONS)
   const [savingKey, setSavingKey] = useState<string | null>(null)
 
-  // Import state
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
@@ -305,26 +306,26 @@ export default function ProfilePage() {
   return (
     <div className="max-w-4xl mx-auto py-8 px-6">
       {/* Header */}
-      <div className="flex items-baseline justify-between pb-4 mb-8 border-b border-stone-300">
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-1">ScoreJam · vendor profile</div>
-          <h1 className="font-serif text-2xl text-stone-900 italic">{vendor?.company_name ?? '…'}</h1>
+          <p className="text-sm text-neutral-400 mb-1">ScoreJam · Vendor profile</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{vendor?.company_name ?? '...'}</h1>
         </div>
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">profile completion</div>
-          <div className={`font-mono text-lg mt-0.5 ${totalFilled === totalQuestions ? 'text-emerald-800' : totalFilled > 0 ? 'text-amber-700' : 'text-stone-400'}`}>
+          <div className="text-xs font-medium text-neutral-400 mb-1">Profile completion</div>
+          <div className={`text-lg font-bold ${totalFilled === totalQuestions ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
             {totalFilled}/{totalQuestions}
           </div>
         </div>
       </div>
 
       {/* Import panel */}
-      <div className="border border-stone-300 bg-stone-50 p-5 mb-8">
-        <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-4">import from</div>
+      <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8 shadow-sm">
+        <h2 className="text-sm font-semibold text-neutral-700 mb-4">Import from</h2>
         <div className="flex flex-col gap-4">
           {/* URL */}
           <div>
-            <div className="text-xs text-stone-600 font-mono mb-1.5">Website URL</div>
+            <div className="text-xs font-medium text-neutral-500 mb-1.5">Website URL</div>
             <div className="flex gap-2">
               <input
                 value={importUrl}
@@ -332,54 +333,50 @@ export default function ProfilePage() {
                 onKeyDown={e => e.key === 'Enter' && handleImportUrl()}
                 placeholder="yourcompany.com"
                 disabled={importing}
-                className="flex-1 border border-stone-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-stone-900 disabled:opacity-50"
+                className={`flex-1 ${inputClass}`}
               />
               <button
                 onClick={handleImportUrl}
                 disabled={importing || !importUrl.trim()}
-                className="px-4 py-2 border border-stone-900 text-stone-900 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50 disabled:opacity-40 whitespace-nowrap"
+                className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 whitespace-nowrap transition-all"
               >
-                {importing ? 'reading…' : '↓ fetch'}
+                {importing ? 'Reading...' : 'Fetch'}
               </button>
             </div>
           </div>
 
           {/* Divider */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-stone-200" />
-            <span className="text-[10px] uppercase tracking-widest text-stone-400 font-mono">or</span>
-            <div className="flex-1 h-px bg-stone-200" />
+            <div className="flex-1 h-px bg-neutral-100" />
+            <span className="text-xs text-neutral-300">or</span>
+            <div className="flex-1 h-px bg-neutral-100" />
           </div>
 
           {/* Document */}
           <div>
-            <div className="text-xs text-stone-600 font-mono mb-1.5">Document <span className="text-stone-400">(PDF or .txt)</span></div>
-            <label className={`flex items-center justify-center border border-dashed border-stone-300 bg-white px-4 py-4 cursor-pointer hover:border-stone-600 transition-colors ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
-              <span className="text-xs font-mono text-stone-500">
-                {importing ? 'reading document…' : '↑ click to upload — pitch deck, product doc, company brief'}
+            <div className="text-xs font-medium text-neutral-500 mb-1.5">Document <span className="text-neutral-300">(PDF or .txt)</span></div>
+            <label className={`flex items-center justify-center border-2 border-dashed border-neutral-200 bg-neutral-50 rounded-xl px-4 py-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
+              <span className="text-sm text-neutral-400">
+                {importing ? 'Reading document...' : 'Click to upload — pitch deck, product doc, company brief'}
               </span>
               <input type="file" accept=".pdf,.txt,.md" onChange={handleImportDoc} className="hidden" disabled={importing} />
             </label>
           </div>
         </div>
 
-        {importError && (
-          <p className="mt-3 text-xs font-mono text-rose-700">{importError}</p>
-        )}
-        {importSuccess && (
-          <p className="mt-3 text-xs font-mono text-emerald-700">{importSuccess}</p>
-        )}
+        {importError && <p className="mt-3 text-sm text-rose-600">{importError}</p>}
+        {importSuccess && <p className="mt-3 text-sm text-emerald-600">{importSuccess}</p>}
       </div>
 
-      <div className="border-l-2 border-stone-900 pl-4 py-2 mb-8 bg-stone-50">
-        <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-1">how to use this</div>
-        <p className="text-sm text-stone-800 font-serif italic leading-relaxed">
+      {/* Info card */}
+      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 mb-8">
+        <p className="text-sm text-blue-700">
           Import from your website or a document to pre-fill. Then review each dimension and save. The more complete your profile, the better the engine reads each deal.
         </p>
       </div>
 
       {/* Dimension sections */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {DIMENSIONS.map(def => (
           <DimensionSection
             key={def.key}

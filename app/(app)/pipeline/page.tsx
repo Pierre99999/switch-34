@@ -14,10 +14,10 @@ function getLayerScore(round: DealRound | null, layer: number): number | null {
 
 const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
 const EVIDENCE_SHORT: Record<EvidenceLevel, string> = { declared: 'D', corroborated: 'C', verified: 'V' }
-const EVIDENCE_COLOR: Record<EvidenceLevel, string> = {
-  declared: 'text-amber-500',
-  corroborated: 'text-blue-500',
-  verified: 'text-emerald-500',
+const EVIDENCE_PILL: Record<EvidenceLevel, string> = {
+  declared: 'bg-amber-50 text-amber-600 border-amber-200',
+  corroborated: 'bg-blue-50 text-blue-600 border-blue-200',
+  verified: 'bg-emerald-50 text-emerald-600 border-emerald-200',
 }
 
 function getLayerMinEvidence(round: DealRound | null, layer: number): EvidenceLevel | null {
@@ -29,45 +29,37 @@ function getLayerMinEvidence(round: DealRound | null, layer: number): EvidenceLe
   return EVIDENCE_ORDER[Math.min(...levels.map(l => EVIDENCE_ORDER.indexOf(l)))]
 }
 
+const VERDICT_COLORS: Record<string, { text: string; bg: string }> = {
+  PASS:     { text: 'text-emerald-600', bg: 'bg-emerald-500' },
+  HOLD:     { text: 'text-amber-600',   bg: 'bg-amber-400' },
+  'AT RISK':{ text: 'text-rose-600',    bg: 'bg-rose-500' },
+  EMPTY:    { text: 'text-neutral-300',  bg: 'bg-neutral-200' },
+  EMERGING: { text: 'text-amber-500',   bg: 'bg-amber-400' },
+  NASCENT:  { text: 'text-amber-400',   bg: 'bg-amber-300' },
+}
+
 function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: number; label: string }) {
   const verdict = getLayerVerdict(round, layer)
   const score = getLayerScore(round, layer)
   const minEvidence = getLayerMinEvidence(round, layer)
-
-  const barColor = {
-    PASS: 'bg-emerald-500',
-    HOLD: 'bg-amber-400',
-    'AT RISK': 'bg-rose-500',
-    EMPTY: 'bg-stone-200',
-    EMERGING: 'bg-amber-400',
-    NASCENT: 'bg-amber-300',
-  }[verdict]
-
-  const textColor = {
-    PASS: 'text-emerald-700',
-    HOLD: 'text-amber-700',
-    'AT RISK': 'text-rose-700',
-    EMPTY: 'text-stone-400',
-    EMERGING: 'text-amber-600',
-    NASCENT: 'text-amber-500',
-  }[verdict]
+  const vc = VERDICT_COLORS[verdict] ?? VERDICT_COLORS.EMPTY
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="text-[9px] uppercase tracking-widest text-stone-400 font-mono">{label}</div>
-      <div className="flex items-baseline gap-1">
-        <div className={`text-base font-mono font-semibold leading-none ${textColor}`}>
+    <div className="flex flex-col gap-1.5">
+      <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-wide">{label}</div>
+      <div className="flex items-center gap-1.5">
+        <span className={`text-sm font-semibold ${vc.text}`}>
           {score !== null ? score.toFixed(1) : '—'}
-        </div>
+        </span>
         {minEvidence && (
-          <span className={`text-[9px] font-mono ${EVIDENCE_COLOR[minEvidence]}`} title={EVIDENCE_LABELS[minEvidence]}>
+          <span className={`text-[9px] font-medium border rounded-full px-1.5 py-0.5 leading-none ${EVIDENCE_PILL[minEvidence]}`} title={EVIDENCE_LABELS[minEvidence]}>
             {EVIDENCE_SHORT[minEvidence]}
           </span>
         )}
       </div>
-      <div className="h-1 w-full bg-stone-100 rounded-full overflow-hidden">
+      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full ${barColor} transition-all`}
+          className={`h-full rounded-full ${vc.bg} transition-all`}
           style={{ width: score !== null ? `${(score / 5) * 100}%` : '0%' }}
         />
       </div>
@@ -86,7 +78,6 @@ export default async function PipelinePage() {
     .eq('status', 'active')
     .order('updated_at', { ascending: false })
 
-  // Get latest round for each deal
   const dealIds = (deals || []).map((d: Deal) => d.id)
   const { data: rounds } = dealIds.length > 0
     ? await supabase
@@ -116,80 +107,89 @@ export default async function PipelinePage() {
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-6">
-      <div className="flex items-baseline justify-between pb-4 mb-6 border-b border-stone-300">
+      {/* Header */}
+      <div className="flex items-end justify-between mb-8">
         <div>
-          <div className="text-xs uppercase tracking-widest text-stone-500 font-mono">ScoreJam · pipeline</div>
-          <h1 className="font-serif text-2xl text-stone-900 italic mt-1">Active deals</h1>
+          <p className="text-sm text-neutral-400 mb-1">ScoreJam</p>
+          <h1 className="text-2xl font-bold text-neutral-900">Pipeline</h1>
         </div>
         <Link
           href="/deals/new"
-          className="border border-stone-900 text-stone-900 px-4 py-2 text-xs uppercase tracking-widest font-mono hover:bg-stone-900 hover:text-stone-50"
+          className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
         >
-          + new deal
+          + New deal
         </Link>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        <div className="bg-stone-50 p-3 border border-stone-200">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">active</div>
-          <div className="font-mono text-2xl text-stone-900 mt-1">{summary.total}</div>
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">Active</div>
+          <div className="text-3xl font-bold text-neutral-900">{summary.total}</div>
         </div>
-        <div className="bg-stone-50 p-3 border border-stone-200">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">near close</div>
-          <div className="font-mono text-2xl text-emerald-700 mt-1">{summary.nearClose}</div>
+        <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">Near close</div>
+          <div className="text-3xl font-bold text-emerald-600">{summary.nearClose}</div>
         </div>
-        <div className="bg-stone-50 p-3 border border-stone-200">
-          <div className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">at risk</div>
-          <div className="font-mono text-2xl text-rose-700 mt-1">{summary.atRisk}</div>
+        <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">At risk</div>
+          <div className="text-3xl font-bold text-rose-500">{summary.atRisk}</div>
         </div>
       </div>
 
-      {/* Table header */}
-      <div className="grid grid-cols-12 gap-3 px-4 py-2 border-b border-stone-300 text-[10px] uppercase tracking-widest text-stone-500 font-mono">
-        <div className="col-span-4">prospect</div>
-        <div className="col-span-1">round</div>
-        <div className="col-span-5">scores · /5</div>
-        <div className="col-span-2 text-right">actions</div>
-      </div>
-
-      {(deals || []).length === 0 && (
-        <div className="py-16 text-center">
-          <p className="text-sm text-stone-500 font-serif italic mb-4">No deals yet.</p>
-          <Link href="/deals/new" className="text-xs uppercase tracking-widest font-mono text-stone-900 border border-stone-900 px-4 py-2 hover:bg-stone-900 hover:text-stone-50">
-            + start your first deal
-          </Link>
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+        {/* Table header */}
+        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50">
+          <div className="col-span-4 text-xs font-medium text-neutral-400 uppercase tracking-wide">Prospect</div>
+          <div className="col-span-1 text-xs font-medium text-neutral-400 uppercase tracking-wide">Round</div>
+          <div className="col-span-5 text-xs font-medium text-neutral-400 uppercase tracking-wide">Scores</div>
+          <div className="col-span-2 text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">Actions</div>
         </div>
-      )}
 
-      {(deals || []).map((deal: Deal) => {
-        const r = latestRound(deal.id)
-        return (
-          <div key={deal.id} className="grid grid-cols-12 gap-3 px-4 py-4 border-b border-stone-200 items-center hover:bg-stone-50">
-            <div className="col-span-4">
-              <EditableProspectName
-                dealId={deal.id}
-                name={deal.prospect_name}
-              />
-              {deal.contact_name && (
-                <div className="text-[11px] text-stone-500">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</div>
-              )}
+        {(deals || []).length === 0 && (
+          <div className="py-16 text-center">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">+</span>
             </div>
-            <div className="col-span-1 text-xs font-mono text-stone-500">R{deal.current_round}</div>
-            <div className="col-span-5 grid grid-cols-4 gap-3">
-              <ScoreCell round={r} layer={1} label="Opportunity" />
-              <ScoreCell round={r} layer={2} label="Winability" />
-              <ScoreCell round={r} layer={3} label="Impact" />
-              <ScoreCell round={r} layer={4} label="Momentum" />
-            </div>
-            <div className="col-span-2 text-right">
-              <Link href={`/deals/${deal.id}/dashboard`} className="text-[11px] uppercase tracking-widest font-mono text-stone-700 hover:text-stone-900">
-                open →
-              </Link>
-            </div>
+            <p className="text-sm text-neutral-500 mb-4">No deals yet.</p>
+            <Link href="/deals/new" className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all">
+              + Start your first deal
+            </Link>
           </div>
-        )
-      })}
+        )}
+
+        {(deals || []).map((deal: Deal) => {
+          const r = latestRound(deal.id)
+          return (
+            <div key={deal.id} className="grid grid-cols-12 gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors">
+              <div className="col-span-4">
+                <EditableProspectName
+                  dealId={deal.id}
+                  name={deal.prospect_name}
+                />
+                {deal.contact_name && (
+                  <div className="text-xs text-neutral-400 mt-0.5">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</div>
+                )}
+              </div>
+              <div className="col-span-1">
+                <span className="text-xs font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
+              </div>
+              <div className="col-span-5 grid grid-cols-4 gap-3">
+                <ScoreCell round={r} layer={1} label="Opp" />
+                <ScoreCell round={r} layer={2} label="Win" />
+                <ScoreCell round={r} layer={3} label="Imp" />
+                <ScoreCell round={r} layer={4} label="Mom" />
+              </div>
+              <div className="col-span-2 text-right">
+                <Link href={`/deals/${deal.id}/dashboard`} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
+                  Open →
+                </Link>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

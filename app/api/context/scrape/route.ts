@@ -69,11 +69,13 @@ ${rawText}`,
   }
 
   try {
-    const jsonMatch = content.text.match(/\{[\s\S]*\}/)
+    const cleaned = content.text.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '')
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('No JSON found')
     const extracted = JSON.parse(jsonMatch[0])
     return NextResponse.json({ extracted })
-  } catch {
+  } catch (e) {
+    console.error('AI response parse error:', e, 'Raw response:', content.text.slice(0, 500))
     return NextResponse.json({ error: 'Could not parse AI response' }, { status: 500 })
   }
 }

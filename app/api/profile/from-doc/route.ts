@@ -62,10 +62,12 @@ export async function POST(req: NextRequest) {
 
   const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
   try {
-    const match = responseText.match(/\{[\s\S]*\}/)
-    if (!match) throw new Error('No JSON')
+    const cleaned = responseText.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '')
+    const match = cleaned.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('No JSON found in response')
     return NextResponse.json({ dimensions: JSON.parse(match[0]) })
-  } catch {
+  } catch (e) {
+    console.error('AI response parse error:', e, 'Raw response:', responseText.slice(0, 500))
     return NextResponse.json({ error: 'Could not parse AI response' }, { status: 500 })
   }
 }
