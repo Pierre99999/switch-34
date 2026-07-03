@@ -6,15 +6,17 @@ import { LAYER_VARIABLES, LAYER_LABELS, type DealRound } from '@/lib/types'
 
 const client = new Anthropic()
 
-// Determine the active diagnostic layer — the first that is empty or at risk.
-// This drives the question sequence: L1 (Stay?) → L2 (Win?) → L3 (Impact?) → L4 (Momentum?)
+// Determine the active diagnostic layer — the first that is NOT solid.
+// A layer is solid when ALL its variables are scored AND the average >= 3.0.
+// This enforces sequential progression: L1 must be solid before L2 gets focus.
 function getActiveLayer(round: DealRound): number {
   for (const layer of [1, 2, 3, 4]) {
     const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
     const scores = vars.map(v => round[v as keyof DealRound] as number | null)
     const filled = scores.filter(s => s !== null) as number[]
-    if (filled.length === 0) return layer          // empty — work here first
-    if (Math.min(...filled) <= 2) return layer     // AT RISK — needs attention
+    if (filled.length < vars.length) return layer  // not all variables scored
+    const avg = filled.reduce((a, b) => a + b, 0) / filled.length
+    if (avg < 3.0) return layer                    // scored but weak
   }
   return 4 // all solid, stay on momentum
 }
