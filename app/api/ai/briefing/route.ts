@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 8192,
     system: `You are a senior sales coach generating a pre-conversation briefing based on the French diagnostic sales methodology from Pierre Gaubil's book "Pourquoi les meilleurs vendeurs ne vendent pas".
 
 The methodology has four sequential diagnostic layers — they must be built in order:

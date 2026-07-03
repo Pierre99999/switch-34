@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1536,
+    max_tokens: 4096,
     system: `You are a senior sales coach helping a salesperson know their own product deeply before any prospect conversation. Based on the vendor profile only, generate sharp, specific content for three generic preparation boxes that apply to any deal. Be concrete and direct — these are the salesperson's standing knowledge about what they sell, who it is for, and who needs to be in the room. 2-4 sentences per box. No prospect-specific language.`,
     tools: [
       {

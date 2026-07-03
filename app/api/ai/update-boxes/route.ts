@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 8192,
     system: `You are a sales intelligence engine updating a knowledge base after a prospect conversation.
 
 For COLLECTED boxes (perception, problems, stakeholders, human_pain, budget): extract from capture notes. Only include what was actually said or clearly observed.
