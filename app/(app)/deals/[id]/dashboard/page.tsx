@@ -262,27 +262,8 @@ export default function DealDashboardPage() {
     ])
     if (dealData) setDeal(dealData)
     if (roundData) {
-      const allScoreVars = Object.values(LAYER_VARIABLES).flat() as string[]
-      const latest = roundData[roundData.length - 1]
-      const prev = roundData.length >= 2 ? roundData[roundData.length - 2] : null
-      if (latest && prev) {
-        const latestHasScores = allScoreVars.some(v => latest[v as keyof DealRound] !== null)
-        const prevHasScores = allScoreVars.some(v => prev[v as keyof DealRound] !== null)
-        if (!latestHasScores && prevHasScores) {
-          const inherited: Record<string, unknown> = {}
-          for (const v of allScoreVars) {
-            const score = prev[v as keyof DealRound] as number | null
-            if (score !== null) inherited[v] = score
-          }
-          const prevEvidence = (prev.evidence_levels ?? {}) as Record<string, string>
-          if (Object.keys(prevEvidence).length > 0) inherited.evidence_levels = prevEvidence
-          await supabase.from('deal_rounds').update(inherited).eq('id', latest.id)
-          const { data: refreshed } = await supabase
-            .from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true })
-          if (refreshed) { setRounds(refreshed); setSelectedRound(refreshed[refreshed.length - 1].round); return }
-        }
-      }
       setRounds(roundData)
+      const latest = roundData[roundData.length - 1]
       if (latest) setSelectedRound(latest.round)
     }
   }, [dealId])
