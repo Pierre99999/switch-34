@@ -78,6 +78,16 @@ export default function CapturePage() {
     setSuggestingScores(true)
     setError(null)
     try {
+      // Save capture notes first
+      const merged = { ...notes, __free__: freeNote }
+      console.log('[capture] saving notes:', JSON.stringify(merged).slice(0, 500))
+      const supabase = createClient()
+      const { error: saveErr } = await supabase
+        .from('deal_rounds')
+        .update({ capture_notes: merged })
+        .eq('id', currentRoundData.id)
+      if (saveErr) throw new Error(saveErr.message)
+
       const res = await fetch('/api/ai/suggest-scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +103,6 @@ export default function CapturePage() {
         if (s.score !== null) scoreUpdate[variable] = s.score
         if (s.evidence) evidenceLevels[variable] = s.evidence
       }
-      const supabase = createClient()
       const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels }).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 

@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   // Check if any round has capture notes (not just the passed round)
   const hasCapture = (allRounds ?? []).some(r => {
     const notes = r.capture_notes as Record<string, string> | null
-    return notes && Object.values(notes).some(v => v?.trim())
+    return notes && Object.values(notes).some(v => typeof v === 'string' && v.trim())
   })
 
   const contextParts: string[] = []
@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
 
   // Always try to update built boxes from scores; skip collected if no capture
   const hasScores = Object.values(round).some(v => typeof v === 'number' && v > 0)
+
+  console.log('[update-boxes] hasCapture:', hasCapture, 'hasScores:', hasScores, 'round:', round.round, 'capture_notes:', JSON.stringify(round.capture_notes)?.slice(0, 500))
 
   if (!hasCapture && !hasScores) {
     return NextResponse.json({ ok: true, skipped: true, reason: 'no capture notes and no scores yet' })
@@ -89,6 +91,7 @@ Be concise: 1-3 sentences per entry. Return empty string "" only if there is tru
   }
 
   const input = toolUse.input as Record<string, string>
+  console.log('[update-boxes] AI returned keys:', Object.keys(input), 'non-empty:', Object.entries(input).filter(([,v]) => v?.trim()).map(([k]) => k))
 
   const BOX_MAP: Record<string, string> = {
     perception: 'perception',
