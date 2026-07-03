@@ -290,13 +290,13 @@ export default function CapturePage() {
 
       {/* Free-form note */}
       <div className="bg-white rounded-2xl border border-neutral-200 p-5 mb-8 shadow-sm">
-        <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">Other signals</div>
+        <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">Tout ce qui a été dit d'autre</div>
         {isLatestRound ? (
           <textarea
             value={freeNote}
             onChange={e => setFreeNote(e.target.value)}
-            placeholder="Tone shifts, unexpected topics, off-script moments, body language reads…"
-            rows={4}
+            placeholder="Tout ce que le prospect a dit en dehors des questions ci-dessus : objections, noms de personnes mentionnées, signaux sur le budget, le timing, la concurrence, la politique interne, les freins, les accélérateurs…"
+            rows={5}
             className={inputClass}
           />
         ) : (

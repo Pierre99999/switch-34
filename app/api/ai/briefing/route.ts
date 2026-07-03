@@ -46,10 +46,10 @@ export async function POST(req: NextRequest) {
   if (!deal || !round) return NextResponse.json({ error: 'Data not found' }, { status: 404 })
 
   const activeLayer = getActiveLayer(round as DealRound)
-  const nextLayer = Math.min(activeLayer + 1, 4)
   const gateDescription = LAYER_GATE[activeLayer]
   const activeLayerLabel = LAYER_LABELS[activeLayer]
-  const nextLayerLabel = LAYER_LABELS[nextLayer]
+  const opportunisticLayers = [2, 3, 4].filter(l => l > activeLayer)
+  const opportunisticDesc = opportunisticLayers.map(l => `L${l} (${LAYER_LABELS[l]})`).join(', ')
 
   const context = [
     vendor ? buildVendorContext(vendor) : '',
@@ -73,12 +73,12 @@ The ACTIVE LAYER for this round is Layer ${activeLayer} — ${activeLayerLabel}.
 Gate question: ${gateDescription}
 
 Question generation rules:
-- Generate exactly 3–4 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
-- Generate exactly 1 OPPORTUNISTIC question for Layer ${nextLayer} (${nextLayerLabel}). Only if the conversation naturally opens there.
-- Maximum 5 questions total. If you feel the urge to write more, cut the weakest ones.
+- Generate exactly 4 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
+- Generate exactly 2 OPPORTUNISTIC questions spread across higher layers (${opportunisticDesc}). Only if the conversation naturally opens there.
+- Maximum 6 questions total. If you feel the urge to write more, cut the weakest ones.
 - Each question has ONE main question (open, natural) and 2–3 sub-questions (probes to go deeper on the same thread).
 - The intent explains what the main question is trying to establish — one sentence, for the seller's eyes only.
-- Do NOT generate questions for layers above ${nextLayer}. They are premature until lower layers are solid.
+- Opportunistic questions can target ANY higher layer — if you sense an opening for L4 signals (internal momentum, objections, process drag), go for it.
 - Questions must sound like a human conversation, never a form or an interrogation.
 
 Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.`,
@@ -95,7 +95,7 @@ Be specific — reference actual prospect details, actual scores, actual capture
             win_condition: { type: 'string', description: `What would make this conversation a success for Layer ${activeLayer}. Be specific.` },
             questions: {
               type: 'array',
-              description: `3–4 pressing questions for Layer ${activeLayer}, then 1 opportunistic question for Layer ${nextLayer}. Maximum 5 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
+              description: `4 pressing questions for Layer ${activeLayer}, then 2 opportunistic questions across higher layers (${opportunisticDesc}). Maximum 6 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
               items: {
                 type: 'object',
                 properties: {
@@ -104,7 +104,7 @@ Be specific — reference actual prospect details, actual scores, actual capture
                   intent: { type: 'string', description: 'One sentence: what this question is trying to establish or diagnose. The seller reads this, not the prospect.' },
                   text: { type: 'string', description: 'The single main question to ask — open, conversational, non-leading.' },
                   sub_questions: { type: 'array', items: { type: 'string' }, description: '2–3 follow-up probes to use if the main question opens a thread. Short, natural, each targeting a deeper dimension of the same variable.' },
-                  priority: { type: 'string', enum: ['pressing', 'opportunistic'], description: `pressing = Layer ${activeLayer} (must ask this round), opportunistic = Layer ${nextLayer} (only if the door opens naturally)` },
+                  priority: { type: 'string', enum: ['pressing', 'opportunistic'], description: `pressing = Layer ${activeLayer} (must ask this round), opportunistic = any higher layer (only if the door opens naturally)` },
                 },
                 required: ['layer', 'variable', 'intent', 'text', 'sub_questions', 'priority'],
               },
