@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 4096,
     system: `You are a sales diagnostic engine. Based on what was said in the conversation capture notes, suggest updated scores (1-5) for the 20 diagnostic variables.
 
 EVIDENCE LEVELS — every score must include an evidence level that determines its maximum:
@@ -59,11 +59,12 @@ EVIDENCE LEVELS — every score must include an evidence level that determines i
 - "verified" (cap: 5/5) — backed by hard data: numbers on a slide, a shared document, a metric, a contract clause, an org chart. The prospect showed proof, not just words.
 
 RULES:
-- If a variable was not addressed, keep the previous score and evidence level.
+- ONLY score variables that were explicitly addressed in the capture notes. If a variable was NOT discussed, DO NOT include it in your response — omit it entirely.
 - A score CANNOT exceed its evidence cap. If you think the real score is 4 but the evidence is only "declared", score it 3.
 - Be skeptical of first-round claims. One person saying "we have budget" is declared (max 3), not verified.
 - Look at previous rounds' capture notes: if the same claim was made before AND confirmed again, upgrade to corroborated.
-- Only mark "verified" when the capture notes explicitly mention data, documents, or metrics being shared.`,
+- Only mark "verified" when the capture notes explicitly mention data, documents, or metrics being shared.
+- It is BETTER to leave a variable unscored than to guess. Only score what you have evidence for.`,
     tools: [
       {
         name: 'suggest_scores',
