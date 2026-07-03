@@ -73,9 +73,9 @@ The ACTIVE LAYER for this round is Layer ${activeLayer} — ${activeLayerLabel}.
 Gate question: ${gateDescription}
 
 Question generation rules:
-- Generate exactly 2–3 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
+- Generate exactly 3–4 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
 - Generate exactly 1 OPPORTUNISTIC question for Layer ${nextLayer} (${nextLayerLabel}). Only if the conversation naturally opens there.
-- Maximum 4 questions total. If you feel the urge to write more, cut the weakest ones.
+- Maximum 5 questions total. If you feel the urge to write more, cut the weakest ones.
 - Each question has ONE main question (open, natural) and 2–3 sub-questions (probes to go deeper on the same thread).
 - The intent explains what the main question is trying to establish — one sentence, for the seller's eyes only.
 - Do NOT generate questions for layers above ${nextLayer}. They are premature until lower layers are solid.
@@ -95,7 +95,7 @@ Be specific — reference actual prospect details, actual scores, actual capture
             win_condition: { type: 'string', description: `What would make this conversation a success for Layer ${activeLayer}. Be specific.` },
             questions: {
               type: 'array',
-              description: `2–3 pressing questions for Layer ${activeLayer}, then 1 opportunistic question for Layer ${nextLayer}. Maximum 4 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
+              description: `3–4 pressing questions for Layer ${activeLayer}, then 1 opportunistic question for Layer ${nextLayer}. Maximum 5 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
               items: {
                 type: 'object',
                 properties: {
