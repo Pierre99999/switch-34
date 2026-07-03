@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
+const apiKey = process.env.ANTHROPIC_API_KEY
+console.log('[from-url] API key prefix:', apiKey?.slice(0, 12), 'length:', apiKey?.length, 'ends:', apiKey?.slice(-4))
 const client = new Anthropic()
 
 function stripHtml(html: string): string {
