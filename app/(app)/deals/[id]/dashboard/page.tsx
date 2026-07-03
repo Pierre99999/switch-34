@@ -244,7 +244,7 @@ export default function DealDashboardPage() {
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [selectedRound, setSelectedRound] = useState<number>(0)
-  const [isEditing, setIsEditing] = useState(false)
+  const isEditing = false
   const [pending, setPending] = useState<Partial<DealRound>>({})
   const [pendingEvidence, setPendingEvidence] = useState<Record<string, EvidenceLevel>>({})
   const [saving, setSaving] = useState(false)
@@ -311,14 +311,7 @@ export default function DealDashboardPage() {
     await load()
     setPending({})
     setPendingEvidence({})
-    setIsEditing(false)
     setSaving(false)
-  }
-
-  function handleCancelEdit() {
-    setPending({})
-    setPendingEvidence({})
-    setIsEditing(false)
   }
 
   async function handleGenerateBriefing(roundId: string) {
@@ -441,7 +434,7 @@ export default function DealDashboardPage() {
       <RoundTimeline
         nodes={nodes}
         currentRound={selectedRound}
-        onSelect={r => { setSelectedRound(r); setPending({}); setPendingEvidence({}); setIsEditing(false) }}
+        onSelect={r => { setSelectedRound(r); setPending({}); setPendingEvidence({}) }}
       />
 
       {/* Historical notice */}
@@ -497,25 +490,13 @@ export default function DealDashboardPage() {
 
       {isLatestRound && roundState === 'SCORED' && (
         <div className="flex items-center gap-3 mb-6">
-          {!isEditing ? (
-            <>
-              <SecondaryButton onClick={() => setIsEditing(true)}>Edit scores</SecondaryButton>
-              <SecondaryButton onClick={handleGenerateNarrative} disabled={generatingNarrative}>
-                {generatingNarrative ? 'Generating…' : '✦ Narrative'}
-              </SecondaryButton>
-              <div className="flex-1" />
-              <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
-                {generatingBriefing ? 'Generating…' : `✦ Start round ${deal.current_round + 1} →`}
-              </PrimaryButton>
-            </>
-          ) : (
-            <>
-              <PrimaryButton onClick={handleSave} disabled={saving || !hasPending}>
-                {saving ? 'Saving…' : 'Save changes'}
-              </PrimaryButton>
-              <SecondaryButton onClick={handleCancelEdit} disabled={saving}>Cancel</SecondaryButton>
-            </>
-          )}
+          <SecondaryButton onClick={handleGenerateNarrative} disabled={generatingNarrative}>
+            {generatingNarrative ? 'Generating…' : '✦ Narrative'}
+          </SecondaryButton>
+          <div className="flex-1" />
+          <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
+            {generatingBriefing ? 'Generating…' : `✦ Start round ${deal.current_round + 1} →`}
+          </PrimaryButton>
           {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>
       )}
@@ -527,7 +508,7 @@ export default function DealDashboardPage() {
             key={layer}
             layer={layer}
             round={currentRoundData}
-            isEditing={isEditing && isLatestRound && roundState === 'SCORED'}
+            isEditing={false}
             pending={pending}
             pendingEvidence={pendingEvidence}
             onScore={handleScore}
