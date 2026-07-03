@@ -71,7 +71,6 @@ export default function BriefingPage() {
   const [selectedRound, setSelectedRound] = useState<number>(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [generatingBriefing, setGeneratingBriefing] = useState(false)
 
   const [line, setLine] = useState('')
   const [read, setRead] = useState('')
@@ -138,33 +137,6 @@ export default function BriefingPage() {
     setSaving(false)
   }
 
-  async function handleGenerateBriefing() {
-    if (!currentRoundData) return
-    setGeneratingBriefing(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/ai/briefing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'AI error')
-      const b = data.briefing
-      if (b.line) setLine(b.line)
-      if (b.read) setRead(b.read)
-      if (b.angle) setAngle(b.angle)
-      if (b.win_condition) setWinCondition(b.win_condition)
-      if (b.questions) setQuestions(b.questions)
-      if (b.mirror) setMirror(b.mirror)
-      if (b.objections) setObjections(b.objections)
-      if (b.do_not) setDoNot(b.do_not)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to generate briefing')
-    }
-    setGeneratingBriefing(false)
-  }
-
   // ── List helpers ──────────────────────────────────────────
 
   function addQuestion() {
@@ -194,9 +166,6 @@ export default function BriefingPage() {
   function updateDoNot(i: number, val: string) { setDoNot(d => d.map((item, idx) => idx === i ? val : item)) }
   function removeDoNot(i: number) { setDoNot(d => d.filter((_, idx) => idx !== i)) }
 
-  function addMirror() { setMirror(m => [...m, '']) }
-  function updateMirror(i: number, val: string) { setMirror(m => m.map((item, idx) => idx === i ? val : item)) }
-  function removeMirror(i: number) { setMirror(m => m.filter((_, idx) => idx !== i)) }
 
   function addObjection() { setObjections(o => [...o, { likely: '', frame: '' }]) }
   function updateObjection(i: number, field: 'likely' | 'frame', val: string) {
@@ -232,17 +201,7 @@ export default function BriefingPage() {
             Round {selectedRound === 0 ? '0 (initial)' : selectedRound}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {isLatestRound && (
-            <button
-              onClick={handleGenerateBriefing}
-              disabled={generatingBriefing}
-              className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
-            >
-              {generatingBriefing ? 'Generating…' : '✦ Generate briefing'}
-            </button>
-          )}
-        </div>
+        <div className="flex items-center gap-3" />
       </div>
 
       {/* Round timeline */}
@@ -426,29 +385,6 @@ export default function BriefingPage() {
           <button onClick={addQuestion} className="text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">
             + Add question
           </button>
-        )}
-      </Section>
-
-      {/* Mirror terms */}
-      <Section title="Mirror Vocabulary" subtitle="Prospect's words to echo" accent="bg-cyan-400" defaultOpen={false}>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {mirror.map((term, i) => (
-            isLatestRound ? (
-              <div key={i} className="flex items-center gap-1.5 bg-cyan-50 border border-cyan-200 px-3 py-1.5 rounded-full">
-                <input
-                  value={term}
-                  onChange={e => updateMirror(i, e.target.value)}
-                  className="text-sm text-cyan-700 w-28 focus:outline-none bg-transparent font-medium"
-                />
-                <button onClick={() => removeMirror(i)} className="text-cyan-300 hover:text-rose-500 text-xs transition-colors">✕</button>
-              </div>
-            ) : (
-              <span key={i} className="bg-cyan-50 border border-cyan-200 px-3 py-1.5 rounded-full text-sm text-cyan-700 font-medium">{term}</span>
-            )
-          ))}
-        </div>
-        {isLatestRound && (
-          <button onClick={addMirror} className="text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">+ Add term</button>
         )}
       </Section>
 

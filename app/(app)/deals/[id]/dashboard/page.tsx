@@ -463,17 +463,12 @@ export default function DealDashboardPage() {
           <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
             The engine will analyze your vendor profile and prospect context to generate a conversation plan.
           </p>
-          <div className="flex items-center justify-center gap-3">
-            <PrimaryButton
-              onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
-              disabled={generatingBriefing || !currentRoundData}
-            >
-              {generatingBriefing ? 'Generating…' : '✦ Generate briefing'}
-            </PrimaryButton>
-            <SecondaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>
-              Write manually
-            </SecondaryButton>
-          </div>
+          <PrimaryButton
+            onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
+            disabled={generatingBriefing || !currentRoundData}
+          >
+            {generatingBriefing ? 'Generating…' : '✦ Generate briefing'}
+          </PrimaryButton>
           {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
         </div>
       )}
