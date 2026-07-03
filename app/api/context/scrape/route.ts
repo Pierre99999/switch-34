@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
   const { url } = await req.json()
   if (!url) return NextResponse.json({ error: 'No URL provided' }, { status: 400 })
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  console.log('[scrape] API key starts with:', apiKey?.slice(0, 10), 'length:', apiKey?.length)
+  if (!apiKey) {
     return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
   }
 
