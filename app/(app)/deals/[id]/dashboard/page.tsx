@@ -4,9 +4,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
-  type Deal, type DealRound, type EvidenceLevel,
+  type Deal, type DealRound, type EvidenceLevel, type SourceAuthority,
   LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS,
   EVIDENCE_CAP, EVIDENCE_LABELS, EVIDENCE_DESCRIPTIONS,
+  AUTHORITY_LABELS,
   getLayerVerdict, getLayerAverage, capScore, weightedScore,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
@@ -28,10 +29,37 @@ const EVIDENCE_PILL: Record<EvidenceLevel, string> = {
   verified: 'text-emerald-700 bg-emerald-100',
 }
 
-function ScoreBar({ score, evidence }: { score: number | null; evidence?: EvidenceLevel }) {
+function VariableRow({ label, rationale, children }: { label: string; rationale?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div>
+      <div className="flex items-center gap-1.5">
+        <div className="text-sm text-neutral-700 font-medium">{label}</div>
+        {rationale && (
+          <button onClick={() => setOpen(o => !o)} className="text-neutral-400 hover:text-neutral-600 transition-colors">
+            <svg className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+          </button>
+        )}
+      </div>
+      {children}
+      {open && rationale && (
+        <p className="text-xs text-neutral-500 mt-1.5 pl-0.5 leading-relaxed">{rationale}</p>
+      )}
+    </div>
+  )
+}
+
+const AUTHORITY_PILL: Record<SourceAuthority, string> = {
+  decision_maker: 'text-purple-700 bg-purple-100',
+  influencer: 'text-indigo-700 bg-indigo-100',
+  end_user: 'text-neutral-600 bg-neutral-100',
+}
+
+function ScoreBar({ score, evidence, authority }: { score: number | null; evidence?: EvidenceLevel; authority?: SourceAuthority }) {
   if (score === null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
   const ev = evidence ?? 'declared'
-  const effective = weightedScore(score, ev)
+  const auth = authority ?? 'end_user'
+  const effective = weightedScore(score, ev, auth)
   const pct = (effective / 5) * 100
   const barColor = effective <= 2 ? 'bg-rose-500' : effective <= 3 ? 'bg-amber-400' : 'bg-emerald-500'
   return (
@@ -42,11 +70,18 @@ function ScoreBar({ score, evidence }: { score: number | null; evidence?: Eviden
         </div>
         <span className="text-xs font-semibold text-neutral-700 w-8 text-right">{effective.toFixed(1)}/5</span>
       </div>
-      {evidence && (
-        <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${EVIDENCE_PILL[evidence]}`}>
-          {EVIDENCE_LABELS[evidence]}
-        </span>
-      )}
+      <div className="flex gap-1.5">
+        {evidence && (
+          <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${EVIDENCE_PILL[evidence]}`}>
+            {EVIDENCE_LABELS[evidence]}
+          </span>
+        )}
+        {authority && authority !== 'end_user' && (
+          <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${AUTHORITY_PILL[authority]}`}>
+            {AUTHORITY_LABELS[authority]}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -193,10 +228,12 @@ function LayerCard({
           const field = v as keyof DealRound
           const currentValue = (pending[field] !== undefined ? pending[field] : round?.[field]) as number | null
           const evidenceLevels = round?.evidence_levels ?? {}
+          const authorityLevels = (round?.authority_levels ?? {}) as Record<string, SourceAuthority>
           const currentEvidence: EvidenceLevel = pendingEvidence[v] ?? evidenceLevels[v] ?? 'declared'
+          const currentAuthority: SourceAuthority = authorityLevels[v] ?? 'end_user'
+          const rationale = (round?.rationales ?? {})[v] as string | undefined
           return (
-            <div key={v}>
-              <div className="text-sm text-neutral-700 font-medium">{VARIABLE_LABELS[v]}</div>
+            <VariableRow key={v} label={VARIABLE_LABELS[v]} rationale={rationale}>
               {isEditing ? (
                 <ScorePicker
                   value={currentValue}
@@ -206,9 +243,9 @@ function LayerCard({
                   disabled={false}
                 />
               ) : (
-                <ScoreBar score={currentValue} evidence={currentEvidence} />
+                <ScoreBar score={currentValue} evidence={currentEvidence} authority={currentAuthority} />
               )}
-            </div>
+            </VariableRow>
           )
         })}
       </div>

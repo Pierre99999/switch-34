@@ -199,6 +199,7 @@ export type DealRound = {
   briefing_objections: BriefingObjection[]
   briefing_win_condition: string | null
   evidence_levels: Record<string, EvidenceLevel>
+  authority_levels: Record<string, SourceAuthority>
   created_at: string
   updated_at: string
 }
@@ -262,6 +263,7 @@ export type MirrorTerm = {
 // ============================================================
 
 export type EvidenceLevel = 'declared' | 'corroborated' | 'verified'
+export type SourceAuthority = 'decision_maker' | 'influencer' | 'end_user'
 
 export const EVIDENCE_CAP: Record<EvidenceLevel, number> = {
   declared: 3,
@@ -287,12 +289,24 @@ export const EVIDENCE_WEIGHT: Record<EvidenceLevel, number> = {
   verified: 1.0,
 }
 
+export const AUTHORITY_WEIGHT: Record<SourceAuthority, number> = {
+  decision_maker: 1.0,
+  influencer: 0.85,
+  end_user: 0.7,
+}
+
+export const AUTHORITY_LABELS: Record<SourceAuthority, string> = {
+  decision_maker: 'Decision Maker',
+  influencer: 'Influencer',
+  end_user: 'End User',
+}
+
 export function capScore(score: number, evidence: EvidenceLevel): number {
   return Math.min(score, EVIDENCE_CAP[evidence])
 }
 
-export function weightedScore(score: number, evidence: EvidenceLevel): number {
-  return Math.min(score, EVIDENCE_CAP[evidence]) * EVIDENCE_WEIGHT[evidence]
+export function weightedScore(score: number, evidence: EvidenceLevel, authority: SourceAuthority = 'end_user'): number {
+  return Math.min(score, EVIDENCE_CAP[evidence]) * EVIDENCE_WEIGHT[evidence] * AUTHORITY_WEIGHT[authority]
 }
 
 // ============================================================
@@ -342,15 +356,17 @@ export function getLayerAverage(round: DealRound | null, layer: number): number 
   if (!round) return null
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
   const evidenceLevels = (round.evidence_levels ?? {}) as Record<string, EvidenceLevel>
+  const authorityLevels = (round.authority_levels ?? {}) as Record<string, SourceAuthority>
   const weighted: number[] = []
   for (const v of vars) {
     const raw = round[v as keyof DealRound] as number | null
     if (raw === null) continue
     const ev: EvidenceLevel = evidenceLevels[v] ?? 'declared'
-    weighted.push(weightedScore(raw, ev))
+    const auth: SourceAuthority = authorityLevels[v] ?? 'end_user'
+    weighted.push(weightedScore(raw, ev, auth))
   }
   if (weighted.length === 0) return null
-  return weighted.reduce((a, b) => a + b, 0) / weighted.length
+  return weighted.reduce((a, b) => a + b, 0) / vars.length
 }
 
 export function getLayerVerdict(round: DealRound | null, layer: number): LayerVerdict {

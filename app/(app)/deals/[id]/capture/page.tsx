@@ -96,14 +96,18 @@ export default function CapturePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
 
-      const suggestions: Record<string, { score: number; evidence: string; rationale: string }> = data.suggestions
+      const suggestions: Record<string, { score: number; evidence: string; authority: string; rationale: string }> = data.suggestions
       const scoreUpdate: Record<string, number> = {}
       const evidenceLevels: Record<string, string> = { ...(currentRoundData.evidence_levels ?? {}) }
+      const authorityLevels: Record<string, string> = { ...((currentRoundData as Record<string, unknown>).authority_levels as Record<string, string> ?? {}) }
+      const rationales: Record<string, string> = { ...(currentRoundData.rationales ?? {}) }
       for (const [variable, s] of Object.entries(suggestions)) {
         if (s.score !== null) scoreUpdate[variable] = s.score
         if (s.evidence) evidenceLevels[variable] = s.evidence
+        if (s.authority) authorityLevels[variable] = s.authority
+        if (s.rationale) rationales[variable] = s.rationale
       }
-      const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels }).eq('id', currentRoundData.id)
+      const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels, authority_levels: authorityLevels, rationales }).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 
       fetch('/api/ai/update-boxes', {

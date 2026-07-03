@@ -66,6 +66,8 @@ create table deal_rounds (
   external_friction integer check (external_friction between 1 and 5),
   -- Evidence levels per variable
   evidence_levels jsonb default '{}',
+  -- Source authority levels per variable
+  authority_levels jsonb default '{}',
   -- Rationales (free text per variable)
   rationales jsonb default '{}',
   -- Engine narrative
