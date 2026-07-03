@@ -23,6 +23,18 @@ export async function POST(req: NextRequest) {
 
   if (!deal || !round || !vendor) return NextResponse.json({ error: 'Data not found' }, { status: 404 })
 
+  // Determine which variables were actually discussed based on capture notes
+  const captureNotes = (round.capture_notes ?? {}) as Record<string, string>
+  const briefingQuestions = (round.briefing_questions ?? []) as Array<{ variable: string; text: string }>
+  const answeredVariables = new Set<string>()
+  for (const q of briefingQuestions) {
+    const noteKey = q.text
+    if (noteKey && captureNotes[noteKey]?.trim()) {
+      if (q.variable) answeredVariables.add(q.variable)
+    }
+  }
+  const hasFreeNotes = !!captureNotes.__free__?.trim()
+
   // Build all variable names for the schema
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
 
@@ -88,10 +100,12 @@ RULES:
     return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
   }
 
-  // Apply evidence caps to all suggested scores
+  // Apply evidence caps and filter to only variables with actual capture evidence
   const raw = toolUse.input as Record<string, { score: number; evidence: EvidenceLevel; rationale: string }>
   const capped: Record<string, { score: number; evidence: EvidenceLevel; rationale: string }> = {}
   for (const [variable, suggestion] of Object.entries(raw)) {
+    // Only keep scores for variables that were actually discussed in capture
+    if (!hasFreeNotes && answeredVariables.size > 0 && !answeredVariables.has(variable)) continue
     const ev = suggestion.evidence ?? 'declared'
     const cap = EVIDENCE_CAP[ev] ?? 3
     capped[variable] = {
