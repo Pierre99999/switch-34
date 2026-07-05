@@ -39,22 +39,47 @@ export async function POST(req: NextRequest) {
   // Always try to update built boxes from scores; skip collected if no capture
   const hasScores = Object.values(round).some(v => typeof v === 'number' && v > 0)
 
-  console.log('[update-boxes] hasCapture:', hasCapture, 'hasScores:', hasScores, 'round:', round.round, 'capture_notes:', JSON.stringify(round.capture_notes)?.slice(0, 500))
-
   if (!hasCapture && !hasScores) {
     return NextResponse.json({ ok: true, skipped: true, reason: 'no capture notes and no scores yet' })
   }
+
+  const BOX_MAP: Record<string, string> = {
+    perception: 'perception',
+    problems: 'problems',
+    stakeholders: 'stakeholders',
+    human_pain: 'human-pain',
+    budget: 'budget',
+    buy_reason: 'buy-reason',
+    implementation: 'implementation',
+    urgency: 'urgency',
+    value: 'value',
+    timing: 'timing',
+    forces: 'forces',
+  }
+
+  // Build summary of existing box entries to pass to AI
+  const existingBoxSummary = Object.entries(BOX_MAP).map(([toolKey, boxId]) => {
+    const entries = (existingBoxes ?? []).find(b => b.box_id === boxId)?.entries as { round: number; text: string }[] | undefined
+    if (!entries?.length) return null
+    const lines = entries.map(e => `  R${e.round}: ${e.text}`).join('\n')
+    return `${toolKey}:\n${lines}`
+  }).filter(Boolean).join('\n\n')
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
     system: `You are a sales intelligence engine updating a knowledge base after a prospect conversation.
 
-For COLLECTED boxes (perception, problems, stakeholders, human_pain, budget): extract from capture notes. Only include what was actually said or clearly observed.
+CRITICAL RULE: Only write what is NEW in this round. Do NOT repeat, rephrase, or summarize information that already exists in previous entries. Each entry should add incremental value — a new fact, a changed signal, or a deeper understanding that wasn't there before. If nothing new emerged for a box in this round, return "" for it.
 
-For BUILT boxes (buy_reason, implementation, urgency, value, timing, forces): synthesize from scores + all context. These are your analytical output — reason from what you know about the deal. Even without capture notes, use scores and prospect context to produce something useful.
+Here is what already exists in the knowledge base:
+${existingBoxSummary || '(empty — first round)'}
 
-Be concise: 1-3 sentences per entry. Return empty string "" only if there is truly nothing to say. Do not hallucinate specific facts not in the context.`,
+For COLLECTED boxes (perception, problems, stakeholders, human_pain, budget): extract ONLY new information from this round's capture notes that wasn't captured before.
+
+For BUILT boxes (buy_reason, implementation, urgency, value, timing, forces): synthesize ONLY new analytical insights from this round's scores and context. If your analysis hasn't changed from previous rounds, return "".
+
+Be concise: 1-2 sentences per entry. Return "" if nothing new to add. Do not hallucinate specific facts not in the context.`,
     tools: [
       {
         name: 'update_boxes',
@@ -91,22 +116,6 @@ Be concise: 1-3 sentences per entry. Return empty string "" only if there is tru
   }
 
   const input = toolUse.input as Record<string, string>
-  console.log('[update-boxes] AI returned keys:', Object.keys(input), 'non-empty:', Object.entries(input).filter(([,v]) => v?.trim()).map(([k]) => k))
-
-  const BOX_MAP: Record<string, string> = {
-    perception: 'perception',
-    problems: 'problems',
-    stakeholders: 'stakeholders',
-    human_pain: 'human-pain',
-    budget: 'budget',
-    buy_reason: 'buy-reason',
-    implementation: 'implementation',
-    urgency: 'urgency',
-    value: 'value',
-    timing: 'timing',
-    forces: 'forces',
-  }
-
   // Build existing entries map
   const existingMap: Record<string, { round: number; text: string }[]> = {}
   for (const row of existingBoxes ?? []) {

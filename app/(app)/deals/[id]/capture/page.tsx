@@ -80,7 +80,6 @@ export default function CapturePage() {
     try {
       // Save capture notes first
       const merged = { ...notes, __free__: freeNote }
-      console.log('[capture] saving notes:', JSON.stringify(merged).slice(0, 500))
       const supabase = createClient()
       const { error: saveErr } = await supabase
         .from('deal_rounds')
