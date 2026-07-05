@@ -204,7 +204,7 @@ export default function CapturePage() {
                 <div className="bg-neutral-50 px-5 py-3 border-b border-neutral-100">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="w-2 h-2 rounded-full bg-neutral-800" />
-                    <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">L{q.layer} · {q.variable} · pressing</span>
+                    <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">L{q.layer} · {t(('var.' + q.variable) as any) || q.variable} · {t('briefing.pressing')}</span>
                   </div>
                   {q.intent && <p className="text-xs text-amber-700 italic bg-amber-50 px-2.5 py-1 rounded-lg inline-block mt-1">→ {q.intent}</p>}
                   <p className="text-sm text-neutral-800 font-medium mt-2">"{q.text}"</p>
@@ -248,7 +248,7 @@ export default function CapturePage() {
                 return (
                   <div key={`opp-${i}`} className="bg-white rounded-2xl border border-dashed border-neutral-200 overflow-hidden">
                     <div className="bg-neutral-50/50 px-5 py-3 border-b border-neutral-100">
-                      <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">L{q.layer} · {q.variable}</span>
+                      <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">L{q.layer} · {t(('var.' + q.variable) as any) || q.variable}</span>
                       {q.intent && <p className="text-xs text-amber-600 italic mt-1">→ {q.intent}</p>}
                       <p className="text-sm text-neutral-600 mt-2">"{q.text}"</p>
                       {(q.sub_questions ?? []).length > 0 && (
