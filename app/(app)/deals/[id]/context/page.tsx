@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type Stakeholder, type ProspectDimensions, EMPTY_PROSPECT_DIMENSIONS } from '@/lib/types'
+import { useI18n } from '@/lib/i18n/context'
 
 // ── Prospect dimension definitions ───────────────────────────
 
@@ -151,6 +152,7 @@ function DimensionSection({
 // ── Page ─────────────────────────────────────────────────────
 
 export default function AccountContextPage() {
+  const { t } = useI18n()
   const params = useParams()
   const router = useRouter()
   const dealId = params.id as string
@@ -303,7 +305,7 @@ export default function AccountContextPage() {
     await load()
   }
 
-  if (!deal) return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">Loading...</div>
+  if (!deal) return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">{t('common.loading')}</div>
 
   const totalFilled = DIMENSIONS.reduce((acc, d) => acc + filledCount(dims[d.key] as Record<string, string>), 0)
   const totalQ = DIMENSIONS.reduce((acc, d) => acc + d.questions.length, 0)
@@ -315,10 +317,10 @@ export default function AccountContextPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
-            ← Back to pipeline
+            {t('capture.backToPipeline')}
           </button>
           <h1 className="text-2xl font-bold text-neutral-900">
-            Account context · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
+            {t('context.title')} · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
           </h1>
         </div>
         <div className="text-right">

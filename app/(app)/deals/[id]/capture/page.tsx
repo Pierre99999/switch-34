@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type DealRound, type BriefingQuestion } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
+import { useI18n } from '@/lib/i18n/context'
 
 export default function CapturePage() {
   const params = useParams()
   const router = useRouter()
+  const { t, locale } = useI18n()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
@@ -137,7 +139,7 @@ export default function CapturePage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
-            ← Back to pipeline
+            {t('capture.backToPipeline')}
           </button>
           <h1 className="text-2xl font-bold text-neutral-900">
             Capture · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
@@ -154,7 +156,7 @@ export default function CapturePage() {
       {/* Historical notice */}
       {!isLatestRound && (
         <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
-          Viewing historical capture — read only
+          {t('capture.historical')}
         </div>
       )}
 
@@ -164,15 +166,15 @@ export default function CapturePage() {
           <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">📋</span>
           </div>
-          <h3 className="text-lg font-semibold text-neutral-800 mb-1">Briefing required</h3>
+          <h3 className="text-lg font-semibold text-neutral-800 mb-1">{t('capture.briefingRequired')}</h3>
           <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
-            Generate a briefing before capturing this conversation. The briefing structures what to look for.
+            {t('capture.briefingRequiredDesc')}
           </p>
           <button
             onClick={() => router.push(`/deals/${dealId}/dashboard`)}
             className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
           >
-            → Go to dashboard
+            {t('capture.goToDashboard')}
           </button>
         </div>
       )}
@@ -182,10 +184,10 @@ export default function CapturePage() {
         <div className="bg-violet-50 border border-violet-200 rounded-2xl px-5 py-4 mb-6">
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-violet-400" />
-            <span className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Log conversation</span>
+            <span className="text-xs font-semibold text-violet-600 uppercase tracking-wide">{t('capture.logConversation')}</span>
           </div>
           <p className="text-sm text-violet-700">
-            Type what was actually said, in the prospect's words. Skip what didn't come up. Don't reframe — log it raw.
+            {t('capture.logInstruction')}
           </p>
         </div>
       )}
@@ -219,13 +221,13 @@ export default function CapturePage() {
                     <textarea
                       value={val}
                       onChange={e => setNote(key, e.target.value)}
-                      placeholder="What did they say? Skip if it didn't come up."
+                      placeholder={t('capture.pressingPlaceholder')}
                       rows={3}
                       className={inputClass}
                     />
                   ) : (
                     <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-700 whitespace-pre-wrap min-h-[3rem]">
-                      {val || <span className="text-neutral-300">Nothing captured</span>}
+                      {val || <span className="text-neutral-300">{t('capture.nothingCaptured')}</span>}
                     </div>
                   )}
                 </div>
@@ -238,7 +240,7 @@ export default function CapturePage() {
             <>
               <div className="flex items-center gap-2 pt-2">
                 <span className="w-2 h-2 rounded-full border-2 border-neutral-300" />
-                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Opportunistic — capture if it came up</span>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('briefing.opportunisticCapture')}</span>
               </div>
               {questions.filter(q => q.priority === 'opportunistic').map((q, i) => {
                 const key = q.variable || `opp-${i}`
@@ -262,13 +264,13 @@ export default function CapturePage() {
                         <textarea
                           value={val}
                           onChange={e => setNote(key, e.target.value)}
-                          placeholder="Only if it came up naturally."
+                          placeholder={t('capture.opportunisticPlaceholder')}
                           rows={2}
                           className={inputClass}
                         />
                       ) : (
                         <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-600 whitespace-pre-wrap min-h-[2.5rem]">
-                          {val || <span className="text-neutral-300">Nothing captured</span>}
+                          {val || <span className="text-neutral-300">{t('capture.nothingCaptured')}</span>}
                         </div>
                       )}
                     </div>
@@ -280,25 +282,23 @@ export default function CapturePage() {
         </div>
       ) : (
         <div className="mb-8 bg-white rounded-2xl border border-dashed border-neutral-200 p-8 text-center">
-          <p className="text-sm text-neutral-400 font-medium">No briefing questions yet</p>
+          <p className="text-sm text-neutral-400 font-medium">{t('capture.noBriefingQuestions')}</p>
           <p className="text-xs text-neutral-400 mt-1">
-            Add field questions in the{' '}
             <button onClick={() => router.push(`/deals/${dealId}/briefing`)} className="text-blue-500 hover:text-blue-600 underline">
-              briefing tab
-            </button>{' '}
-            first.
+              {t('nav.briefing')}
+            </button>
           </p>
         </div>
       )}
 
       {/* Free-form note */}
       <div className="bg-white rounded-2xl border border-neutral-200 p-5 mb-8 shadow-sm">
-        <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">Tout ce qui a été dit d'autre</div>
+        <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">{t('capture.freeNote')}</div>
         {isLatestRound ? (
           <textarea
             value={freeNote}
             onChange={e => setFreeNote(e.target.value)}
-            placeholder="Tout ce que le prospect a dit en dehors des questions ci-dessus : objections, noms de personnes mentionnées, signaux sur le budget, le timing, la concurrence, la politique interne, les freins, les accélérateurs…"
+            placeholder={t('capture.freeNotePlaceholder')}
             rows={5}
             className={inputClass}
           />
@@ -319,14 +319,14 @@ export default function CapturePage() {
             disabled={saving || suggestingScores}
             className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
           >
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('capture.saving') : t('capture.save')}
           </button>
           <button
             onClick={handleAnalyze}
             disabled={suggestingScores || saving}
             className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
           >
-            {suggestingScores ? 'Analyzing…' : '✦ Analyze → Dashboard'}
+            {suggestingScores ? t('capture.analyzing') : t('capture.analyze')}
           </button>
           {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>

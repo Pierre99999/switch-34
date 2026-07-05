@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useI18n } from '@/lib/i18n/context'
 import { type Deal, type DealRound, type DealBox, type BoxEntry } from '@/lib/types'
 
 // ── Box definitions (fixed methodology) ─────────────────────
@@ -62,6 +63,7 @@ function BoxCard({
   onDelete: (index: number) => Promise<void>
   rounds: DealRound[]
 }) {
+  const { t } = useI18n()
   const ts = TYPE_STYLE[box.type]
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
@@ -105,7 +107,7 @@ function BoxCard({
         <p className="text-xs text-neutral-400 mb-3 leading-snug">{box.description}</p>
 
         {entries.length === 0 ? (
-          <div className="text-xs text-neutral-300 mb-3">No entries yet</div>
+          <div className="text-xs text-neutral-300 mb-3">{t('boxes.empty')}</div>
         ) : (
           <div className="space-y-2 mb-3">
             {entries.map((entry, i) => (
@@ -208,6 +210,7 @@ function BoxCard({
 export default function BoxesPage() {
   const params = useParams()
   const router = useRouter()
+  const { t } = useI18n()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
@@ -308,7 +311,7 @@ export default function BoxesPage() {
   }
 
   if (!deal) {
-    return <div className="max-w-6xl mx-auto py-12 px-6 text-sm text-neutral-400">Loading...</div>
+    return <div className="max-w-6xl mx-auto py-12 px-6 text-sm text-neutral-400">{t('common.loading')}</div>
   }
 
   const totalFilled = BOXES.filter(b => (boxData[b.id] ?? []).length > 0).length
@@ -319,9 +322,9 @@ export default function BoxesPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
-            ← Back to pipeline
+            {t('capture.backToPipeline')}
           </button>
-          <h1 className="text-2xl font-bold text-neutral-900">Knowledge boxes</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('boxes.title')}</h1>
         </div>
         <div className="text-right">
           <div className="text-xs font-medium text-neutral-400 mb-1">{deal.prospect_name}</div>

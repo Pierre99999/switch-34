@@ -4,10 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useI18n } from '@/lib/i18n/context'
 
 export default function NavBar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { t, locale, setLocale } = useI18n()
 
   const dealMatch = pathname.match(/\/deals\/([^/]+)/)
   const dealId = dealMatch?.[1]
@@ -65,26 +67,34 @@ export default function NavBar() {
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
         <div className="flex items-center gap-1">
           <span className="text-lg font-bold text-blue-500 mr-4 tracking-tight">Switch</span>
-          {tab('Pipeline', '/pipeline', pathname === '/pipeline')}
-          {tab('My Profile', '/profile', pathname === '/profile')}
+          {tab(t('nav.pipeline'), '/pipeline', pathname === '/pipeline')}
+          {tab(t('nav.profile'), '/profile', pathname === '/profile')}
           {dealId && (
             <>
               <div className="w-px h-5 bg-neutral-200 mx-2" />
-              {dealTab('Dashboard', 'dashboard', 'bg-neutral-800')}
-              {dealTab('Briefing', 'briefing', 'bg-orange-500')}
-              {dealTab('Capture', 'capture', 'bg-violet-500')}
+              {dealTab(t('nav.dashboard'), 'dashboard', 'bg-neutral-800')}
+              {dealTab(t('nav.briefing'), 'briefing', 'bg-orange-500')}
+              {dealTab(t('nav.capture'), 'capture', 'bg-violet-500')}
               <div className="w-px h-5 bg-neutral-200 mx-2" />
-              {dealTab('Context', 'context', 'bg-cyan-600')}
-              {dealTab('Boxes', 'boxes', 'bg-emerald-600')}
+              {dealTab(t('nav.context'), 'context', 'bg-cyan-600')}
+              {dealTab(t('nav.boxes'), 'boxes', 'bg-emerald-600')}
             </>
           )}
         </div>
-        <button
-          onClick={handleSignOut}
-          className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')}
+            className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 transition-colors uppercase tracking-wide"
+          >
+            {locale === 'fr' ? 'EN' : 'FR'}
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
+          >
+            {t('nav.signOut')}
+          </button>
+        </div>
       </div>
     </nav>
   )

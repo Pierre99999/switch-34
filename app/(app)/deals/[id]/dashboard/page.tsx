@@ -11,6 +11,7 @@ import {
   getLayerVerdict, getLayerAverage, capScore, weightedScore,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
+import { useI18n } from '@/lib/i18n/context'
 
 // ── Layer color system ──────────────────────────────────────
 
@@ -268,6 +269,7 @@ function SecondaryButton({ onClick, disabled, children }: { onClick: () => void;
 export default function DealDashboardPage() {
   const params = useParams()
   const router = useRouter()
+  const { t, locale } = useI18n()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
@@ -427,13 +429,13 @@ export default function DealDashboardPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
-            ← Back to pipeline
+            {t('dashboard.backToPipeline')}
           </button>
           <h1 className="text-2xl font-bold text-neutral-900">{deal.prospect_name}</h1>
           {deal.contact_name && <p className="text-sm text-neutral-500 mt-0.5">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</p>}
         </div>
         <div className="text-right">
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">Round</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('dashboard.round')}</div>
           <div className="text-3xl font-bold text-neutral-900 leading-none">
             {selectedRound === 0 ? '0' : selectedRound}
           </div>
@@ -450,7 +452,7 @@ export default function DealDashboardPage() {
       {/* Historical notice */}
       {!isLatestRound && (
         <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
-          Viewing historical round — scores are read-only
+          {locale === 'fr' ? 'Round historique — lecture seule' : 'Viewing historical round — scores are read-only'}
         </div>
       )}
 
@@ -461,16 +463,16 @@ export default function DealDashboardPage() {
             <span className="text-2xl">✦</span>
           </div>
           <h3 className="text-lg font-semibold text-neutral-800 mb-1">
-            Prepare your briefing
+            {locale === 'fr' ? 'Préparez votre briefing' : 'Prepare your briefing'}
           </h3>
           <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
-            The engine will analyze your vendor profile and prospect context to generate a conversation plan.
+            {locale === 'fr' ? 'Le moteur analysera votre profil vendeur et le contexte prospect pour générer un plan de conversation.' : 'The engine will analyze your vendor profile and prospect context to generate a conversation plan.'}
           </p>
           <PrimaryButton
             onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
             disabled={generatingBriefing || !currentRoundData}
           >
-            {generatingBriefing ? 'Generating…' : '✦ Generate briefing'}
+            {generatingBriefing ? t('dashboard.generating') : locale === 'fr' ? '✦ Générer le briefing' : '✦ Generate briefing'}
           </PrimaryButton>
           {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
         </div>
@@ -481,10 +483,10 @@ export default function DealDashboardPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Briefing ready</span>
+              <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">{locale === 'fr' ? 'Briefing prêt' : 'Briefing ready'}</span>
             </div>
             <p className="text-sm text-neutral-600">
-              Go into the conversation, then capture the responses.
+              {locale === 'fr' ? 'Allez en conversation, puis capturez les réponses.' : 'Go into the conversation, then capture the responses.'}
             </p>
           </div>
           <div className="flex gap-3 flex-shrink-0 ml-6">
@@ -501,11 +503,11 @@ export default function DealDashboardPage() {
       {isLatestRound && roundState === 'SCORED' && (
         <div className="flex items-center gap-3 mb-6">
           <SecondaryButton onClick={handleGenerateNarrative} disabled={generatingNarrative}>
-            {generatingNarrative ? 'Generating…' : '✦ Narrative'}
+            {generatingNarrative ? t('dashboard.generating') : '✦ Narrative'}
           </SecondaryButton>
           <div className="flex-1" />
           <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
-            {generatingBriefing ? 'Generating…' : `✦ Start round ${deal.current_round + 1} →`}
+            {generatingBriefing ? t('dashboard.generating') : locale === 'fr' ? `✦ Démarrer round ${deal.current_round + 1} →` : `✦ Start round ${deal.current_round + 1} →`}
           </PrimaryButton>
           {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>
@@ -532,7 +534,7 @@ export default function DealDashboardPage() {
         <div className="mt-8 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-sm">✦</span>
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Engine narrative</span>
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('dashboard.engineNarrative')}</span>
           </div>
           <p className="text-sm text-neutral-700 leading-relaxed">{currentRoundData.narrative}</p>
         </div>

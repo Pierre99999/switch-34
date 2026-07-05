@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useI18n } from '@/lib/i18n/context'
 import {
   type Deal, type DealRound, type BriefingQuestion, type BriefingObjection,
   LAYER_LABELS, getLayerVerdict,
@@ -65,6 +66,7 @@ export default function BriefingPage() {
   const params = useParams()
   const router = useRouter()
   const dealId = params.id as string
+  const { t } = useI18n()
 
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
@@ -192,7 +194,7 @@ export default function BriefingPage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
-            ← Back to pipeline
+            {t('capture.backToPipeline')}
           </button>
           <h1 className="text-2xl font-bold text-neutral-900">
             Briefing · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
@@ -210,13 +212,13 @@ export default function BriefingPage() {
       {/* Historical notice */}
       {!isLatestRound && (
         <div className="mb-5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
-          Viewing historical briefing — read only
+          {t('capture.historical')}
         </div>
       )}
 
       {/* The Line */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 mb-5 text-white shadow-lg shadow-blue-500/20">
-        <div className="text-xs font-semibold uppercase tracking-wide text-blue-200 mb-3">The Line</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-blue-200 mb-3">{t('briefing.theLine')}</div>
         {isLatestRound ? (
           <textarea
             value={line}
@@ -236,7 +238,7 @@ export default function BriefingPage() {
       </div>
 
       {/* The Read */}
-      <Section title="The Read" subtitle="Where the deal stands" accent="bg-neutral-400" defaultOpen={true}>
+      <Section title={t('briefing.theRead')} subtitle="Where the deal stands" accent="bg-neutral-400" defaultOpen={true}>
         {isLatestRound ? (
           <textarea
             value={read}
@@ -251,7 +253,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* The Angle */}
-      <Section title="The Angle" subtitle="What needs to be accomplished" accent="bg-orange-400" defaultOpen={false}>
+      <Section title={t('briefing.theAngle')} subtitle="What needs to be accomplished" accent="bg-orange-400" defaultOpen={false}>
         {isLatestRound ? (
           <textarea
             value={angle}
@@ -266,7 +268,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Field Questions */}
-      <Section title="Field Questions" subtitle="Sequential by diagnostic layer" accent="bg-violet-400" defaultOpen={false}>
+      <Section title={t('briefing.fieldQuestions')} subtitle="Sequential by diagnostic layer" accent="bg-violet-400" defaultOpen={false}>
         {/* Pressing */}
         {questions.filter(q => q.priority !== 'opportunistic').length > 0 && (
           <div className="mb-6">
@@ -330,7 +332,7 @@ export default function BriefingPage() {
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-2 h-2 rounded-full border-2 border-neutral-300" />
-              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">Opportunistic — if the door opens</span>
+              <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('briefing.opportunisticCapture')}</span>
             </div>
             <div className="space-y-4">
               {questions.map((q, i) => q.priority !== 'opportunistic' ? null : (
@@ -389,7 +391,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Objections */}
-      <Section title="Objection Ready" subtitle="Expected pushback" accent="bg-amber-400" defaultOpen={false}>
+      <Section title={t('briefing.objections')} subtitle="Expected pushback" accent="bg-amber-400" defaultOpen={false}>
         <div className="space-y-3">
           {objections.map((o, i) => (
             <div key={i} className="bg-amber-50 rounded-xl p-4 border border-amber-200">
@@ -426,7 +428,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Do Not */}
-      <Section title="Do Not" subtitle="Avoid in this conversation" accent="bg-rose-400" defaultOpen={false}>
+      <Section title={t('briefing.doNot')} subtitle="Avoid in this conversation" accent="bg-rose-400" defaultOpen={false}>
         <div className="space-y-2">
           {doNot.map((item, i) => (
             <div key={i} className="flex gap-2 items-center">
@@ -453,7 +455,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Win Condition */}
-      <Section title="Win Condition" subtitle="What success looks like after this round" accent="bg-emerald-400" defaultOpen={false}>
+      <Section title={t('briefing.winCondition')} subtitle="What success looks like after this round" accent="bg-emerald-400" defaultOpen={false}>
         {isLatestRound ? (
           <textarea
             value={winCondition}
@@ -475,13 +477,13 @@ export default function BriefingPage() {
             disabled={saving}
             className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
           >
-            {saving ? 'Saving…' : 'Save briefing'}
+            {saving ? t('capture.saving') : t('capture.save')}
           </button>
           <button
             onClick={() => router.push(`/deals/${dealId}/capture`)}
             className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm transition-all"
           >
-            → Go to capture
+            {t('briefing.goCapture')}
           </button>
           {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>

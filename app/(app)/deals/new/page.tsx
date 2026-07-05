@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useI18n } from '@/lib/i18n/context'
 
 export default function NewDealPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({
@@ -44,14 +46,14 @@ export default function NewDealPage() {
   return (
     <div className="max-w-2xl mx-auto py-12 px-6">
       <div className="mb-10">
-        <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">Switch · new deal</div>
-        <h1 className="font-serif text-3xl text-stone-900 italic">Start a deal diagnostic</h1>
-        <p className="text-sm text-stone-500 mt-2">Name the prospect and contact. Add context and URLs from the account context tab.</p>
+        <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">Switch</div>
+        <h1 className="font-serif text-3xl text-stone-900 italic">{t('newDeal.title')}</h1>
+        <p className="text-sm text-stone-500 mt-2">{t('newDeal.subtitle')}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Prospect company *</label>
+          <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.prospectCompany')} *</label>
           <input
             type="text" value={form.prospect_name} onChange={e => set('prospect_name', e.target.value)} required
             placeholder="Acme Manufacturing"
@@ -60,7 +62,7 @@ export default function NewDealPage() {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Contact name</label>
+            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.contactName')}</label>
             <input
               type="text" value={form.contact_name} onChange={e => set('contact_name', e.target.value)}
               placeholder="Sarah Chen"
@@ -68,7 +70,7 @@ export default function NewDealPage() {
             />
           </div>
           <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Title</label>
+            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.contactTitle')}</label>
             <input
               type="text" value={form.contact_title} onChange={e => set('contact_title', e.target.value)}
               placeholder="VP Operations"
@@ -83,13 +85,13 @@ export default function NewDealPage() {
             type="button" onClick={() => router.back()}
             className="px-6 py-2.5 text-xs uppercase tracking-widest font-mono text-stone-600 border border-stone-300 hover:border-stone-600"
           >
-            cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit" disabled={!form.prospect_name || loading}
             className="flex-1 bg-stone-900 text-stone-50 py-2.5 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
           >
-            {loading ? 'creating…' : 'Create deal →'}
+            {loading ? t('newDeal.creating') : t('newDeal.create')}
           </button>
         </div>
       </form>

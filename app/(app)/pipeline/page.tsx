@@ -1,8 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { getLayerVerdict, LAYER_VARIABLES, type EvidenceLevel, EVIDENCE_LABELS } from '@/lib/types'
 import type { Deal, DealRound } from '@/lib/types'
 import EditableProspectName from '@/components/deal/EditableProspectName'
+import { useI18n } from '@/lib/i18n/context'
 
 function getLayerScore(round: DealRound | null, layer: number): number | null {
   if (!round) return null
@@ -67,43 +71,61 @@ function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: nu
   )
 }
 
-export default async function PipelinePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default function PipelinePage() {
+  const { t } = useI18n()
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [rounds, setRounds] = useState<DealRound[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const { data: deals } = await supabase
-    .from('deals')
-    .select('*')
-    .eq('user_id', user!.id)
-    .eq('status', 'active')
-    .order('updated_at', { ascending: false })
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-  const dealIds = (deals || []).map((d: Deal) => d.id)
-  const { data: rounds } = dealIds.length > 0
-    ? await supabase
-        .from('deal_rounds')
+      const { data: dealData } = await supabase
+        .from('deals')
         .select('*')
-        .in('deal_id', dealIds)
-    : { data: [] }
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false })
+
+      const d = dealData || []
+      setDeals(d)
+
+      const ids = d.map((x: Deal) => x.id)
+      if (ids.length > 0) {
+        const { data: roundData } = await supabase
+          .from('deal_rounds')
+          .select('*')
+          .in('deal_id', ids)
+        setRounds(roundData || [])
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
 
   const latestRound = (dealId: string): DealRound | null => {
-    const dealRounds = (rounds || [])
+    const dealRounds = rounds
       .filter((r: DealRound) => r.deal_id === dealId)
       .sort((a: DealRound, b: DealRound) => b.round - a.round)
     return dealRounds[0] || null
   }
 
   const summary = {
-    total: deals?.length || 0,
-    nearClose: (deals || []).filter((d: Deal) => {
+    total: deals.length,
+    nearClose: deals.filter((d: Deal) => {
       const r = latestRound(d.id)
       return r && getLayerVerdict(r, 3) === 'PASS'
     }).length,
-    atRisk: (deals || []).filter((d: Deal) => {
+    atRisk: deals.filter((d: Deal) => {
       const r = latestRound(d.id)
       return r && [1, 2, 3, 4].some(l => getLayerVerdict(r, l) === 'AT RISK')
     }).length,
   }
+
+  if (loading) return null
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-6">
@@ -111,28 +133,28 @@ export default async function PipelinePage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <p className="text-sm text-neutral-400 mb-1">Switch</p>
-          <h1 className="text-2xl font-bold text-neutral-900">Pipeline</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('pipeline.title')}</h1>
         </div>
         <Link
           href="/deals/new"
           className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
         >
-          + New deal
+          {t('pipeline.newDeal')}
         </Link>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">Active</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{t('pipeline.active')}</div>
           <div className="text-3xl font-bold text-neutral-900">{summary.total}</div>
         </div>
         <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">Near close</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{t('pipeline.nearClose')}</div>
           <div className="text-3xl font-bold text-emerald-600">{summary.nearClose}</div>
         </div>
         <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">At risk</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{t('pipeline.atRisk')}</div>
           <div className="text-3xl font-bold text-rose-500">{summary.atRisk}</div>
         </div>
       </div>
@@ -141,25 +163,25 @@ export default async function PipelinePage() {
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
         {/* Table header */}
         <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50">
-          <div className="col-span-4 text-xs font-medium text-neutral-400 uppercase tracking-wide">Prospect</div>
-          <div className="col-span-1 text-xs font-medium text-neutral-400 uppercase tracking-wide">Round</div>
-          <div className="col-span-5 text-xs font-medium text-neutral-400 uppercase tracking-wide">Scores</div>
-          <div className="col-span-2 text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">Actions</div>
+          <div className="col-span-4 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.prospect')}</div>
+          <div className="col-span-1 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.round')}</div>
+          <div className="col-span-5 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>
+          <div className="col-span-2 text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
         </div>
 
-        {(deals || []).length === 0 && (
+        {deals.length === 0 && (
           <div className="py-16 text-center">
             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">+</span>
             </div>
-            <p className="text-sm text-neutral-500 mb-4">No deals yet.</p>
+            <p className="text-sm text-neutral-500 mb-4">{t('pipeline.noDeals')}</p>
             <Link href="/deals/new" className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all">
-              + Start your first deal
+              {t('pipeline.newDeal')}
             </Link>
           </div>
         )}
 
-        {(deals || []).map((deal: Deal) => {
+        {deals.map((deal: Deal) => {
           const r = latestRound(deal.id)
           return (
             <div key={deal.id} className="grid grid-cols-12 gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors">
@@ -176,14 +198,14 @@ export default async function PipelinePage() {
                 <span className="text-xs font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
               </div>
               <div className="col-span-5 grid grid-cols-4 gap-3">
-                <ScoreCell round={r} layer={1} label="Opp" />
-                <ScoreCell round={r} layer={2} label="Win" />
-                <ScoreCell round={r} layer={3} label="Imp" />
-                <ScoreCell round={r} layer={4} label="Mom" />
+                <ScoreCell round={r} layer={1} label={t('layer.1')} />
+                <ScoreCell round={r} layer={2} label={t('layer.2')} />
+                <ScoreCell round={r} layer={3} label={t('layer.3')} />
+                <ScoreCell round={r} layer={4} label={t('layer.4')} />
               </div>
               <div className="col-span-2 text-right">
                 <Link href={`/deals/${deal.id}/dashboard`} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
-                  Open →
+                  {t('pipeline.dashboard')}
                 </Link>
               </div>
             </div>

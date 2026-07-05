@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useI18n } from '@/lib/i18n/context'
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [companyName, setCompanyName] = useState('')
@@ -35,31 +37,31 @@ export default function OnboardingPage() {
       <div className="max-w-md mx-auto py-20 px-6">
         <div className="mb-10">
           <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">Switch · setup</div>
-          <h1 className="font-serif text-3xl text-stone-900 italic">Welcome</h1>
+          <h1 className="font-serif text-3xl text-stone-900 italic">{t('onboarding.title')}</h1>
           <p className="text-sm text-stone-500 mt-2 leading-relaxed">
-            Enter your company name to get started. You'll import your profile from your website or a document on the next screen.
+            {t('onboarding.subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Company name</label>
+            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('onboarding.companyName')}</label>
             <input
               type="text"
               value={companyName}
               onChange={e => setCompanyName(e.target.value)}
-              placeholder="Acme Corp"
+              placeholder={t('onboarding.companyNamePlaceholder')}
               required
               className="mt-1 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
             />
           </div>
           <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">Website (optional)</label>
+            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('onboarding.website')}</label>
             <input
               type="text"
               value={companyUrl}
               onChange={e => setCompanyUrl(e.target.value)}
-              placeholder="acme.com"
+              placeholder={t('onboarding.websitePlaceholder')}
               className="mt-1 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
             />
           </div>
@@ -71,7 +73,7 @@ export default function OnboardingPage() {
             disabled={!companyName.trim() || loading}
             className="w-full bg-stone-900 text-stone-50 py-3 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
           >
-            {loading ? 'creating…' : 'Continue →'}
+            {loading ? t('onboarding.saving') : t('onboarding.submit')}
           </button>
         </form>
       </div>
