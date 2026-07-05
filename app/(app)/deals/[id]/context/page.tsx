@@ -5,63 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type Stakeholder, type ProspectDimensions, EMPTY_PROSPECT_DIMENSIONS } from '@/lib/types'
 import { useI18n } from '@/lib/i18n/context'
-
-// ── Prospect dimension definitions ───────────────────────────
-
-type SubQ = { key: string; label: string; hint: string }
-type DimDef = { key: keyof ProspectDimensions; label: string; questions: SubQ[] }
-
-const DIMENSIONS: DimDef[] = [
-  {
-    key: 'company', label: '1 · Company',
-    questions: [
-      { key: 'core_business', label: 'Core business', hint: 'What they do, their main product or service, business model.' },
-      { key: 'industry', label: 'Industry & market', hint: 'Sector, competitive environment, market they operate in.' },
-      { key: 'size_stage', label: 'Size & stage', hint: 'Headcount, revenue signals, growth phase, funding status.' },
-      { key: 'geography', label: 'Geography', hint: 'HQ, regions, markets served, operating model.' },
-    ],
-  },
-  {
-    key: 'strategic_context', label: '2 · Strategic Context',
-    questions: [
-      { key: 'priorities', label: 'Strategic priorities', hint: 'What they are focused on — growth, efficiency, compliance, transformation.' },
-      { key: 'challenges', label: 'Known challenges', hint: 'Operational pain points, recurring problems, friction areas.' },
-      { key: 'recent_signals', label: 'Recent signals', hint: 'News, announcements, leadership changes, new initiatives.' },
-      { key: 'pressures', label: 'Pressures', hint: 'Regulatory, competitive, financial, or market pressures.' },
-    ],
-  },
-  {
-    key: 'buying_environment', label: '3 · Buying Environment',
-    questions: [
-      { key: 'decision_process', label: 'Decision process', hint: 'How buying decisions are made, approval layers, stakeholders involved.' },
-      { key: 'budget_signals', label: 'Budget signals', hint: 'Budget cycle, existing tools spend, procurement style.' },
-      { key: 'timeline', label: 'Timeline', hint: 'Known deadlines, board commitments, fiscal pressures, urgency triggers.' },
-      { key: 'history', label: 'History with similar solutions', hint: 'Have they tried before? Switched vendors? Failed implementations?' },
-    ],
-  },
-  {
-    key: 'key_contact', label: '4 · Key Contact',
-    questions: [
-      { key: 'role_accountability', label: 'Role & accountability', hint: 'What they own, what they are measured on, what keeps them up at night.' },
-      { key: 'background', label: 'Background', hint: 'Career history, domain expertise, how long in role.' },
-      { key: 'personal_priorities', label: 'Personal priorities', hint: 'What they care about given their position — visibility, risk, performance.' },
-      { key: 'influence_level', label: 'Influence level', hint: 'Their authority in the buying process — champion, gatekeeper, decision maker?' },
-    ],
-  },
-  {
-    key: 'fit_signals', label: '5 · Fit Signals',
-    questions: [
-      { key: 'problem_mapping', label: 'Problem mapping', hint: 'Which of their problems map to what you solve?' },
-      { key: 'implementation_readiness', label: 'Implementation readiness', hint: 'Org capacity, tech stack, change tolerance, bandwidth.' },
-      { key: 'timing_trigger', label: 'Timing trigger', hint: 'Is there a real trigger for action now? What makes this urgent?' },
-    ],
-  },
-]
-
-const ACTOR_LABELS: Record<string, string> = {
-  champion: 'Champion', decision_maker: 'Decision Maker', user: 'End User',
-  reviewer: 'Reviewer', blocker: 'Blocker', unknown: 'Unknown',
-}
+import { getContextDimensions, type ContextDimDef } from '@/lib/i18n/context-dimensions'
 
 const ACTOR_COLORS: Record<string, string> = {
   champion: 'bg-emerald-50 text-emerald-600 border-emerald-200',
@@ -70,6 +14,15 @@ const ACTOR_COLORS: Record<string, string> = {
   reviewer: 'bg-amber-50 text-amber-600 border-amber-200',
   blocker: 'bg-rose-50 text-rose-600 border-rose-200',
   unknown: 'bg-neutral-100 text-neutral-500 border-neutral-200',
+}
+
+const ACTOR_KEYS: Record<string, string> = {
+  champion: 'context.champion',
+  decision_maker: 'context.decisionMaker',
+  user: 'context.endUser',
+  reviewer: 'context.reviewer',
+  blocker: 'context.blocker',
+  unknown: 'context.unknown',
 }
 
 const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
@@ -91,13 +44,14 @@ function deepMerge(base: ProspectDimensions, saved: Partial<ProspectDimensions>)
 function DimensionSection({
   def, values, onChange, onSave, saving, isDirty,
 }: {
-  def: DimDef
+  def: ContextDimDef
   values: Record<string, string>
   onChange: (key: string, val: string) => void
   onSave: () => void
   saving: boolean
   isDirty: boolean
 }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const filled = filledCount(values)
   const total = def.questions.length
@@ -110,7 +64,7 @@ function DimensionSection({
       >
         <span className="text-sm font-semibold text-neutral-800">{def.label}</span>
         <div className="flex items-center gap-3">
-          {isDirty && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Unsaved</span>}
+          {isDirty && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{t('context.unsaved')}</span>}
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${filled === total ? 'text-emerald-600 bg-emerald-50' : filled > 0 ? 'text-amber-600 bg-amber-50' : 'text-neutral-400 bg-neutral-100'}`}>
             {filled}/{total}
           </span>
@@ -139,7 +93,7 @@ function DimensionSection({
                 disabled={saving}
                 className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
               >
-                {saving ? 'Saving...' : 'Save changes'}
+                {saving ? t('context.saving') : t('context.saveChanges')}
               </button>
             </div>
           )}
@@ -152,7 +106,8 @@ function DimensionSection({
 // ── Page ─────────────────────────────────────────────────────
 
 export default function AccountContextPage() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const DIMENSIONS = getContextDimensions(locale)
   const params = useParams()
   const router = useRouter()
   const dealId = params.id as string
@@ -230,9 +185,9 @@ export default function AccountContextPage() {
       const newDims = deepMerge(dims, data.dimensions)
       setDims(newDims)
       await saveAllDims(newDims)
-      setCompanyImportSuccess('Company context imported and saved.')
+      setCompanyImportSuccess(t('context.companyImported'))
     } catch {
-      setCompanyImportError('Network error — try again')
+      setCompanyImportError(t('context.networkError'))
     } finally {
       setImportingCompany(false)
     }
@@ -253,9 +208,9 @@ export default function AccountContextPage() {
       const newDims = deepMerge(dims, data.dimensions)
       setDims(newDims)
       await saveAllDims(newDims)
-      setCompanyImportSuccess('Company context imported and saved.')
+      setCompanyImportSuccess(t('context.companyImported'))
     } catch {
-      setCompanyImportError('Network error — try again')
+      setCompanyImportError(t('context.networkError'))
     } finally {
       setImportingCompany(false)
       e.target.value = ''
@@ -278,9 +233,9 @@ export default function AccountContextPage() {
       const newDims = deepMerge(dims, data.dimensions)
       setDims(newDims)
       await saveAllDims(newDims)
-      setLinkedinSuccess('Contact context imported and saved.')
+      setLinkedinSuccess(t('context.contactImported'))
     } catch {
-      setLinkedinError('Network error — try again')
+      setLinkedinError(t('context.networkError'))
     } finally {
       setImportingLinkedin(false)
     }
@@ -324,7 +279,7 @@ export default function AccountContextPage() {
           </h1>
         </div>
         <div className="text-right">
-          <div className="text-xs font-medium text-neutral-400 mb-1">Completion</div>
+          <div className="text-xs font-medium text-neutral-400 mb-1">{t('context.completion')}</div>
           <div className={`text-lg font-bold ${totalFilled === totalQ ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
             {totalFilled}/{totalQ}
           </div>
@@ -333,11 +288,11 @@ export default function AccountContextPage() {
 
       {/* Import panel */}
       <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8 shadow-sm">
-        <h2 className="text-sm font-semibold text-neutral-700 mb-5">Import context</h2>
+        <h2 className="text-sm font-semibold text-neutral-700 mb-5">{t('context.importContext')}</h2>
 
         {/* Company context */}
         <div className="mb-5">
-          <div className="text-xs font-medium text-neutral-500 mb-2">Company context <span className="text-neutral-300">(fills dims 1-3)</span></div>
+          <div className="text-xs font-medium text-neutral-500 mb-2">{t('context.companyContext')} <span className="text-neutral-300">{t('context.fillsDims13')}</span></div>
           <div className="flex gap-2 mb-2">
             <input
               value={companyUrl}
@@ -352,12 +307,12 @@ export default function AccountContextPage() {
               disabled={importing || !companyUrl.trim()}
               className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 whitespace-nowrap transition-all"
             >
-              {importingCompany ? 'Reading...' : 'Fetch'}
+              {importingCompany ? t('context.reading') : t('context.fetch')}
             </button>
           </div>
           <label className={`flex items-center justify-center border-2 border-dashed border-neutral-200 bg-neutral-50 rounded-xl px-4 py-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
             <span className="text-sm text-neutral-400">
-              {importingCompany ? 'Reading document...' : 'Upload document — annual report, press release, company brief'}
+              {importingCompany ? t('context.readingDoc') : t('context.uploadDoc')}
             </span>
             <input type="file" accept=".pdf,.txt,.md" onChange={handleImportCompanyDoc} className="hidden" disabled={importing} />
           </label>
@@ -368,13 +323,13 @@ export default function AccountContextPage() {
         {/* Divider */}
         <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 h-px bg-neutral-100" />
-          <span className="text-xs text-neutral-300">contact</span>
+          <span className="text-xs text-neutral-300">{t('context.contact')}</span>
           <div className="flex-1 h-px bg-neutral-100" />
         </div>
 
         {/* LinkedIn */}
         <div>
-          <div className="text-xs font-medium text-neutral-500 mb-2">Key contact LinkedIn <span className="text-neutral-300">(fills dim 4)</span></div>
+          <div className="text-xs font-medium text-neutral-500 mb-2">{t('context.keyContactLinkedin')} <span className="text-neutral-300">{t('context.fillsDim4')}</span></div>
           <div className="flex gap-2">
             <input
               value={linkedinUrl}
@@ -389,10 +344,10 @@ export default function AccountContextPage() {
               disabled={importing || !linkedinUrl.trim()}
               className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 whitespace-nowrap transition-all"
             >
-              {importingLinkedin ? 'Reading...' : 'Fetch'}
+              {importingLinkedin ? t('context.reading') : t('context.fetch')}
             </button>
           </div>
-          <p className="mt-1.5 text-xs text-neutral-300">LinkedIn often blocks scrapers. If it fails, fill the Key Contact dimension manually.</p>
+          <p className="mt-1.5 text-xs text-neutral-300">{t('context.linkedinWarning')}</p>
           {linkedinError && <p className="mt-2 text-sm text-rose-600">{linkedinError}</p>}
           {linkedinSuccess && <p className="mt-2 text-sm text-emerald-600">{linkedinSuccess}</p>}
         </div>
@@ -400,7 +355,7 @@ export default function AccountContextPage() {
 
       {/* Prospect dimensions */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Prospect profile</h2>
+        <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">{t('context.prospectProfile')}</h2>
         <div className="space-y-3">
           {DIMENSIONS.map(def => (
             <DimensionSection
@@ -419,12 +374,12 @@ export default function AccountContextPage() {
       {/* Stakeholder ecosystem */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-neutral-900">Stakeholder ecosystem</h2>
-          <span className="text-xs font-medium text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">{stakeholders.length} identified</span>
+          <h2 className="text-lg font-bold text-neutral-900">{t('context.stakeholderEcosystem')}</h2>
+          <span className="text-xs font-medium text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">{t('context.identified', { n: stakeholders.length })}</span>
         </div>
 
         {stakeholders.length === 0 && (
-          <p className="text-sm text-neutral-400 mb-4">No stakeholders added yet.</p>
+          <p className="text-sm text-neutral-400 mb-4">{t('context.noStakeholders')}</p>
         )}
 
         <div className="space-y-3 mb-6">
@@ -434,7 +389,7 @@ export default function AccountContextPage() {
                 <div className="flex items-center gap-3">
                   <h5 className="text-sm font-semibold text-neutral-800">{s.name}</h5>
                   <span className={`text-[10px] font-medium border rounded-full px-2 py-0.5 ${ACTOR_COLORS[s.actor_type] ?? ACTOR_COLORS.unknown}`}>
-                    {ACTOR_LABELS[s.actor_type]}
+                    {t((ACTOR_KEYS[s.actor_type] ?? 'context.unknown') as any)}
                   </span>
                   {s.role && <span className="text-xs text-neutral-400">{s.role}</span>}
                 </div>
@@ -442,7 +397,7 @@ export default function AccountContextPage() {
                   onClick={() => handleDeleteStakeholder(s.id)}
                   className="text-xs text-neutral-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
                 >
-                  Remove
+                  {t('context.remove')}
                 </button>
               </div>
               {s.notes && <p className="text-sm text-neutral-600 mt-2 leading-relaxed">{s.notes}</p>}
@@ -452,23 +407,23 @@ export default function AccountContextPage() {
 
         {/* Add stakeholder */}
         <div className="bg-white rounded-2xl border-2 border-dashed border-neutral-200 p-5">
-          <h3 className="text-sm font-semibold text-neutral-600 mb-3">Add stakeholder</h3>
+          <h3 className="text-sm font-semibold text-neutral-600 mb-3">{t('context.addStakeholder')}</h3>
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <input value={newStk.name} onChange={e => setNewStk(n => ({ ...n, name: e.target.value }))} placeholder="Name"
+            <input value={newStk.name} onChange={e => setNewStk(n => ({ ...n, name: e.target.value }))} placeholder={t('context.name')}
               className={inputClass} />
-            <input value={newStk.role} onChange={e => setNewStk(n => ({ ...n, role: e.target.value }))} placeholder="Title / Role"
+            <input value={newStk.role} onChange={e => setNewStk(n => ({ ...n, role: e.target.value }))} placeholder={t('context.titleRole')}
               className={inputClass} />
           </div>
           <select value={newStk.actor_type} onChange={e => setNewStk(n => ({ ...n, actor_type: e.target.value as Stakeholder['actor_type'] }))}
             className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 mb-3 transition-all">
-            {Object.entries(ACTOR_LABELS).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
+            {Object.entries(ACTOR_KEYS).map(([val, key]) => <option key={val} value={val}>{t(key as any)}</option>)}
           </select>
           <textarea value={newStk.notes} onChange={e => setNewStk(n => ({ ...n, notes: e.target.value }))} rows={2}
-            placeholder="Notes — position, motivations, influence?"
+            placeholder={t('context.notesPlaceholder')}
             className={`${inputClass} mb-3`} />
           <button onClick={handleAddStakeholder} disabled={addingStk || !newStk.name}
             className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all">
-            {addingStk ? 'Adding...' : '+ Add'}
+            {addingStk ? t('context.adding') : t('context.add')}
           </button>
         </div>
       </section>
