@@ -10,38 +10,50 @@ import { type Deal, type DealRound, type DealBox, type BoxEntry } from '@/lib/ty
 
 type BoxDef = {
   id: string
-  name: string
-  description: string
+  nameKey: string
+  descKey: string
   type: 'collected' | 'prepared' | 'built'
 }
 
 const BOXES: BoxDef[] = [
-  { id: 'perception',       name: 'Perception',                    type: 'collected', description: 'How the market sees you before meeting you' },
-  { id: 'problems',         name: 'Business Problems',             type: 'collected', description: "The prospect's real operational problems" },
-  { id: 'stakeholders',     name: 'Real Stakeholders',             type: 'collected', description: 'Who is actually involved in this deal' },
-  { id: 'human-pain',       name: 'Human Pain',                    type: 'collected', description: 'What individuals feel personally' },
-  { id: 'budget',           name: 'Budget',                        type: 'collected', description: 'Budget existence, size, and approval process' },
-  { id: 'product',          name: 'Product & Positioning',         type: 'prepared',  description: 'Your real strengths and why you are different' },
-  { id: 'fit',              name: 'Terrain (Concern Fit)',         type: 'prepared',  description: 'Who you are genuinely relevant to' },
-  { id: 'necessary-actor',  name: 'Necessary Actor',               type: 'prepared',  description: 'Who you need for the deal to close' },
-  { id: 'buy-reason',       name: 'Legitimate Reason to Buy',      type: 'built',     description: 'Why this client should buy — now' },
-  { id: 'implementation',   name: 'Implementation',                type: 'built',     description: "How the solution fits into their reality" },
-  { id: 'urgency',          name: 'Urgency',                       type: 'built',     description: 'Why now — frequency, intensity, stakes' },
-  { id: 'value',            name: 'Value, Solution, Impact',       type: 'built',     description: 'The minimum value that triggers a decision' },
-  { id: 'timing',           name: 'Timing',                        type: 'built',     description: 'When a decision must happen' },
-  { id: 'forces',           name: 'Decision Forces',               type: 'built',     description: 'Forces that accelerate, slow, or are ambivalent' },
+  { id: 'perception',       nameKey: 'boxes.perception',       descKey: 'boxes.perceptionDesc',       type: 'collected' },
+  { id: 'problems',         nameKey: 'boxes.problems',         descKey: 'boxes.problemsDesc',         type: 'collected' },
+  { id: 'stakeholders',     nameKey: 'boxes.stakeholders',     descKey: 'boxes.stakeholdersDesc',     type: 'collected' },
+  { id: 'human-pain',       nameKey: 'boxes.humanPain',        descKey: 'boxes.humanPainDesc',        type: 'collected' },
+  { id: 'budget',           nameKey: 'boxes.budget',           descKey: 'boxes.budgetDesc',           type: 'collected' },
+  { id: 'product',          nameKey: 'boxes.product',          descKey: 'boxes.productDesc',          type: 'prepared' },
+  { id: 'fit',              nameKey: 'boxes.fit',              descKey: 'boxes.fitDesc',              type: 'prepared' },
+  { id: 'necessary-actor',  nameKey: 'boxes.necessaryActor',   descKey: 'boxes.necessaryActorDesc',   type: 'prepared' },
+  { id: 'buy-reason',       nameKey: 'boxes.buyReason',        descKey: 'boxes.buyReasonDesc',        type: 'built' },
+  { id: 'implementation',   nameKey: 'boxes.implementation',   descKey: 'boxes.implementationDesc',   type: 'built' },
+  { id: 'urgency',          nameKey: 'boxes.urgency',          descKey: 'boxes.urgencyDesc',          type: 'built' },
+  { id: 'value',            nameKey: 'boxes.value',            descKey: 'boxes.valueDesc',            type: 'built' },
+  { id: 'timing',           nameKey: 'boxes.timing',           descKey: 'boxes.timingDesc',           type: 'built' },
+  { id: 'forces',           nameKey: 'boxes.forces',           descKey: 'boxes.forcesDesc',           type: 'built' },
 ]
 
+const TYPE_LABEL_KEY: Record<string, string> = {
+  collected: 'boxes.collected',
+  prepared: 'boxes.prepared',
+  built: 'boxes.built',
+}
+
 const TYPE_STYLE = {
-  collected: { badge: 'bg-sky-50 text-sky-600 border-sky-200',        bar: 'border-l-sky-400',    label: 'Collected' },
-  prepared:  { badge: 'bg-violet-50 text-violet-600 border-violet-200', bar: 'border-l-violet-400', label: 'Prepared'  },
-  built:     { badge: 'bg-orange-50 text-orange-600 border-orange-200', bar: 'border-l-orange-400', label: 'Built'     },
+  collected: { badge: 'bg-sky-50 text-sky-600 border-sky-200',        bar: 'border-l-sky-400' },
+  prepared:  { badge: 'bg-violet-50 text-violet-600 border-violet-200', bar: 'border-l-violet-400' },
+  built:     { badge: 'bg-orange-50 text-orange-600 border-orange-200', bar: 'border-l-orange-400' },
+}
+
+const GROUP_LABEL_KEY: Record<string, string> = {
+  collected: 'boxes.groupCollected',
+  prepared: 'boxes.groupPrepared',
+  built: 'boxes.groupBuilt',
 }
 
 const GROUPS = [
-  { label: 'Inputs · collected across conversations', types: ['collected'] as const },
-  { label: 'Inputs · prepared upfront',               types: ['prepared']  as const },
-  { label: 'Outputs · built by synthesis',            types: ['built']     as const },
+  { key: 'collected', types: ['collected'] as const },
+  { key: 'prepared',  types: ['prepared']  as const },
+  { key: 'built',     types: ['built']     as const },
 ]
 
 const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
@@ -99,12 +111,12 @@ function BoxCard({
     <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${entries.length === 0 ? 'border-neutral-200 opacity-60' : 'border-neutral-200'}`}>
       <div className="px-5 py-4">
         <div className="flex items-start justify-between mb-1.5">
-          <h4 className="text-sm font-semibold text-neutral-800 leading-snug">{box.name}</h4>
+          <h4 className="text-sm font-semibold text-neutral-800 leading-snug">{t(box.nameKey as any)}</h4>
           <span className={`text-[10px] font-medium border rounded-full px-2 py-0.5 ml-3 flex-shrink-0 ${ts.badge}`}>
-            {ts.label}
+            {t(TYPE_LABEL_KEY[box.type] as any)}
           </span>
         </div>
-        <p className="text-xs text-neutral-400 mb-3 leading-snug">{box.description}</p>
+        <p className="text-xs text-neutral-400 mb-3 leading-snug">{t(box.descKey as any)}</p>
 
         {entries.length === 0 ? (
           <div className="text-xs text-neutral-300 mb-3">{t('boxes.empty')}</div>
@@ -127,13 +139,13 @@ function BoxCard({
                         disabled={editSaving || !editText.trim()}
                         className="px-4 py-2 bg-blue-500 text-white text-xs font-medium rounded-xl hover:bg-blue-600 disabled:opacity-40 transition-all"
                       >
-                        {editSaving ? 'Saving...' : 'Save'}
+                        {editSaving ? t('boxes.saving') : t('boxes.save')}
                       </button>
                       <button
                         onClick={() => setEditingIndex(null)}
                         className="px-4 py-2 bg-white border border-neutral-200 text-neutral-500 text-xs font-medium rounded-xl hover:border-neutral-400 transition-all"
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
@@ -141,11 +153,11 @@ function BoxCard({
                   <>
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-[10px] font-medium text-neutral-400 bg-neutral-100 rounded px-1.5 py-0.5">
-                        {entry.round === 0 ? 'Initial' : `R${entry.round}`}
+                        {entry.round === 0 ? t('boxes.initial') : `R${entry.round}`}
                       </span>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <button onClick={() => startEdit(i)} className="text-xs text-neutral-400 hover:text-blue-500 transition-colors">Edit</button>
-                        <button onClick={() => onDelete(i)} className="text-xs text-neutral-300 hover:text-rose-500 transition-colors">Remove</button>
+                        <button onClick={() => startEdit(i)} className="text-xs text-neutral-400 hover:text-blue-500 transition-colors">{t('boxes.edit')}</button>
+                        <button onClick={() => onDelete(i)} className="text-xs text-neutral-300 hover:text-rose-500 transition-colors">{t('boxes.remove')}</button>
                       </div>
                     </div>
                     <p className="text-sm text-neutral-600 leading-relaxed mt-1">{entry.text}</p>
@@ -161,7 +173,7 @@ function BoxCard({
             onClick={() => setOpen(true)}
             className="text-xs text-neutral-400 hover:text-blue-500 border border-dashed border-neutral-200 hover:border-blue-300 rounded-xl px-3 py-1.5 transition-all"
           >
-            + Add entry
+            {t('boxes.addEntry')}
           </button>
         ) : (
           <div className="mt-2 space-y-2">
@@ -172,14 +184,14 @@ function BoxCard({
             >
               {rounds.map(r => (
                 <option key={r.round} value={r.round}>
-                  {r.round === 0 ? 'Initial' : `Round ${r.round}`}
+                  {r.round === 0 ? t('boxes.initial') : `${t('boxes.round')} ${r.round}`}
                 </option>
               ))}
             </select>
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder="What do you know about this box?"
+              placeholder={t('boxes.whatDoYouKnow')}
               rows={3}
               className={inputClass}
             />
@@ -189,13 +201,13 @@ function BoxCard({
                 disabled={saving || !text.trim()}
                 className="px-4 py-2 bg-blue-500 text-white text-xs font-medium rounded-xl hover:bg-blue-600 disabled:opacity-40 transition-all"
               >
-                {saving ? 'Saving...' : 'Add'}
+                {saving ? t('boxes.saving') : t('boxes.add')}
               </button>
               <button
                 onClick={() => { setOpen(false); setText('') }}
                 className="px-4 py-2 bg-white border border-neutral-200 text-neutral-500 text-xs font-medium rounded-xl hover:border-neutral-400 transition-all"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -328,14 +340,14 @@ export default function BoxesPage() {
         </div>
         <div className="text-right">
           <div className="text-xs font-medium text-neutral-400 mb-1">{deal.prospect_name}</div>
-          <div className="text-lg font-bold text-neutral-900">{totalFilled}/{BOXES.length} filled</div>
+          <div className="text-lg font-bold text-neutral-900">{totalFilled}/{BOXES.length} {t('boxes.filled')}</div>
         </div>
       </div>
 
       {/* Method info */}
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 mb-8">
         <p className="text-sm text-blue-700">
-          Inputs are collected across conversations, in any order. Outputs are not found — they are built by crossing everything else together. The puzzle fills conversation by conversation.
+          {t('boxes.methodInfo')}
         </p>
       </div>
 
@@ -344,9 +356,9 @@ export default function BoxesPage() {
         const boxes = BOXES.filter(b => (group.types as readonly string[]).includes(b.type))
         const filledCount = boxes.filter(b => (boxData[b.id] ?? []).length > 0).length
         return (
-          <section key={group.label} className="mb-10">
+          <section key={group.key} className="mb-10">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide">{group.label}</h2>
+              <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide">{t(GROUP_LABEL_KEY[group.key] as any)}</h2>
               <div className="flex items-center gap-3">
                 {(group.types[0] === 'collected' || group.types[0] === 'built') && (
                   <>
@@ -356,7 +368,7 @@ export default function BoxesPage() {
                       disabled={updatingBoxes}
                       className="px-4 py-2 bg-white border border-neutral-200 text-neutral-600 text-xs font-medium rounded-xl hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
                     >
-                      {updatingBoxes ? 'Updating...' : 'Update from capture'}
+                      {updatingBoxes ? t('boxes.updating') : t('boxes.updateFromCapture')}
                     </button>
                   </>
                 )}
@@ -368,7 +380,7 @@ export default function BoxesPage() {
                       disabled={fillingPrepared}
                       className="px-4 py-2 bg-white border border-neutral-200 text-neutral-600 text-xs font-medium rounded-xl hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
                     >
-                      {fillingPrepared ? 'Generating...' : 'Fill from profile'}
+                      {fillingPrepared ? t('boxes.generating') : t('boxes.fillFromProfile')}
                     </button>
                   </>
                 )}
