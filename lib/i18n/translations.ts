@@ -193,6 +193,18 @@ export const translations = {
   'profile.save': { en: 'Save', fr: 'Sauvegarder' },
   'profile.saving': { en: 'Saving…', fr: 'Sauvegarde…' },
   'profile.importFromUrl': { en: 'Import from URL →', fr: 'Importer depuis URL →' },
+  'profile.completion': { en: 'Profile completion', fr: 'Complétion du profil' },
+  'profile.importFrom': { en: 'Import from', fr: 'Importer depuis' },
+  'profile.websiteUrl': { en: 'Website URL', fr: 'URL du site web' },
+  'profile.fetch': { en: 'Fetch', fr: 'Récupérer' },
+  'profile.reading': { en: 'Reading...', fr: 'Lecture...' },
+  'profile.or': { en: 'or', fr: 'ou' },
+  'profile.document': { en: 'Document', fr: 'Document' },
+  'profile.uploadHint': { en: 'Click to upload — pitch deck, product doc, company brief', fr: 'Cliquez pour importer — pitch deck, doc produit, présentation' },
+  'profile.readingDoc': { en: 'Reading document...', fr: 'Lecture du document...' },
+  'profile.infoCard': { en: 'Import from your website or a document to pre-fill. Then review each dimension and save. The more complete your profile, the better the engine reads each deal.', fr: 'Importez depuis votre site ou un document pour pré-remplir. Puis révisez chaque dimension et sauvegardez. Plus votre profil est complet, mieux le moteur lit chaque deal.' },
+  'profile.unsaved': { en: 'Unsaved', fr: 'Non sauvegardé' },
+  'profile.saveChanges': { en: 'Save changes', fr: 'Sauvegarder' },
 
   // ── Common ──
   'common.loading': { en: 'Loading…', fr: 'Chargement…' },
