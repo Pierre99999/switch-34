@@ -41,6 +41,7 @@ function Section({ title, subtitle, defaultOpen = true, accent, children }: {
 const LAYER_BAND_COLORS: Record<number, string> = { 1: 'bg-orange-500', 2: 'bg-blue-500', 3: 'bg-violet-500', 4: 'bg-cyan-500' }
 
 function StatusBand({ layer, verdict }: { layer: number; verdict: string }) {
+  const { t } = useI18n()
   const verdictStyle = verdict === 'PASS'
     ? 'text-emerald-600 bg-emerald-50'
     : verdict === 'AT RISK'
@@ -54,7 +55,7 @@ function StatusBand({ layer, verdict }: { layer: number; verdict: string }) {
         <span className={`w-1.5 h-1.5 rounded-full ${LAYER_BAND_COLORS[layer]}`} />
         <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">L{layer}</span>
       </div>
-      <div className="text-xs font-medium text-neutral-700">{LAYER_LABELS[layer]}</div>
+      <div className="text-xs font-medium text-neutral-700">{t(`layer.${layer}` as any)}</div>
       <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${verdictStyle}`}>{verdict}</span>
     </div>
   )
@@ -238,7 +239,7 @@ export default function BriefingPage() {
       </div>
 
       {/* The Read */}
-      <Section title={t('briefing.theRead')} subtitle="Where the deal stands" accent="bg-neutral-400" defaultOpen={true}>
+      <Section title={t('briefing.theRead')} subtitle={t('briefing.readSubtitle')} accent="bg-neutral-400" defaultOpen={true}>
         {isLatestRound ? (
           <textarea
             value={read}
@@ -253,7 +254,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* The Angle */}
-      <Section title={t('briefing.theAngle')} subtitle="What needs to be accomplished" accent="bg-orange-400" defaultOpen={false}>
+      <Section title={t('briefing.theAngle')} subtitle={t('briefing.angleSubtitle')} accent="bg-orange-400" defaultOpen={false}>
         {isLatestRound ? (
           <textarea
             value={angle}
@@ -268,7 +269,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Field Questions */}
-      <Section title={t('briefing.fieldQuestions')} subtitle="Sequential by diagnostic layer" accent="bg-violet-400" defaultOpen={false}>
+      <Section title={t('briefing.fieldQuestions')} subtitle={t('briefing.questionsSubtitle')} accent="bg-violet-400" defaultOpen={false}>
         {/* Pressing */}
         {questions.filter(q => q.priority !== 'opportunistic').length > 0 && (
           <div className="mb-6">
@@ -391,7 +392,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Objections */}
-      <Section title={t('briefing.objections')} subtitle="Expected pushback" accent="bg-amber-400" defaultOpen={false}>
+      <Section title={t('briefing.objections')} subtitle={t('briefing.objectionsSubtitle')} accent="bg-amber-400" defaultOpen={false}>
         <div className="space-y-3">
           {objections.map((o, i) => (
             <div key={i} className="bg-amber-50 rounded-xl p-4 border border-amber-200">
@@ -428,7 +429,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Do Not */}
-      <Section title={t('briefing.doNot')} subtitle="Avoid in this conversation" accent="bg-rose-400" defaultOpen={false}>
+      <Section title={t('briefing.doNot')} subtitle={t('briefing.doNotSubtitle')} accent="bg-rose-400" defaultOpen={false}>
         <div className="space-y-2">
           {doNot.map((item, i) => (
             <div key={i} className="flex gap-2 items-center">
@@ -455,7 +456,7 @@ export default function BriefingPage() {
       </Section>
 
       {/* Win Condition */}
-      <Section title={t('briefing.winCondition')} subtitle="What success looks like after this round" accent="bg-emerald-400" defaultOpen={false}>
+      <Section title={t('briefing.winCondition')} subtitle={t('briefing.winConditionSubtitle')} accent="bg-emerald-400" defaultOpen={false}>
         {isLatestRound ? (
           <textarea
             value={winCondition}

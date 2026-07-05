@@ -84,6 +84,36 @@ export const translations = {
   'layer.q3': { en: 'Can we create meaningful outcomes?', fr: 'Peut-on créer un impact réel ?' },
   'layer.q4': { en: 'Will a decision happen?', fr: 'Y aura-t-il une décision ?' },
 
+  // ── Variable labels ──
+  'var.real_business_problem': { en: 'Real Business Problem', fr: 'Problème business réel' },
+  'var.compelling_reason': { en: 'Compelling Reason', fr: 'Raison impérieuse' },
+  'var.concerns_fit': { en: 'Concerns Fit', fr: 'Adéquation des préoccupations' },
+  'var.stakeholder_map': { en: 'Stakeholder Map', fr: 'Carte des parties prenantes' },
+  'var.personal_pain_linkage': { en: 'Personal Pain Linkage', fr: 'Lien douleur personnelle' },
+  'var.credibility_perception': { en: 'Credibility & Perception', fr: 'Crédibilité et perception' },
+  'var.value_solution_fit': { en: 'Value & Solution Fit', fr: 'Adéquation valeur/solution' },
+  'var.competitive_position': { en: 'Competitive Position', fr: 'Position concurrentielle' },
+  'var.urgency': { en: 'Urgency', fr: 'Urgence' },
+  'var.product_capability': { en: 'Product Capability', fr: 'Capacité produit' },
+  'var.implementation_feasibility': { en: 'Implementation Feasibility', fr: 'Faisabilité d\'implémentation' },
+  'var.adoption_reality': { en: 'Adoption Reality', fr: 'Réalité d\'adoption' },
+  'var.impact': { en: 'Impact', fr: 'Impact' },
+  'var.urgency_resolution': { en: 'Urgency Resolution', fr: 'Résolution d\'urgence' },
+  'var.value_momentum': { en: 'Value Momentum', fr: 'Momentum de valeur' },
+  'var.strategic_alignment': { en: 'Strategic Alignment', fr: 'Alignement stratégique' },
+  'var.internal_momentum': { en: 'Internal Momentum', fr: 'Momentum interne' },
+  'var.open_objections': { en: 'Open Objections', fr: 'Objections ouvertes' },
+  'var.process_drag': { en: 'Process Drag', fr: 'Frein de processus' },
+  'var.external_friction': { en: 'External Friction', fr: 'Friction externe' },
+
+  // ── Briefing sections ──
+  'briefing.readSubtitle': { en: 'Where the deal stands', fr: 'Où en est le deal' },
+  'briefing.angleSubtitle': { en: 'What needs to be accomplished', fr: 'Ce qu\'il faut accomplir' },
+  'briefing.questionsSubtitle': { en: 'Sequential by diagnostic layer', fr: 'Séquencées par couche diagnostique' },
+  'briefing.objectionsSubtitle': { en: 'Expected pushback', fr: 'Résistances anticipées' },
+  'briefing.doNotSubtitle': { en: 'Avoid in this conversation', fr: 'À éviter dans cette conversation' },
+  'briefing.winConditionSubtitle': { en: 'What success looks like after this round', fr: 'À quoi ressemble le succès après ce round' },
+
   // ── Verdicts ──
   'verdict.pass': { en: 'PASS', fr: 'OK' },
   'verdict.hold': { en: 'HOLD', fr: 'EN ATTENTE' },

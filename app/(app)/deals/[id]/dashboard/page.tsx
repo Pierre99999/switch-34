@@ -156,12 +156,6 @@ function ScorePicker({
 
 // ── Layer card ───────────────────────────────────────────────
 
-const LAYER_QUESTIONS: Record<number, string> = {
-  1: 'Stay or disengage?',
-  2: 'Are we positioned to win?',
-  3: 'Can we create meaningful outcomes?',
-  4: 'Will a decision happen?',
-}
 
 function LayerCard({
   layer,
@@ -180,6 +174,7 @@ function LayerCard({
   onScore: (field: string, value: number | null) => void
   onEvidence: (field: string, value: EvidenceLevel) => void
 }) {
+  const { t } = useI18n()
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
   const merged = round ? { ...round, ...pending } as DealRound : null
   const verdict = getLayerVerdict(merged, layer)
@@ -203,7 +198,7 @@ function LayerCard({
             <span className={`text-xs font-semibold tracking-wide uppercase ${colors.accent}`}>Layer {layer}</span>
           </div>
           <h3 className="text-base font-semibold text-neutral-800 mt-1">
-            {LAYER_LABELS[layer]} <span className="font-normal text-neutral-500">— {LAYER_QUESTIONS[layer]}</span>
+            {t(`layer.${layer}` as any)} <span className="font-normal text-neutral-500">— {t(`layer.q${layer}` as any)}</span>
           </h3>
         </div>
         <div className="flex items-center gap-2">
@@ -226,7 +221,7 @@ function LayerCard({
           const currentAuthority: SourceAuthority = authorityLevels[v] ?? 'end_user'
           const rationale = (round?.rationales ?? {})[v] as string | undefined
           return (
-            <VariableRow key={v} label={VARIABLE_LABELS[v]} rationale={rationale}>
+            <VariableRow key={v} label={t(`var.${v}` as any)} rationale={rationale}>
               {isEditing ? (
                 <ScorePicker
                   value={currentValue}
