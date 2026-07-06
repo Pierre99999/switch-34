@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
 import { LAYER_VARIABLES, LAYER_LABELS, type DealRound } from '@/lib/types'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
@@ -31,7 +32,7 @@ const LAYER_GATE: Record<number, string> = {
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
-  const { dealId, roundId } = await req.json()
+  const { dealId, roundId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -81,7 +82,7 @@ Question generation rules:
 - Opportunistic questions can target ANY higher layer — if you sense an opening for L4 signals (internal momentum, objections, process drag), go for it.
 - Questions must sound like a human conversation, never a form or an interrogation.
 
-Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.`,
+Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.` + localeInstruction(locale),
     tools: [
       {
         name: 'save_briefing',

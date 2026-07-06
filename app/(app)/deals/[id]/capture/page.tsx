@@ -92,7 +92,7 @@ export default function CapturePage() {
       const res = await fetch('/api/ai/suggest-scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
@@ -114,7 +114,7 @@ export default function CapturePage() {
       fetch('/api/ai/update-boxes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
       }).catch(() => {})
 
       router.push(`/deals/${dealId}/dashboard`)

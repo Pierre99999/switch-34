@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext } from '@/lib/ai-context'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
-  const { dealId } = await req.json()
+  const { dealId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
-    system: `You are a senior sales coach helping a salesperson know their own product deeply before any prospect conversation. Based on the vendor profile only, generate sharp, specific content for three generic preparation boxes that apply to any deal. Be concrete and direct — these are the salesperson's standing knowledge about what they sell, who it is for, and who needs to be in the room. 2-4 sentences per box. No prospect-specific language.`,
+    system: `You are a senior sales coach helping a salesperson know their own product deeply before any prospect conversation. Based on the vendor profile only, generate sharp, specific content for three generic preparation boxes that apply to any deal. Be concrete and direct — these are the salesperson's standing knowledge about what they sell, who it is for, and who needs to be in the room. 2-4 sentences per box. No prospect-specific language.` + localeInstruction(locale),
     tools: [
       {
         name: 'fill_prepared_boxes',

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
-  const { dealId, roundId } = await req.json()
+  const { dealId, roundId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -79,7 +80,7 @@ For COLLECTED boxes (perception, problems, stakeholders, human_pain, budget): ex
 
 For BUILT boxes (buy_reason, implementation, urgency, value, timing, forces): synthesize ONLY new analytical insights from this round's scores and context. If your analysis hasn't changed from previous rounds, return "".
 
-Be concise: 1-2 sentences per entry. Return "" if nothing new to add. Do not hallucinate specific facts not in the context.`,
+Be concise: 1-2 sentences per entry. Return "" if nothing new to add. Do not hallucinate specific facts not in the context.` + localeInstruction(locale),
     tools: [
       {
         name: 'update_boxes',

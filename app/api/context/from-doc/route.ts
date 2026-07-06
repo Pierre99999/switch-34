@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
@@ -8,6 +9,7 @@ export async function POST(req: NextRequest) {
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
+  const locale = formData.get('locale') as string | null
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
   const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf')
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1536,
-    system: 'You are extracting structured company intelligence from a document for a sales CRM. Be concise — 1-3 sentences per field. Use empty string for fields not evidenced in the content.',
+    system: 'You are extracting structured company intelligence from a document for a sales CRM. Be concise — 1-3 sentences per field. Use empty string for fields not evidenced in the content.' + localeInstruction(locale ?? undefined),
     tools: [
       {
         name: 'save_company_context',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
+  const locale = formData.get('locale') as string | null
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
   const allowedTypes = ['application/pdf', 'text/plain', 'text/markdown']
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
-    system: SYSTEM_PROMPT,
+    system: SYSTEM_PROMPT + localeInstruction(locale ?? undefined),
     messages: [{ role: 'user', content: messageContent }],
   })
 

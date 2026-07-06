@@ -169,7 +169,7 @@ export default function ProfilePage() {
       const res = await fetch('/api/profile/from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: importUrl.trim() }),
+        body: JSON.stringify({ url: importUrl.trim(), locale }),
       })
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
@@ -190,6 +190,7 @@ export default function ProfilePage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('locale', locale)
       const res = await fetch('/api/profile/from-doc', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }

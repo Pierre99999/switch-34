@@ -222,7 +222,7 @@ function BoxCard({
 export default function BoxesPage() {
   const params = useParams()
   const router = useRouter()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
@@ -260,7 +260,7 @@ export default function BoxesPage() {
       const res = await fetch('/api/ai/fill-prepared-boxes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId }),
+        body: JSON.stringify({ dealId, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
@@ -287,7 +287,7 @@ export default function BoxesPage() {
       const res = await fetch('/api/ai/update-boxes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRound.id }),
+        body: JSON.stringify({ dealId, roundId: currentRound.id, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')

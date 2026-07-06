@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
@@ -87,7 +88,7 @@ const SCHEMA = `{
 }`
 
 export async function POST(req: NextRequest) {
-  const { url } = await req.json()
+  const { url, locale } = await req.json()
   if (!url) return NextResponse.json({ error: 'No URL provided' }, { status: 400 })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    system: SYSTEM_PROMPT + localeInstruction(locale),
     tools: [
       {
         name: 'save_vendor_profile',

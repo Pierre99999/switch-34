@@ -178,7 +178,7 @@ export default function AccountContextPage() {
       const res = await fetch('/api/context/from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: companyUrl.trim() }),
+        body: JSON.stringify({ url: companyUrl.trim(), locale }),
       })
       const data = await res.json()
       if (!res.ok || data.error) { setCompanyImportError(data.error ?? 'Failed'); return }
@@ -202,6 +202,7 @@ export default function AccountContextPage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('locale', locale)
       const res = await fetch('/api/context/from-doc', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok || data.error) { setCompanyImportError(data.error ?? 'Failed'); return }
@@ -226,7 +227,7 @@ export default function AccountContextPage() {
       const res = await fetch('/api/context/from-linkedin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: linkedinUrl.trim() }),
+        body: JSON.stringify({ url: linkedinUrl.trim(), locale }),
       })
       const data = await res.json()
       if (!res.ok || data.error) { setLinkedinError(data.error ?? 'Failed'); return }

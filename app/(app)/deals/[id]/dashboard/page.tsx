@@ -328,7 +328,7 @@ export default function DealDashboardPage() {
       const res = await fetch('/api/ai/briefing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId }),
+        body: JSON.stringify({ dealId, roundId, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')
@@ -382,7 +382,7 @@ export default function DealDashboardPage() {
       const res = await fetch('/api/ai/narrative', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id }),
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'AI error')

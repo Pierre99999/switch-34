@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
@@ -16,7 +17,7 @@ function stripHtml(html: string): string {
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
-  const { url } = await req.json()
+  const { url, locale } = await req.json()
   if (!url) return NextResponse.json({ error: 'No URL provided' }, { status: 400 })
 
   let rawText = ''
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
-    system: 'You are extracting structured contact intelligence from a LinkedIn profile page for a sales CRM. Be concise — 1-3 sentences per field. Use empty string for fields not evidenced in the content.',
+    system: 'You are extracting structured contact intelligence from a LinkedIn profile page for a sales CRM. Be concise — 1-3 sentences per field. Use empty string for fields not evidenced in the content.' + localeInstruction(locale),
     tools: [
       {
         name: 'save_contact_context',

@@ -3,13 +3,14 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
 import { LAYER_VARIABLES, VARIABLE_LABELS, EVIDENCE_CAP, type EvidenceLevel, type SourceAuthority } from '@/lib/types'
+import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
-  const { dealId, roundId } = await req.json()
+  const { dealId, roundId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -83,7 +84,7 @@ RULES:
 - Look at previous rounds' capture notes: if the same claim was made before AND confirmed again, upgrade to corroborated.
 - Only mark "verified" when the capture notes explicitly mention data, documents, or metrics being shared.
 - Determine source authority from context: if the capture notes mention who said something (CEO, manager, user), set authority accordingly. Default to "end_user" if unclear.
-- It is BETTER to leave a variable unscored than to guess. Only score what you have evidence for.`,
+- It is BETTER to leave a variable unscored than to guess. Only score what you have evidence for.` + localeInstruction(locale),
     tools: [
       {
         name: 'suggest_scores',
