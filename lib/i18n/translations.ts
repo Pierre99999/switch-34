@@ -173,6 +173,10 @@ export const translations = {
   'capture.analyze': { en: '✦ Analyze → Dashboard', fr: '✦ Analyser → Tableau de bord' },
   'capture.analyzing': { en: 'Analyzing…', fr: 'Analyse…' },
   'capture.noBriefingQuestions': { en: 'No briefing questions yet', fr: 'Pas de questions de briefing' },
+  'capture.importTranscript': { en: 'Import transcript', fr: 'Importer un transcript' },
+  'capture.importTranscriptHint': { en: 'Gong, Chorus, Fireflies, or any .txt / .pdf transcript', fr: 'Gong, Chorus, Fireflies, ou tout transcript .txt / .pdf' },
+  'capture.parsing': { en: 'Analyzing transcript…', fr: 'Analyse du transcript…' },
+  'capture.transcriptImported': { en: 'Transcript analyzed — fields pre-filled. Review and save.', fr: 'Transcript analysé — champs pré-remplis. Vérifiez et sauvegardez.' },
 
   // ── Boxes ──
   'boxes.title': { en: 'Knowledge Boxes', fr: 'Boîtes de connaissance' },

@@ -21,6 +21,8 @@ export default function CapturePage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [suggestingScores, setSuggestingScores] = useState(false)
+  const [parsingTranscript, setParsingTranscript] = useState(false)
+  const [transcriptSuccess, setTranscriptSuccess] = useState<string | null>(null)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -124,6 +126,43 @@ export default function CapturePage() {
     }
   }
 
+  async function handleImportTranscript(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !currentRoundData) return
+    setParsingTranscript(true)
+    setError(null)
+    setTranscriptSuccess(null)
+    try {
+      const questionPayload = questions.map((q, i) => ({
+        key: q.variable || (q.priority === 'opportunistic' ? `opp-${i}` : String(i)),
+        variable: q.variable,
+        text: q.text,
+        intent: q.intent,
+      }))
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('questions', JSON.stringify(questionPayload))
+      formData.append('locale', locale)
+      const res = await fetch('/api/ai/parse-transcript', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok || data.error) { setError(data.error ?? 'Failed'); return }
+      const parsed = data.notes as Record<string, string>
+      for (const [key, val] of Object.entries(parsed)) {
+        if (key === '__free__' && val) {
+          setFreeNote(prev => prev ? `${prev}\n\n${val}` : val)
+        } else if (val) {
+          setNotes(prev => ({ ...prev, [key]: prev[key] ? `${prev[key]}\n\n${val}` : val }))
+        }
+      }
+      setTranscriptSuccess(t('capture.transcriptImported'))
+    } catch {
+      setError('Network error — try again')
+    } finally {
+      setParsingTranscript(false)
+      e.target.value = ''
+    }
+  }
+
   if (!deal) {
     return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">Loading…</div>
   }
@@ -189,6 +228,27 @@ export default function CapturePage() {
           <p className="text-sm text-violet-700">
             {t('capture.logInstruction')}
           </p>
+        </div>
+      )}
+
+      {/* Transcript import */}
+      {isLatestRound && hasBriefing && (
+        <div className="mb-6 flex items-center gap-3 flex-wrap">
+          <label className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-neutral-300 text-sm font-medium cursor-pointer hover:border-violet-400 hover:bg-violet-50 transition-all ${parsingTranscript ? 'opacity-50 pointer-events-none' : ''}`}>
+            <span>📄</span>
+            <span>{parsingTranscript ? t('capture.parsing') : t('capture.importTranscript')}</span>
+            <input
+              type="file"
+              accept=".txt,.pdf,.md,.vtt,.srt"
+              className="hidden"
+              onChange={handleImportTranscript}
+              disabled={parsingTranscript}
+            />
+          </label>
+          <span className="text-xs text-neutral-400">{t('capture.importTranscriptHint')}</span>
+          {transcriptSuccess && (
+            <span className="text-xs text-green-600 font-medium">{transcriptSuccess}</span>
+          )}
         </div>
       )}
 
