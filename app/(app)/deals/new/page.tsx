@@ -14,6 +14,7 @@ export default function NewDealPage() {
     prospect_name: '',
     contact_name: '',
     contact_title: '',
+    potential_revenue: '',
   })
 
   function set(field: string, value: string) {
@@ -28,9 +29,10 @@ export default function NewDealPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
 
+    const { potential_revenue, ...rest } = form
     const { data: deal, error } = await supabase
       .from('deals')
-      .insert({ user_id: user.id, ...form, current_round: 0 })
+      .insert({ user_id: user.id, ...rest, potential_revenue: potential_revenue ? Number(potential_revenue) : null, current_round: 0 })
       .select()
       .single()
 
@@ -77,6 +79,15 @@ export default function NewDealPage() {
               className="mt-1 w-full border border-stone-300 bg-white px-3 py-2 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
             />
           </div>
+        </div>
+        <div>
+          <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.potentialRevenue')}</label>
+          <input
+            type="number" value={form.potential_revenue} onChange={e => set('potential_revenue', e.target.value)}
+            placeholder="50000"
+            min="0"
+            className="mt-1 w-full border border-stone-300 bg-white px-3 py-2 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
+          />
         </div>
         {error && <p className="text-xs text-rose-700 font-mono">{error}</p>}
 

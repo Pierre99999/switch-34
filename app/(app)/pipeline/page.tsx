@@ -134,6 +134,8 @@ export default function PipelinePage() {
     return dealRounds[0] || null
   }
 
+  const totalRevenue = deals.reduce((sum, d) => sum + (d.potential_revenue ?? 0), 0)
+
   const summary = {
     total: deals.length,
     nearClose: deals.filter((d: Deal) => {
@@ -145,6 +147,8 @@ export default function PipelinePage() {
       return r && [1, 2, 3, 4].some(l => getLayerVerdict(r, l) === 'AT RISK')
     }).length,
   }
+
+  const fmtRevenue = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k€` : `${n}€`
 
   if (loading) return null
 
@@ -168,7 +172,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{t('pipeline.active')}</div>
           <div className="text-3xl font-bold text-neutral-900">{summary.total}</div>
@@ -181,17 +185,22 @@ export default function PipelinePage() {
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{t('pipeline.atRisk')}</div>
           <div className="text-3xl font-bold text-rose-500">{summary.atRisk}</div>
         </div>
+        <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{t('pipeline.totalRevenue')}</div>
+          <div className="text-3xl font-bold text-blue-600">{totalRevenue > 0 ? fmtRevenue(totalRevenue) : '—'}</div>
+        </div>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
         {/* Table header */}
-        <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50 ${isDirector ? 'grid-cols-14' : 'grid-cols-12'}`}>
-          <div className={`${isDirector ? 'col-span-3' : 'col-span-4'} text-xs font-medium text-neutral-400 uppercase tracking-wide`}>{t('pipeline.prospect')}</div>
-          {isDirector && <div className="col-span-2 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.rep')}</div>}
-          <div className="col-span-1 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.round')}</div>
-          <div className={`${isDirector ? 'col-span-6' : 'col-span-5'} text-xs font-medium text-neutral-400 uppercase tracking-wide`}>{t('pipeline.activity')}</div>
-          <div className="col-span-2 text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
+        <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.prospect')}</div>
+          {isDirector && <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.rep')}</div>}
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.round')}</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.revenue')}</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
         </div>
 
         {deals.length === 0 && (
@@ -209,8 +218,8 @@ export default function PipelinePage() {
         {deals.map((deal: Deal) => {
           const r = latestRound(deal.id)
           return (
-            <div key={deal.id} className={`grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors ${isDirector ? 'grid-cols-14' : 'grid-cols-12'}`}>
-              <div className={isDirector ? 'col-span-3' : 'col-span-4'}>
+            <div key={deal.id} className="grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors" style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
+              <div>
                 <EditableProspectName
                   dealId={deal.id}
                   name={deal.prospect_name}
@@ -220,20 +229,23 @@ export default function PipelinePage() {
                 )}
               </div>
               {isDirector && (
-                <div className="col-span-2">
+                <div>
                   <span className="text-xs font-medium text-neutral-600">{repNames[deal.user_id] || '—'}</span>
                 </div>
               )}
-              <div className="col-span-1">
+              <div>
                 <span className="text-xs font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
               </div>
-              <div className={`${isDirector ? 'col-span-6' : 'col-span-5'} grid grid-cols-4 gap-3`}>
+              <div className="text-right">
+                <span className="text-sm font-semibold text-neutral-700">{deal.potential_revenue ? fmtRevenue(deal.potential_revenue) : '—'}</span>
+              </div>
+              <div className="grid grid-cols-4 gap-3">
                 <ScoreCell round={r} layer={1} label={t('layer.1')} />
                 <ScoreCell round={r} layer={2} label={t('layer.2')} />
                 <ScoreCell round={r} layer={3} label={t('layer.3')} />
                 <ScoreCell round={r} layer={4} label={t('layer.4')} />
               </div>
-              <div className="col-span-2 text-right">
+              <div className="text-right">
                 <Link href={`/deals/${deal.id}/dashboard`} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
                   {t('pipeline.dashboard')}
                 </Link>

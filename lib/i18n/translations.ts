@@ -55,6 +55,8 @@ export const translations = {
   'pipeline.contextLink': { en: 'context →', fr: 'contexte →' },
   'pipeline.noDeals': { en: 'No deals yet', fr: 'Aucun deal' },
   'pipeline.noDealsDesc': { en: 'Start your first deal diagnostic to get going.', fr: 'Lancez votre premier diagnostic pour commencer.' },
+  'pipeline.revenue': { en: 'Revenue', fr: 'CA potentiel' },
+  'pipeline.totalRevenue': { en: 'Total pipeline', fr: 'Pipeline total' },
   'pipeline.rep': { en: 'Rep', fr: 'Commercial' },
   'pipeline.allReps': { en: 'All reps', fr: 'Tous les commerciaux' },
 
@@ -70,6 +72,7 @@ export const translations = {
   'newDeal.prospectPlaceholder': { en: 'Acme Manufacturing', fr: 'Acme Manufacturing' },
   'newDeal.contactName': { en: 'Contact name', fr: 'Nom du contact' },
   'newDeal.contactTitle': { en: 'Title', fr: 'Titre' },
+  'newDeal.potentialRevenue': { en: 'Potential revenue (€)', fr: 'CA potentiel (€)' },
   'newDeal.create': { en: 'Start diagnostic →', fr: 'Démarrer le diagnostic →' },
   'newDeal.creating': { en: 'Creating…', fr: 'Création…' },
 

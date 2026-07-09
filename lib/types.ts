@@ -158,6 +158,7 @@ export type Deal = {
   contact_linkedin: string | null
   current_round: number
   status: 'active' | 'won' | 'lost' | 'paused'
+  potential_revenue: number | null
   prospect_dimensions: ProspectDimensions | null
   created_at: string
   updated_at: string

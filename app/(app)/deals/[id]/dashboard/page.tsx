@@ -427,7 +427,12 @@ export default function DealDashboardPage() {
             {t('dashboard.backToPipeline')}
           </button>
           <h1 className="text-2xl font-bold text-neutral-900">{deal.prospect_name}</h1>
-          {deal.contact_name && <p className="text-sm text-neutral-500 mt-0.5">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</p>}
+          <div className="flex items-center gap-3 mt-0.5">
+            {deal.contact_name && <span className="text-sm text-neutral-500">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</span>}
+            <span className="text-sm font-semibold text-blue-600">
+              {deal.potential_revenue ? `${deal.potential_revenue >= 1000 ? `${(deal.potential_revenue / 1000).toFixed(deal.potential_revenue % 1000 === 0 ? 0 : 1)}k€` : `${deal.potential_revenue}€`}` : ''}
+            </span>
+          </div>
         </div>
         <div className="text-right">
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('dashboard.round')}</div>
