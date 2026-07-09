@@ -73,6 +73,8 @@ export const translations = {
   'newDeal.contactName': { en: 'Contact name', fr: 'Nom du contact' },
   'newDeal.contactTitle': { en: 'Title', fr: 'Titre' },
   'newDeal.potentialRevenue': { en: 'Potential revenue (€)', fr: 'CA potentiel (€)' },
+  'deal.potentialRevenue': { en: 'Potential revenue (€)', fr: 'CA potentiel (€)' },
+  'deal.revenueSaved': { en: 'Saved', fr: 'Enregistré' },
   'newDeal.create': { en: 'Start diagnostic →', fr: 'Démarrer le diagnostic →' },
   'newDeal.creating': { en: 'Creating…', fr: 'Création…' },
 

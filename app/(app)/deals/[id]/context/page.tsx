@@ -128,6 +128,9 @@ export default function AccountContextPage() {
   const [linkedinError, setLinkedinError] = useState<string | null>(null)
   const [linkedinSuccess, setLinkedinSuccess] = useState<string | null>(null)
 
+  const [revenue, setRevenue] = useState('')
+  const [revenueSaved, setRevenueSaved] = useState(false)
+
   const [newStk, setNewStk] = useState({ name: '', role: '', actor_type: 'unknown' as Stakeholder['actor_type'], notes: '' })
   const [addingStk, setAddingStk] = useState(false)
 
@@ -139,6 +142,7 @@ export default function AccountContextPage() {
     ])
     if (dealData) {
       setDeal(dealData)
+      setRevenue(dealData.potential_revenue != null ? String(dealData.potential_revenue) : '')
       const merged = deepMerge(EMPTY_PROSPECT_DIMENSIONS, dealData.prospect_dimensions ?? {})
       setDims(merged)
       setSavedDims(merged)
@@ -284,6 +288,32 @@ export default function AccountContextPage() {
           <div className={`text-lg font-bold ${totalFilled === totalQ ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
             {totalFilled}/{totalQ}
           </div>
+        </div>
+      </div>
+
+      {/* Revenue */}
+      <div className="bg-white rounded-2xl border border-neutral-200 p-5 mb-6 shadow-sm">
+        <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('deal.potentialRevenue')}</label>
+        <div className="flex items-center gap-3 mt-2">
+          <input
+            type="number"
+            value={revenue}
+            onChange={e => { setRevenue(e.target.value); setRevenueSaved(false) }}
+            placeholder="50000"
+            min="0"
+            className="w-48 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+          />
+          <button
+            onClick={async () => {
+              const supabase = createClient()
+              await supabase.from('deals').update({ potential_revenue: revenue ? Number(revenue) : null }).eq('id', dealId)
+              setRevenueSaved(true)
+            }}
+            className="px-4 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
+          >
+            {t('profile.saveChanges')}
+          </button>
+          {revenueSaved && <span className="text-xs text-emerald-600 font-medium">{t('deal.revenueSaved')}</span>}
         </div>
       </div>
 
