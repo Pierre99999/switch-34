@@ -32,6 +32,13 @@ export const translations = {
   'onboarding.websitePlaceholder': { en: 'acme.com', fr: 'acme.com' },
   'onboarding.submit': { en: 'Get started →', fr: 'Commencer →' },
   'onboarding.saving': { en: 'Setting up…', fr: 'Configuration…' },
+  'onboarding.yourRole': { en: 'Your role', fr: 'Votre rôle' },
+  'onboarding.roleSales': { en: 'Sales representative', fr: 'Commercial' },
+  'onboarding.roleSalesDesc': { en: 'I manage my own deals', fr: 'Je gère mes propres deals' },
+  'onboarding.roleDirector': { en: 'Sales director', fr: 'Directeur commercial' },
+  'onboarding.roleDirectorDesc': { en: 'I oversee the full pipeline and configure the company profile', fr: 'Je supervise le pipeline complet et configure le profil entreprise' },
+  'onboarding.fullName': { en: 'Your full name', fr: 'Votre nom complet' },
+  'onboarding.fullNamePlaceholder': { en: 'John Doe', fr: 'Jean Dupont' },
 
   // ── Pipeline ──
   'pipeline.title': { en: 'Active deals', fr: 'Deals actifs' },
@@ -48,6 +55,13 @@ export const translations = {
   'pipeline.contextLink': { en: 'context →', fr: 'contexte →' },
   'pipeline.noDeals': { en: 'No deals yet', fr: 'Aucun deal' },
   'pipeline.noDealsDesc': { en: 'Start your first deal diagnostic to get going.', fr: 'Lancez votre premier diagnostic pour commencer.' },
+  'pipeline.rep': { en: 'Rep', fr: 'Commercial' },
+  'pipeline.allReps': { en: 'All reps', fr: 'Tous les commerciaux' },
+
+  // ── Roles ──
+  'role.sales': { en: 'Sales', fr: 'Commercial' },
+  'role.director': { en: 'Director', fr: 'Directeur' },
+  'profile.readOnly': { en: 'Read-only — configured by your sales director', fr: 'Lecture seule — configuré par votre directeur commercial' },
 
   // ── New Deal ──
   'newDeal.title': { en: 'Start a deal diagnostic', fr: 'Démarrer un diagnostic' },

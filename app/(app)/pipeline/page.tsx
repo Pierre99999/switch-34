@@ -7,6 +7,7 @@ import { getLayerVerdict, LAYER_VARIABLES, type EvidenceLevel, EVIDENCE_LABELS }
 import type { Deal, DealRound } from '@/lib/types'
 import EditableProspectName from '@/components/deal/EditableProspectName'
 import { useI18n } from '@/lib/i18n/context'
+import { useRole } from '@/lib/role-context'
 
 function getLayerScore(round: DealRound | null, layer: number): number | null {
   if (!round) return null
@@ -73,8 +74,11 @@ function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: nu
 
 export default function PipelinePage() {
   const { t } = useI18n()
+  const { role } = useRole()
+  const isDirector = role === 'director'
   const [deals, setDeals] = useState<Deal[]>([])
   const [rounds, setRounds] = useState<DealRound[]>([])
+  const [repNames, setRepNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -83,15 +87,32 @@ export default function PipelinePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: dealData } = await supabase
+      let query = supabase
         .from('deals')
         .select('*')
-        .eq('user_id', user.id)
         .eq('status', 'active')
         .order('updated_at', { ascending: false })
 
+      if (!isDirector) {
+        query = query.eq('user_id', user.id)
+      }
+
+      const { data: dealData } = await query
       const d = dealData || []
       setDeals(d)
+
+      if (isDirector && d.length > 0) {
+        const userIds = [...new Set(d.map((x: Deal) => x.user_id))]
+        const { data: vendors } = await supabase
+          .from('vendors')
+          .select('user_id, full_name, company_name')
+          .in('user_id', userIds)
+        const names: Record<string, string> = {}
+        for (const v of vendors || []) {
+          names[v.user_id] = v.full_name || v.company_name
+        }
+        setRepNames(names)
+      }
 
       const ids = d.map((x: Deal) => x.id)
       if (ids.length > 0) {
@@ -104,7 +125,7 @@ export default function PipelinePage() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [isDirector])
 
   const latestRound = (dealId: string): DealRound | null => {
     const dealRounds = rounds
@@ -133,7 +154,10 @@ export default function PipelinePage() {
       <div className="flex items-end justify-between mb-8">
         <div>
           <p className="text-sm text-neutral-400 mb-1">Switch</p>
-          <h1 className="text-2xl font-bold text-neutral-900">{t('pipeline.title')}</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">
+            {t('pipeline.title')}
+            {isDirector && <span className="text-sm font-medium text-neutral-400 ml-2">· {t('pipeline.allReps')}</span>}
+          </h1>
         </div>
         <Link
           href="/deals/new"
@@ -162,10 +186,11 @@ export default function PipelinePage() {
       {/* Table */}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-12 gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50">
-          <div className="col-span-4 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.prospect')}</div>
+        <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50 ${isDirector ? 'grid-cols-14' : 'grid-cols-12'}`}>
+          <div className={`${isDirector ? 'col-span-3' : 'col-span-4'} text-xs font-medium text-neutral-400 uppercase tracking-wide`}>{t('pipeline.prospect')}</div>
+          {isDirector && <div className="col-span-2 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.rep')}</div>}
           <div className="col-span-1 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.round')}</div>
-          <div className="col-span-5 text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>
+          <div className={`${isDirector ? 'col-span-6' : 'col-span-5'} text-xs font-medium text-neutral-400 uppercase tracking-wide`}>{t('pipeline.activity')}</div>
           <div className="col-span-2 text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
         </div>
 
@@ -184,8 +209,8 @@ export default function PipelinePage() {
         {deals.map((deal: Deal) => {
           const r = latestRound(deal.id)
           return (
-            <div key={deal.id} className="grid grid-cols-12 gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors">
-              <div className="col-span-4">
+            <div key={deal.id} className={`grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors ${isDirector ? 'grid-cols-14' : 'grid-cols-12'}`}>
+              <div className={isDirector ? 'col-span-3' : 'col-span-4'}>
                 <EditableProspectName
                   dealId={deal.id}
                   name={deal.prospect_name}
@@ -194,10 +219,15 @@ export default function PipelinePage() {
                   <div className="text-xs text-neutral-400 mt-0.5">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</div>
                 )}
               </div>
+              {isDirector && (
+                <div className="col-span-2">
+                  <span className="text-xs font-medium text-neutral-600">{repNames[deal.user_id] || '—'}</span>
+                </div>
+              )}
               <div className="col-span-1">
                 <span className="text-xs font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
               </div>
-              <div className="col-span-5 grid grid-cols-4 gap-3">
+              <div className={`${isDirector ? 'col-span-6' : 'col-span-5'} grid grid-cols-4 gap-3`}>
                 <ScoreCell round={r} layer={1} label={t('layer.1')} />
                 <ScoreCell round={r} layer={2} label={t('layer.2')} />
                 <ScoreCell round={r} layer={3} label={t('layer.3')} />

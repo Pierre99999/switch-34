@@ -5,11 +5,13 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n/context'
+import { useRole } from '@/lib/role-context'
 
 export default function NavBar() {
   const pathname = usePathname()
   const router = useRouter()
   const { t, locale, setLocale } = useI18n()
+  const { role, fullName } = useRole()
 
   const dealMatch = pathname.match(/\/deals\/([^/]+)/)
   const dealId = dealMatch?.[1]
@@ -82,6 +84,10 @@ export default function NavBar() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          {fullName && <span className="text-[11px] text-neutral-400">{fullName}</span>}
+          <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${role === 'director' ? 'bg-blue-50 text-blue-600' : 'bg-neutral-100 text-neutral-500'}`}>
+            {t(('role.' + role) as any)}
+          </span>
           <button
             onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')}
             className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 transition-colors uppercase tracking-wide"

@@ -129,10 +129,14 @@ export const EMPTY_PROSPECT_DIMENSIONS: ProspectDimensions = {
   fit_signals: { problem_mapping: '', implementation_readiness: '', timing_trigger: '' },
 }
 
+export type UserRole = 'sales' | 'director'
+
 export type Vendor = {
   id: string
   user_id: string
   company_name: string
+  full_name: string | null
+  role: UserRole
   company_url: string | null
   product_description: string | null
   value_proposition: string | null

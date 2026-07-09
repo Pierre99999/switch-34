@@ -12,6 +12,8 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null)
   const [companyName, setCompanyName] = useState('')
   const [companyUrl, setCompanyUrl] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [role, setRole] = useState<'sales' | 'director'>('director')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -25,6 +27,8 @@ export default function OnboardingPage() {
       user_id: user.id,
       company_name: companyName,
       company_url: companyUrl,
+      full_name: fullName || null,
+      role,
     })
 
     if (error) { setError(error.message); setLoading(false); return }
@@ -64,6 +68,38 @@ export default function OnboardingPage() {
               placeholder={t('onboarding.websitePlaceholder')}
               className="mt-1 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
             />
+          </div>
+
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('onboarding.fullName')}</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              placeholder={t('onboarding.fullNamePlaceholder')}
+              className="mt-1 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-2 block">{t('onboarding.yourRole')}</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setRole('sales')}
+                className={`border px-4 py-3 text-left transition-all ${role === 'sales' ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-400'}`}
+              >
+                <div className="text-sm font-medium text-stone-900 font-mono">{t('onboarding.roleSales')}</div>
+                <div className="text-xs text-stone-500 mt-0.5">{t('onboarding.roleSalesDesc')}</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('director')}
+                className={`border px-4 py-3 text-left transition-all ${role === 'director' ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-400'}`}
+              >
+                <div className="text-sm font-medium text-stone-900 font-mono">{t('onboarding.roleDirector')}</div>
+                <div className="text-xs text-stone-500 mt-0.5">{t('onboarding.roleDirectorDesc')}</div>
+              </button>
+            </div>
           </div>
 
           {error && <p className="text-xs text-rose-700 font-mono">{error}</p>}

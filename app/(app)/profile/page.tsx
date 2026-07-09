@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { type Vendor, type VendorDimensions, EMPTY_VENDOR_DIMENSIONS } from '@/lib/types'
 import { useI18n } from '@/lib/i18n/context'
+import { useRole } from '@/lib/role-context'
 import { getDimensions, type DimensionDef } from '@/lib/i18n/profile-dimensions'
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -31,6 +32,7 @@ function DimensionSection({
   onSave,
   saving,
   isDirty,
+  readOnly,
 }: {
   def: DimensionDef
   values: Record<string, string>
@@ -38,6 +40,7 @@ function DimensionSection({
   onSave: () => void
   saving: boolean
   isDirty: boolean
+  readOnly?: boolean
 }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
@@ -55,7 +58,7 @@ function DimensionSection({
           <span className="text-xs text-neutral-400 hidden sm:block max-w-sm truncate">{def.description}</span>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-          {isDirty && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{t('profile.unsaved')}</span>}
+          {isDirty && !readOnly && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{t('profile.unsaved')}</span>}
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${filled === total ? 'text-emerald-600 bg-emerald-50' : filled > 0 ? 'text-amber-600 bg-amber-50' : 'text-neutral-400 bg-neutral-100'}`}>
             {filled}/{total}
           </span>
@@ -73,15 +76,16 @@ function DimensionSection({
                 <p className="text-xs text-neutral-400 mt-0.5 mb-2">{q.hint}</p>
                 <textarea
                   value={values[q.key] ?? ''}
-                  onChange={e => onChange(q.key, e.target.value)}
+                  onChange={e => !readOnly && onChange(q.key, e.target.value)}
+                  readOnly={readOnly}
                   rows={3}
                   placeholder="..."
-                  className={inputClass}
+                  className={`${inputClass} ${readOnly ? 'bg-neutral-100 cursor-default' : ''}`}
                 />
               </div>
             ))}
           </div>
-          {isDirty && (
+          {isDirty && !readOnly && (
             <div className="mt-5 flex items-center gap-3 pt-4 border-t border-neutral-100">
               <button
                 onClick={onSave}
@@ -102,6 +106,8 @@ function DimensionSection({
 
 export default function ProfilePage() {
   const { t, locale } = useI18n()
+  const { role } = useRole()
+  const isReadOnly = role === 'sales'
   const DIMENSIONS = getDimensions(locale)
   const [vendor, setVendor] = useState<Vendor | null>(null)
   const [dims, setDims] = useState<VendorDimensions>(EMPTY_VENDOR_DIMENSIONS)
@@ -117,14 +123,23 @@ export default function ProfilePage() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data } = await supabase.from('vendors').select('*').eq('user_id', user.id).single()
-    if (data) {
-      setVendor(data)
-      const merged = deepMerge(EMPTY_VENDOR_DIMENSIONS, data.dimensions ?? {})
+
+    let vendorData
+    if (isReadOnly) {
+      const { data } = await supabase.from('vendors').select('*').eq('role', 'director').limit(1).single()
+      vendorData = data
+    } else {
+      const { data } = await supabase.from('vendors').select('*').eq('user_id', user.id).single()
+      vendorData = data
+    }
+
+    if (vendorData) {
+      setVendor(vendorData)
+      const merged = deepMerge(EMPTY_VENDOR_DIMENSIONS, vendorData.dimensions ?? {})
       setDims(merged)
       setSavedDims(merged)
     }
-  }, [])
+  }, [isReadOnly])
 
   useEffect(() => { load() }, [load])
 
@@ -222,8 +237,15 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Read-only banner for sales reps */}
+      {isReadOnly && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-8">
+          <p className="text-sm text-amber-700">{t('profile.readOnly')}</p>
+        </div>
+      )}
+
       {/* Import panel */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8 shadow-sm">
+      {!isReadOnly && <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8 shadow-sm">
         <h2 className="text-sm font-semibold text-neutral-700 mb-4">{t('profile.importFrom')}</h2>
         <div className="flex flex-col gap-4">
           {/* URL */}
@@ -269,7 +291,7 @@ export default function ProfilePage() {
 
         {importError && <p className="mt-3 text-sm text-rose-600">{importError}</p>}
         {importSuccess && <p className="mt-3 text-sm text-emerald-600">{importSuccess}</p>}
-      </div>
+      </div>}
 
       {/* Info card */}
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 mb-8">
@@ -289,6 +311,7 @@ export default function ProfilePage() {
             onSave={() => handleSave(def.key)}
             saving={savingKey === def.key}
             isDirty={JSON.stringify(dims[def.key]) !== JSON.stringify(savedDims[def.key])}
+            readOnly={isReadOnly}
           />
         ))}
       </div>
