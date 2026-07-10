@@ -23,6 +23,8 @@ export default function CapturePage() {
   const [suggestingScores, setSuggestingScores] = useState(false)
   const [parsingTranscript, setParsingTranscript] = useState(false)
   const [transcriptSuccess, setTranscriptSuccess] = useState<string | null>(null)
+  const [translating, setTranslating] = useState(false)
+  const [translateSuccess, setTranslateSuccess] = useState<string | null>(null)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -163,6 +165,50 @@ export default function CapturePage() {
     }
   }
 
+  async function handleTranslate() {
+    if (!currentRoundData) return
+    setTranslating(true)
+    setTranslateSuccess(null)
+    try {
+      const r = currentRoundData
+      const data: Record<string, unknown> = {
+        capture_notes: { ...notes, __free__: freeNote },
+      }
+      if (r.briefing_line) data.briefing_line = r.briefing_line
+      if (r.briefing_read) data.briefing_read = r.briefing_read
+      if (r.briefing_angle) data.briefing_angle = r.briefing_angle
+      if (r.briefing_win_condition) data.briefing_win_condition = r.briefing_win_condition
+      if (r.briefing_questions?.length) data.briefing_questions = r.briefing_questions
+      if (r.briefing_do_not?.length) data.briefing_do_not = r.briefing_do_not
+      if (r.briefing_mirror?.length) data.briefing_mirror = r.briefing_mirror
+      if (r.briefing_objections?.length) data.briefing_objections = r.briefing_objections
+      if (r.narrative) data.narrative = r.narrative
+
+      const res = await fetch('/api/ai/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data, locale }),
+      })
+      const result = await res.json()
+      if (result.data) {
+        const d = result.data
+        if (d.capture_notes) {
+          const translated = d.capture_notes as Record<string, string>
+          const free = translated.__free__ ?? ''
+          delete translated.__free__
+          setNotes(translated)
+          setFreeNote(free)
+          d.capture_notes = { ...translated, __free__: free }
+        }
+        const supabase = createClient()
+        await supabase.from('deal_rounds').update(d).eq('id', currentRoundData.id)
+        setTranslateSuccess(t('common.translated'))
+        await load()
+      }
+    } catch { /* ignore */ }
+    setTranslating(false)
+  }
+
   if (!deal) {
     return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">Loading…</div>
   }
@@ -186,6 +232,20 @@ export default function CapturePage() {
           <p className="text-sm text-neutral-500 mt-0.5">
             Round {selectedRound === 0 ? '0 (initial)' : selectedRound}
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {isLatestRound && (
+            <>
+              <button
+                onClick={handleTranslate}
+                disabled={translating}
+                className="px-4 py-2 text-sm font-medium text-neutral-600 border border-neutral-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-40"
+              >
+                {translating ? t('common.translating') : t('common.translateContent')}
+              </button>
+              {translateSuccess && <span className="text-xs text-emerald-600 font-medium">{translateSuccess}</span>}
+            </>
+          )}
         </div>
       </div>
 

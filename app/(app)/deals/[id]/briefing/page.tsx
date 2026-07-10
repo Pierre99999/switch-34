@@ -67,13 +67,15 @@ export default function BriefingPage() {
   const params = useParams()
   const router = useRouter()
   const dealId = params.id as string
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [selectedRound, setSelectedRound] = useState<number>(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [translating, setTranslating] = useState(false)
+  const [translateSuccess, setTranslateSuccess] = useState<string | null>(null)
 
   const [line, setLine] = useState('')
   const [read, setRead] = useState('')
@@ -140,6 +142,43 @@ export default function BriefingPage() {
     setSaving(false)
   }
 
+  async function handleTranslate() {
+    if (!currentRoundData) return
+    setTranslating(true)
+    setTranslateSuccess(null)
+    try {
+      const data: Record<string, unknown> = {
+        briefing_line: line, briefing_read: read, briefing_angle: angle,
+        briefing_win_condition: winCondition, briefing_questions: questions,
+        briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
+      }
+      if (currentRoundData.capture_notes) data.capture_notes = currentRoundData.capture_notes
+      if (currentRoundData.narrative) data.narrative = currentRoundData.narrative
+      const res = await fetch('/api/ai/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data, locale }),
+      })
+      const result = await res.json()
+      if (result.data) {
+        const d = result.data
+        if (d.briefing_line != null) setLine(d.briefing_line)
+        if (d.briefing_read != null) setRead(d.briefing_read)
+        if (d.briefing_angle != null) setAngle(d.briefing_angle)
+        if (d.briefing_win_condition != null) setWinCondition(d.briefing_win_condition)
+        if (d.briefing_questions) setQuestions(d.briefing_questions)
+        if (d.briefing_do_not) setDoNot(d.briefing_do_not)
+        if (d.briefing_mirror) setMirror(d.briefing_mirror)
+        if (d.briefing_objections) setObjections(d.briefing_objections)
+        const supabase = createClient()
+        await supabase.from('deal_rounds').update(d).eq('id', currentRoundData.id)
+        setTranslateSuccess(t('common.translated'))
+        await load()
+      }
+    } catch { /* ignore */ }
+    setTranslating(false)
+  }
+
   // ── List helpers ──────────────────────────────────────────
 
   function addQuestion() {
@@ -204,7 +243,20 @@ export default function BriefingPage() {
             Round {selectedRound === 0 ? '0 (initial)' : selectedRound}
           </p>
         </div>
-        <div className="flex items-center gap-3" />
+        <div className="flex items-center gap-3">
+          {isLatestRound && (
+            <>
+              <button
+                onClick={handleTranslate}
+                disabled={translating}
+                className="px-4 py-2 text-sm font-medium text-neutral-600 border border-neutral-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-40"
+              >
+                {translating ? t('common.translating') : t('common.translateContent')}
+              </button>
+              {translateSuccess && <span className="text-xs text-emerald-600 font-medium">{translateSuccess}</span>}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Round timeline */}
