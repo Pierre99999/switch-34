@@ -18,8 +18,9 @@ export default function NewDealPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Step 0: Prospect name
+  // Step 0: Prospect name + context
   const [prospectName, setProspectName] = useState('')
+  const [salesContext, setSalesContext] = useState('')
 
   // Step 1: URL + context fetch
   const [prospectUrl, setProspectUrl] = useState('')
@@ -42,7 +43,7 @@ export default function NewDealPage() {
       const res = await fetch('/api/context/from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: prospectUrl.trim(), locale }),
+        body: JSON.stringify({ url: prospectUrl.trim(), locale, salesContext: salesContext.trim() || undefined }),
       })
       const data = await res.json()
       if (data.dimensions) {
@@ -128,6 +129,15 @@ export default function NewDealPage() {
               placeholder="Acme Manufacturing"
               className={inputClass}
               autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.salesContext')}</label>
+            <textarea
+              value={salesContext} onChange={e => setSalesContext(e.target.value)}
+              placeholder={t('newDeal.salesContextPlaceholder')}
+              rows={4}
+              className="mt-1 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900 resize-y"
             />
           </div>
           <div className="flex gap-3">
