@@ -106,7 +106,7 @@ function DimensionSection({
 
 export default function ProfilePage() {
   const { t, locale } = useI18n()
-  const { role } = useRole()
+  const { role, loading: roleLoading } = useRole()
   const isReadOnly = role === 'sales'
   const DIMENSIONS = getDimensions(locale)
   const [vendor, setVendor] = useState<Vendor | null>(null)
@@ -120,6 +120,7 @@ export default function ProfilePage() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    if (roleLoading) return
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -139,7 +140,7 @@ export default function ProfilePage() {
       setDims(merged)
       setSavedDims(merged)
     }
-  }, [isReadOnly])
+  }, [isReadOnly, roleLoading])
 
   useEffect(() => { load() }, [load])
 
