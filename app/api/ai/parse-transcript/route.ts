@@ -59,7 +59,9 @@ ${questionList}`
     description: 'Everything else said outside the structured questions: objections, names, budget signals, timing, competition, politics, blockers, accelerators.',
   }
 
-  const message = await client.messages.create({
+  let message
+  try {
+  message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
     system: `You are a sales conversation analyst. You read conversation transcripts (from tools like Gong, Chorus, Fireflies, or manual notes) and extract what was said, mapped to specific diagnostic questions. Be faithful to what was actually said — do not interpret or reframe. Use the prospect's actual words and phrasing. Be concise but complete.` + localeInstruction(locale ?? undefined),
@@ -77,6 +79,10 @@ ${questionList}`
     tool_choice: { type: 'any' as const },
     messages: [{ role: 'user', content: userContent }],
   })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'AI request failed'
+    return NextResponse.json({ error: msg }, { status: 502 })
+  }
 
   const toolUse = message.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {
