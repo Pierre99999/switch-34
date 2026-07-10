@@ -131,12 +131,32 @@ export const EMPTY_PROSPECT_DIMENSIONS: ProspectDimensions = {
 
 export type UserRole = 'sales' | 'director'
 
+export type Organization = {
+  id: string
+  name: string
+  owner_id: string
+  invite_code: string
+  created_at: string
+}
+
+export type QuestionTemplate = {
+  id: string
+  organization_id: string
+  text: string
+  category: string
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Vendor = {
   id: string
   user_id: string
   company_name: string
   full_name: string | null
   role: UserRole
+  organization_id: string | null
+  onboarding_completed: boolean
   company_url: string | null
   product_description: string | null
   value_proposition: string | null
@@ -204,6 +224,7 @@ export type DealRound = {
   briefing_objections: BriefingObjection[]
   briefing_win_condition: string | null
   mandatory_questions: string[]
+  selected_templates: string[]
   evidence_levels: Record<string, EvidenceLevel>
   authority_levels: Record<string, SourceAuthority>
   created_at: string

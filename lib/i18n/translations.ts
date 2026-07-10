@@ -10,6 +10,7 @@ export const translations = {
   'nav.context': { en: 'Context', fr: 'Contexte' },
   'nav.boxes': { en: 'Boxes', fr: 'Boîtes' },
   'nav.signOut': { en: 'Sign out', fr: 'Déconnexion' },
+  'nav.team': { en: 'Team', fr: 'Équipe' },
 
   // ── Auth ──
   'auth.login': { en: 'Sign in', fr: 'Connexion' },
@@ -39,6 +40,32 @@ export const translations = {
   'onboarding.roleDirectorDesc': { en: 'I oversee the full pipeline and configure the company profile', fr: 'Je supervise le pipeline complet et configure le profil entreprise' },
   'onboarding.fullName': { en: 'Your full name', fr: 'Votre nom complet' },
   'onboarding.fullNamePlaceholder': { en: 'John Doe', fr: 'Jean Dupont' },
+  'onboarding.step': { en: 'Step', fr: 'Étape' },
+  'onboarding.next': { en: 'Next →', fr: 'Suivant →' },
+  'onboarding.back': { en: '← Back', fr: '← Retour' },
+  'onboarding.finish': { en: 'Finish setup →', fr: 'Terminer →' },
+  'onboarding.inviteCode': { en: 'Team invite code', fr: "Code d'invitation équipe" },
+  'onboarding.inviteCodePlaceholder': { en: 'Enter the code from your director', fr: 'Entrez le code fourni par votre directeur' },
+  'onboarding.inviteCodeHint': { en: 'Ask your sales director for the team code', fr: 'Demandez le code à votre directeur commercial' },
+  'onboarding.invalidCode': { en: 'Invalid invite code', fr: "Code d'invitation invalide" },
+  'onboarding.profileStep': { en: 'Company profile', fr: "Profil de l'entreprise" },
+  'onboarding.profileStepDesc': { en: 'Import your company info from a URL or documents to populate the 9 sales dimensions.', fr: 'Importez les informations de votre entreprise depuis une URL ou des documents pour remplir les 9 dimensions commerciales.' },
+  'onboarding.questionsStep': { en: 'Mandatory questions', fr: 'Questions obligatoires' },
+  'onboarding.questionsStepDesc': { en: 'Create the must-ask questions your sales team should use in their meetings.', fr: 'Créez les questions incontournables que vos commerciaux doivent poser en rendez-vous.' },
+  'onboarding.teamStep': { en: 'Your team', fr: 'Votre équipe' },
+  'onboarding.teamStepDesc': { en: 'Share this invite code with your sales reps so they can join your organization.', fr: "Partagez ce code d'invitation avec vos commerciaux pour qu'ils rejoignent votre organisation." },
+  'onboarding.addQuestion': { en: '+ Add question', fr: '+ Ajouter une question' },
+  'onboarding.questionPlaceholder': { en: 'What must your reps always ask?', fr: 'Que doivent toujours demander vos commerciaux ?' },
+  'onboarding.importingProfile': { en: 'Importing profile…', fr: 'Import du profil…' },
+  'onboarding.profileImported': { en: 'Profile imported!', fr: 'Profil importé !' },
+  'onboarding.skipForNow': { en: 'Skip for now', fr: 'Passer pour le moment' },
+  'onboarding.codeCopied': { en: 'Code copied!', fr: 'Code copié !' },
+  'onboarding.copyCode': { en: 'Copy code', fr: 'Copier le code' },
+
+  // ── Team ──
+  'team.members': { en: 'Team members', fr: "Membres de l'équipe" },
+  'team.noMembers': { en: 'No team members yet. Share the invite code with your sales reps.', fr: "Aucun membre pour l'instant. Partagez le code d'invitation avec vos commerciaux." },
+  'team.questionsDesc': { en: 'These questions can be activated per round in any deal briefing.', fr: 'Ces questions peuvent être activées par round dans le briefing de chaque deal.' },
 
   // ── Pipeline ──
   'pipeline.title': { en: 'Active deals', fr: 'Deals actifs' },

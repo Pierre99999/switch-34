@@ -71,6 +71,7 @@ export default function NavBar() {
           <span className="text-lg font-bold text-blue-500 mr-4 tracking-tight">Switch</span>
           {tab(t('nav.pipeline'), '/pipeline', pathname === '/pipeline')}
           {tab(t('nav.profile'), '/profile', pathname === '/profile')}
+          {role === 'director' && tab(t('nav.team'), '/team', pathname === '/team')}
           {dealId && (
             <>
               <div className="w-px h-5 bg-neutral-200 mx-2" />

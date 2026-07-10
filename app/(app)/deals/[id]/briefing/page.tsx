@@ -6,9 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
 import {
   type Deal, type DealRound, type BriefingQuestion, type BriefingObjection,
+  type QuestionTemplate,
   LAYER_LABELS, getLayerVerdict,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
+import { useRole } from '@/lib/role-context'
 
 // ── Collapsible section ─────────────────────────────────────
 
@@ -68,8 +70,11 @@ export default function BriefingPage() {
   const router = useRouter()
   const dealId = params.id as string
   const { t, locale } = useI18n()
+  const { organizationId } = useRole()
 
   const [deal, setDeal] = useState<Deal | null>(null)
+  const [orgTemplates, setOrgTemplates] = useState<QuestionTemplate[]>([])
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [selectedRound, setSelectedRound] = useState<number>(0)
   const [saving, setSaving] = useState(false)
@@ -100,6 +105,7 @@ export default function BriefingPage() {
     setMirror(r?.briefing_mirror ?? [])
     setObjections(r?.briefing_objections ?? [])
     setMandatoryQuestions(r?.mandatory_questions ?? [])
+    setSelectedTemplateIds(r?.selected_templates ?? [])
   }
 
   const load = useCallback(async () => {
@@ -108,6 +114,11 @@ export default function BriefingPage() {
       supabase.from('deals').select('*').eq('id', dealId).single(),
       supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
     ])
+    if (organizationId) {
+      const { data: tplData } = await supabase.from('question_templates').select('*').eq('organization_id', organizationId).order('created_at')
+      if (tplData) setOrgTemplates(tplData as QuestionTemplate[])
+    }
+
     if (dealData) setDeal(dealData)
     if (roundData) {
       setRounds(roundData)
@@ -117,7 +128,7 @@ export default function BriefingPage() {
         populateFromRound(latest)
       }
     }
-  }, [dealId])
+  }, [dealId, organizationId])
 
   useEffect(() => { load() }, [load])
 
@@ -138,6 +149,7 @@ export default function BriefingPage() {
         briefing_win_condition: winCondition, briefing_questions: questions,
         briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
         mandatory_questions: mandatoryQuestions,
+        selected_templates: selectedTemplateIds,
       })
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
@@ -302,6 +314,37 @@ export default function BriefingPage() {
 
       {/* Mandatory Questions */}
       <Section title={t('briefing.mandatoryQuestions')} subtitle={t('briefing.mandatorySubtitle')} accent="bg-red-500" defaultOpen={true}>
+        {/* Template questions from org bank */}
+        {orgTemplates.length > 0 && (
+          <div className="mb-4">
+            <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">{t('team.questionsDesc')}</div>
+            <div className="space-y-1.5">
+              {orgTemplates.map(tpl => {
+                const active = selectedTemplateIds.includes(tpl.id)
+                return (
+                  <label key={tpl.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${active ? 'border-red-300 bg-red-50' : 'border-neutral-200 bg-neutral-50 hover:border-red-200'}`}>
+                    <input
+                      type="checkbox"
+                      checked={active}
+                      onChange={() => {
+                        if (!isLatestRound) return
+                        setSelectedTemplateIds(ids =>
+                          active ? ids.filter(id => id !== tpl.id) : [...ids, tpl.id]
+                        )
+                      }}
+                      disabled={!isLatestRound}
+                      className="accent-red-500"
+                    />
+                    <span className={`text-sm ${active ? 'text-red-800 font-medium' : 'text-neutral-600'}`}>{tpl.text}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Custom mandatory questions for this round */}
+        <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">{t('briefing.addMandatory')}</div>
         <div className="space-y-2">
           {mandatoryQuestions.map((item, i) => (
             <div key={i} className="flex gap-2 items-center">
