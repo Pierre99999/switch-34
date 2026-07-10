@@ -84,7 +84,6 @@ export default function OnboardingPage() {
     const { error: vendorErr } = await supabase.from('vendors').insert({
       user_id: user.id,
       company_name: companyName,
-      company_url: companyUrl || null,
       full_name: fullName || null,
       role: 'director',
       organization_id: org.id,
@@ -241,16 +240,10 @@ export default function OnboardingPage() {
             </div>
 
             {role === 'director' && (
-              <>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('onboarding.companyName')}</label>
-                  <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder={t('onboarding.companyNamePlaceholder')} required className={inputClass} />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('onboarding.website')}</label>
-                  <input type="text" value={companyUrl} onChange={e => setCompanyUrl(e.target.value)} placeholder={t('onboarding.websitePlaceholder')} className={inputClass} />
-                </div>
-              </>
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('onboarding.companyName')}</label>
+                <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder={t('onboarding.companyNamePlaceholder')} required className={inputClass} />
+              </div>
             )}
 
             {role === 'sales' && (
