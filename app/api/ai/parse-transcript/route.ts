@@ -17,13 +17,25 @@ export async function POST(req: NextRequest) {
 
   const questions: { key: string; variable: string; text: string; intent?: string }[] = JSON.parse(questionsJson)
 
+  function sanitizeKey(k: string): string {
+    return k.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 64) || 'q'
+  }
+
+  const keyMap: Record<string, string> = {}
+  const sanitizedQuestions = questions.map((q, i) => {
+    let safe = sanitizeKey(q.key)
+    if (keyMap[safe] || safe === '__free__') safe = `q_${i}_${safe}`.slice(0, 64)
+    keyMap[safe] = q.key
+    return { ...q, safeKey: safe }
+  })
+
   const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf')
   const buffer = Buffer.from(await file.arrayBuffer())
 
   let userContent: Anthropic.MessageParam['content']
 
-  const questionList = questions.map((q, i) =>
-    `[${q.key}] (variable: ${q.variable})\n  Question: ${q.text}${q.intent ? `\n  Intent: ${q.intent}` : ''}`
+  const questionList = sanitizedQuestions.map((q) =>
+    `[${q.safeKey}] (variable: ${q.variable})\n  Question: ${q.text}${q.intent ? `\n  Intent: ${q.intent}` : ''}`
   ).join('\n\n')
 
   const instruction = `Analyze this conversation transcript. For each briefing question below, extract what the prospect actually said that is relevant — use their words as much as possible, keep it raw and factual. If the topic was not discussed, return an empty string for that question.
@@ -48,8 +60,8 @@ ${questionList}`
   }
 
   const toolProperties: Record<string, { type: string; description: string }> = {}
-  for (const q of questions) {
-    toolProperties[q.key] = {
+  for (const q of sanitizedQuestions) {
+    toolProperties[q.safeKey] = {
       type: 'string',
       description: `What the prospect said relevant to: ${q.text}. Empty string if not discussed.`,
     }
@@ -61,24 +73,24 @@ ${questionList}`
 
   let message
   try {
-  message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
-    system: `You are a sales conversation analyst. You read conversation transcripts (from tools like Gong, Chorus, Fireflies, or manual notes) and extract what was said, mapped to specific diagnostic questions. Be faithful to what was actually said — do not interpret or reframe. Use the prospect's actual words and phrasing. Be concise but complete.` + localeInstruction(locale ?? undefined),
-    tools: [
-      {
-        name: 'fill_capture_notes',
-        description: 'Map transcript content to each briefing question',
-        input_schema: {
-          type: 'object' as const,
-          properties: toolProperties,
-          required: [...questions.map(q => q.key), '__free__'],
+    message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8192,
+      system: `You are a sales conversation analyst. You read conversation transcripts (from tools like Gong, Chorus, Fireflies, or manual notes) and extract what was said, mapped to specific diagnostic questions. Be faithful to what was actually said — do not interpret or reframe. Use the prospect's actual words and phrasing. Be concise but complete.` + localeInstruction(locale ?? undefined),
+      tools: [
+        {
+          name: 'fill_capture_notes',
+          description: 'Map transcript content to each briefing question',
+          input_schema: {
+            type: 'object' as const,
+            properties: toolProperties,
+            required: [...sanitizedQuestions.map(q => q.safeKey), '__free__'],
+          },
         },
-      },
-    ],
-    tool_choice: { type: 'any' as const },
-    messages: [{ role: 'user', content: userContent }],
-  })
+      ],
+      tool_choice: { type: 'any' as const },
+      messages: [{ role: 'user', content: userContent }],
+    })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'AI request failed'
     return NextResponse.json({ error: msg }, { status: 502 })
@@ -89,5 +101,11 @@ ${questionList}`
     return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
   }
 
-  return NextResponse.json({ notes: toolUse.input })
+  const rawNotes = toolUse.input as Record<string, string>
+  const notes: Record<string, string> = {}
+  for (const [safeKey, value] of Object.entries(rawNotes)) {
+    notes[keyMap[safeKey] ?? safeKey] = value
+  }
+
+  return NextResponse.json({ notes })
 }
