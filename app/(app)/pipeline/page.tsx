@@ -72,6 +72,9 @@ function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: nu
   )
 }
 
+type SortKey = 'prospect' | 'rep' | 'round' | 'revenue' | null
+type SortDir = 'asc' | 'desc'
+
 export default function PipelinePage() {
   const { t } = useI18n()
   const { role } = useRole()
@@ -80,6 +83,8 @@ export default function PipelinePage() {
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [repNames, setRepNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+  const [sortKey, setSortKey] = useState<SortKey>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
 
   useEffect(() => {
     async function load() {
@@ -150,6 +155,34 @@ export default function PipelinePage() {
 
   const fmtRevenue = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k€` : `${n}€`
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortDir(key === 'revenue' ? 'desc' : 'asc')
+    }
+  }
+
+  const sortIndicator = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+
+  const sortedDeals = [...deals].sort((a, b) => {
+    if (!sortKey) return 0
+    const dir = sortDir === 'asc' ? 1 : -1
+    switch (sortKey) {
+      case 'prospect':
+        return dir * a.prospect_name.localeCompare(b.prospect_name)
+      case 'rep':
+        return dir * (repNames[a.user_id] || '').localeCompare(repNames[b.user_id] || '')
+      case 'round':
+        return dir * (a.current_round - b.current_round)
+      case 'revenue':
+        return dir * ((a.potential_revenue ?? 0) - (b.potential_revenue ?? 0))
+      default:
+        return 0
+    }
+  })
+
   if (loading) return null
 
   return (
@@ -195,10 +228,10 @@ export default function PipelinePage() {
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
         {/* Table header */}
         <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.prospect')}</div>
-          {isDirector && <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.rep')}</div>}
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.round')}</div>
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.revenue')}</div>
+          <button onClick={() => toggleSort('prospect')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.prospect')}{sortIndicator('prospect')}</button>
+          {isDirector && <button onClick={() => toggleSort('rep')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.rep')}{sortIndicator('rep')}</button>}
+          <button onClick={() => toggleSort('round')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.round')}{sortIndicator('round')}</button>
+          <button onClick={() => toggleSort('revenue')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.revenue')}{sortIndicator('revenue')}</button>
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
         </div>
@@ -215,7 +248,7 @@ export default function PipelinePage() {
           </div>
         )}
 
-        {deals.map((deal: Deal) => {
+        {sortedDeals.map((deal: Deal) => {
           const r = latestRound(deal.id)
           return (
             <div key={deal.id} className="grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors" style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
