@@ -30,6 +30,7 @@ export default function CapturePage() {
   const isLatestRound = deal ? selectedRound === deal.current_round : false
 
   const questions: BriefingQuestion[] = currentRoundData?.briefing_questions ?? []
+  const mandatoryQuestions: string[] = currentRoundData?.mandatory_questions ?? []
 
   function populateFromRound(r: DealRound | null) {
     setNotes(r?.capture_notes ?? {})
@@ -135,12 +136,21 @@ export default function CapturePage() {
     setError(null)
     setTranscriptSuccess(null)
     try {
-      const questionPayload = questions.map((q, i) => ({
-        key: q.variable || (q.priority === 'opportunistic' ? `opp-${i}` : String(i)),
-        variable: q.variable,
-        text: q.text,
-        intent: q.intent,
+      const mandatoryPayload = mandatoryQuestions.map((mq, i) => ({
+        key: `mandatory_${i}`,
+        variable: `mandatory_${i}`,
+        text: mq,
+        intent: 'Mandatory question — must be answered',
       }))
+      const questionPayload = [
+        ...mandatoryPayload,
+        ...questions.map((q, i) => ({
+          key: q.variable || (q.priority === 'opportunistic' ? `opp-${i}` : String(i)),
+          variable: q.variable,
+          text: q.text,
+          intent: q.intent,
+        })),
+      ]
       const formData = new FormData()
       formData.append('file', file)
       formData.append('questions', JSON.stringify(questionPayload))
@@ -309,6 +319,42 @@ export default function CapturePage() {
           {transcriptSuccess && (
             <span className="text-xs text-green-600 font-medium">{transcriptSuccess}</span>
           )}
+        </div>
+      )}
+
+      {/* Mandatory questions */}
+      {mandatoryQuestions.length > 0 && (
+        <div className="space-y-4 mb-8">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+            <span className="text-xs font-semibold text-red-600 uppercase tracking-wide">{t('briefing.mandatoryQuestions')}</span>
+          </div>
+          {mandatoryQuestions.map((mq, i) => {
+            const key = `mandatory_${i}`
+            const val = notes[key] ?? ''
+            return (
+              <div key={key} className="bg-white rounded-2xl border-2 border-red-200 overflow-hidden shadow-sm">
+                <div className="bg-red-50 px-5 py-3 border-b border-red-100">
+                  <p className="text-sm text-red-800 font-medium">{mq}</p>
+                </div>
+                <div className="px-5 py-4">
+                  {isLatestRound ? (
+                    <textarea
+                      value={val}
+                      onChange={e => setNote(key, e.target.value)}
+                      placeholder={t('capture.pressingPlaceholder')}
+                      rows={3}
+                      className={inputClass}
+                    />
+                  ) : (
+                    <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-700 whitespace-pre-wrap min-h-[3rem]">
+                      {val || <span className="text-neutral-300">{t('capture.nothingCaptured')}</span>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 

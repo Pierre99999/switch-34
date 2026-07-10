@@ -178,6 +178,10 @@ export const translations = {
   'briefing.noBriefing': { en: 'No briefing yet', fr: 'Pas de briefing' },
   'briefing.noBriefingDesc': { en: 'Generate a briefing from the dashboard.', fr: 'Générez un briefing depuis le tableau de bord.' },
   'briefing.goCapture': { en: '→ Go capture', fr: '→ Aller capturer' },
+  'briefing.mandatoryQuestions': { en: 'Mandatory questions', fr: 'Questions obligatoires' },
+  'briefing.mandatorySubtitle': { en: 'Must-ask questions specific to this prospect — not AI-generated', fr: 'Questions incontournables propres à ce prospect — non générées par l\'IA' },
+  'briefing.mandatoryPlaceholder': { en: 'A question you must ask in this round…', fr: 'Une question à poser impérativement dans ce round…' },
+  'briefing.addMandatory': { en: 'Add mandatory question', fr: 'Ajouter une question obligatoire' },
 
   // ── Capture ──
   'capture.title': { en: 'Capture', fr: 'Capture' },

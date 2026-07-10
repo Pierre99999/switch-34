@@ -85,6 +85,7 @@ export default function BriefingPage() {
   const [doNot, setDoNot] = useState<string[]>([])
   const [mirror, setMirror] = useState<string[]>([])
   const [objections, setObjections] = useState<BriefingObjection[]>([])
+  const [mandatoryQuestions, setMandatoryQuestions] = useState<string[]>([])
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -98,6 +99,7 @@ export default function BriefingPage() {
     setDoNot(r?.briefing_do_not ?? [])
     setMirror(r?.briefing_mirror ?? [])
     setObjections(r?.briefing_objections ?? [])
+    setMandatoryQuestions(r?.mandatory_questions ?? [])
   }
 
   const load = useCallback(async () => {
@@ -135,6 +137,7 @@ export default function BriefingPage() {
         briefing_line: line, briefing_read: read, briefing_angle: angle,
         briefing_win_condition: winCondition, briefing_questions: questions,
         briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
+        mandatory_questions: mandatoryQuestions,
       })
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
@@ -151,6 +154,7 @@ export default function BriefingPage() {
         briefing_line: line, briefing_read: read, briefing_angle: angle,
         briefing_win_condition: winCondition, briefing_questions: questions,
         briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
+        mandatory_questions: mandatoryQuestions,
       }
       if (currentRoundData.capture_notes) data.capture_notes = currentRoundData.capture_notes
       if (currentRoundData.narrative) data.narrative = currentRoundData.narrative
@@ -170,6 +174,7 @@ export default function BriefingPage() {
         if (d.briefing_do_not) setDoNot(d.briefing_do_not)
         if (d.briefing_mirror) setMirror(d.briefing_mirror)
         if (d.briefing_objections) setObjections(d.briefing_objections)
+        if (d.mandatory_questions) setMandatoryQuestions(d.mandatory_questions)
         const supabase = createClient()
         await supabase.from('deal_rounds').update(d).eq('id', currentRoundData.id)
         setTranslateSuccess(t('common.translated'))
@@ -178,6 +183,11 @@ export default function BriefingPage() {
     } catch { /* ignore */ }
     setTranslating(false)
   }
+
+  // ── Mandatory question helpers ────────────────────────────
+  function addMandatory() { setMandatoryQuestions(m => [...m, '']) }
+  function updateMandatory(i: number, val: string) { setMandatoryQuestions(m => m.map((item, idx) => idx === i ? val : item)) }
+  function removeMandatory(i: number) { setMandatoryQuestions(m => m.filter((_, idx) => idx !== i)) }
 
   // ── List helpers ──────────────────────────────────────────
 
@@ -289,6 +299,33 @@ export default function BriefingPage() {
           ))}
         </div>
       </div>
+
+      {/* Mandatory Questions */}
+      <Section title={t('briefing.mandatoryQuestions')} subtitle={t('briefing.mandatorySubtitle')} accent="bg-red-500" defaultOpen={true}>
+        <div className="space-y-2">
+          {mandatoryQuestions.map((item, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+              {isLatestRound ? (
+                <>
+                  <input
+                    value={item}
+                    onChange={e => updateMandatory(i, e.target.value)}
+                    placeholder={t('briefing.mandatoryPlaceholder')}
+                    className="flex-1 bg-red-50 border border-red-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                  />
+                  <button onClick={() => removeMandatory(i)} className="text-red-300 hover:text-red-500 transition-colors">✕</button>
+                </>
+              ) : (
+                <p className="text-sm text-neutral-700">{item}</p>
+              )}
+            </div>
+          ))}
+        </div>
+        {isLatestRound && (
+          <button onClick={addMandatory} className="mt-3 text-sm font-medium text-red-500 hover:text-red-600 transition-colors">+ {t('briefing.addMandatory')}</button>
+        )}
+      </Section>
 
       {/* The Read */}
       <Section title={t('briefing.theRead')} subtitle={t('briefing.readSubtitle')} accent="bg-neutral-400" defaultOpen={true}>

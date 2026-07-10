@@ -203,6 +203,7 @@ export type DealRound = {
   briefing_mirror: string[]
   briefing_objections: BriefingObjection[]
   briefing_win_condition: string | null
+  mandatory_questions: string[]
   evidence_levels: Record<string, EvidenceLevel>
   authority_levels: Record<string, SourceAuthority>
   created_at: string
