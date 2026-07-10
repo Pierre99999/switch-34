@@ -64,6 +64,9 @@ export const translations = {
   'role.sales': { en: 'Sales', fr: 'Commercial' },
   'role.director': { en: 'Director', fr: 'Directeur' },
   'profile.readOnly': { en: 'Read-only — configured by your sales director', fr: 'Lecture seule — configuré par votre directeur commercial' },
+  'common.translateContent': { en: 'Translate content to English', fr: 'Traduire le contenu en français' },
+  'common.translating': { en: 'Translating…', fr: 'Traduction…' },
+  'common.translated': { en: 'Content translated', fr: 'Contenu traduit' },
 
   // ── New Deal ──
   'newDeal.title': { en: 'Start a deal diagnostic', fr: 'Démarrer un diagnostic' },

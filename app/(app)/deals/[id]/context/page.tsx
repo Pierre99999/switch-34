@@ -131,6 +131,9 @@ export default function AccountContextPage() {
   const [revenue, setRevenue] = useState('')
   const [revenueSaved, setRevenueSaved] = useState(false)
 
+  const [translating, setTranslating] = useState(false)
+  const [translateSuccess, setTranslateSuccess] = useState<string | null>(null)
+
   const [newStk, setNewStk] = useState({ name: '', role: '', actor_type: 'unknown' as Stakeholder['actor_type'], notes: '' })
   const [addingStk, setAddingStk] = useState(false)
 
@@ -171,6 +174,29 @@ export default function AccountContextPage() {
     const supabase = createClient()
     await supabase.from('deals').update({ prospect_dimensions: newDims }).eq('id', dealId)
     setSavedDims(newDims)
+  }
+
+  async function handleTranslate() {
+    setTranslating(true)
+    setTranslateSuccess(null)
+    try {
+      const res = await fetch('/api/ai/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dimensions: dims, locale }),
+      })
+      const data = await res.json()
+      if (data.dimensions) {
+        const newDims = { ...EMPTY_PROSPECT_DIMENSIONS }
+        for (const key of Object.keys(data.dimensions) as (keyof ProspectDimensions)[]) {
+          if (data.dimensions[key]) newDims[key] = { ...EMPTY_PROSPECT_DIMENSIONS[key], ...data.dimensions[key] } as never
+        }
+        setDims(newDims)
+        await saveAllDims(newDims)
+        setTranslateSuccess(t('common.translated'))
+      }
+    } catch { /* ignore */ }
+    setTranslating(false)
   }
 
   async function handleImportCompanyUrl() {
@@ -290,6 +316,20 @@ export default function AccountContextPage() {
           </div>
         </div>
       </div>
+
+      {/* Translate button */}
+      {totalFilled > 0 && (
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={handleTranslate}
+            disabled={translating}
+            className="px-4 py-2 text-sm font-medium text-neutral-600 border border-neutral-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-40"
+          >
+            {translating ? t('common.translating') : t('common.translateContent')}
+          </button>
+          {translateSuccess && <span className="text-xs text-emerald-600 font-medium">{translateSuccess}</span>}
+        </div>
+      )}
 
       {/* Revenue */}
       <div className="bg-white rounded-2xl border border-neutral-200 p-5 mb-6 shadow-sm">
