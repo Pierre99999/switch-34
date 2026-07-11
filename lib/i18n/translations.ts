@@ -352,7 +352,7 @@ export const translations = {
   'profile.saving': { en: 'Saving…', fr: 'Sauvegarde…' },
   'profile.importFromUrl': { en: 'Import from URL →', fr: 'Importer depuis URL →' },
   'profile.completion': { en: 'Profile completion', fr: 'Complétion du profil' },
-  'profile.importFrom': { en: 'Import from', fr: 'Importer depuis' },
+  'profile.importFrom': { en: 'Update profile', fr: 'Mise à jour du profil' },
   'profile.websiteUrl': { en: 'Website URL', fr: 'URL du site web' },
   'profile.fetch': { en: 'Fetch', fr: 'Récupérer' },
   'profile.reading': { en: 'Reading...', fr: 'Lecture...' },
