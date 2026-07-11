@@ -87,7 +87,7 @@ export default function NewDealPage() {
         contact_title: primaryContact?.title || null,
         contact_linkedin: primaryContact?.linkedin || null,
         potential_revenue: potentialRevenue ? Number(potentialRevenue) : null,
-        prospect_dimensions: fetchedDimensions,
+        prospect_dimensions: fetchedDimensions ?? { _dynamic: true, sales_context: salesContext.trim(), dimensions: [] },
         current_round: 0,
       })
       .select()

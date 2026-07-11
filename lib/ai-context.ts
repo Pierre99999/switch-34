@@ -24,17 +24,24 @@ export function buildProspectContext(deal: Deal): string {
   const lines: string[] = [`PROSPECT: ${deal.prospect_name}`]
   if (deal.contact_name) lines.push(`Contact: ${deal.contact_name}${deal.contact_title ? ` (${deal.contact_title})` : ''}`)
   if (!d) return lines.join('\n')
-  if (d.company?.core_business) lines.push(`Business: ${d.company.core_business}`)
-  if (d.company?.industry) lines.push(`Industry: ${d.company.industry}`)
-  if (d.strategic_context?.priorities) lines.push(`Priorities: ${d.strategic_context.priorities}`)
-  if (d.strategic_context?.challenges) lines.push(`Challenges: ${d.strategic_context.challenges}`)
-  if (d.strategic_context?.pressures) lines.push(`Pressures: ${d.strategic_context.pressures}`)
-  if (d.buying_environment?.decision_process) lines.push(`Decision process: ${d.buying_environment.decision_process}`)
-  if (d.buying_environment?.timeline) lines.push(`Timeline: ${d.buying_environment.timeline}`)
-  if (d.key_contact?.role_accountability) lines.push(`Contact role: ${d.key_contact.role_accountability}`)
-  if (d.key_contact?.personal_priorities) lines.push(`Contact priorities: ${d.key_contact.personal_priorities}`)
-  if (d.fit_signals?.problem_mapping) lines.push(`Fit: ${d.fit_signals.problem_mapping}`)
-  if (d.fit_signals?.timing_trigger) lines.push(`Timing trigger: ${d.fit_signals.timing_trigger}`)
+
+  if (d._dynamic && d.dimensions) {
+    if (d.sales_context) lines.push(`Sales focus: ${d.sales_context}`)
+    for (const dim of d.dimensions) {
+      const filled = dim.fields.filter(f => f.value.trim())
+      if (filled.length === 0) continue
+      lines.push(`\n${dim.label}:`)
+      for (const f of filled) lines.push(`  ${f.label}: ${f.value}`)
+    }
+  } else {
+    const legacy = d as unknown as Record<string, Record<string, string>>
+    for (const [section, fields] of Object.entries(legacy)) {
+      if (typeof fields !== 'object' || !fields) continue
+      for (const [k, v] of Object.entries(fields)) {
+        if (v?.trim()) lines.push(`${k.replace(/_/g, ' ')}: ${v}`)
+      }
+    }
+  }
   return lines.join('\n')
 }
 

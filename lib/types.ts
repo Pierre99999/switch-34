@@ -75,38 +75,34 @@ export type VendorDimensions = {
   }
 }
 
-// ── Prospect 5-dimension profile ─────────────────────────────
+// ── Prospect dynamic profile ─────────────────────────────────
+
+export type ProspectField = {
+  key: string
+  label: string
+  hint: string
+  value: string
+}
+
+export type ProspectDimension = {
+  key: string
+  label: string
+  fields: ProspectField[]
+}
 
 export type ProspectDimensions = {
-  company: {
-    core_business: string
-    industry: string
-    size_stage: string
-    geography: string
-  }
-  strategic_context: {
-    priorities: string
-    challenges: string
-    recent_signals: string
-    pressures: string
-  }
-  buying_environment: {
-    decision_process: string
-    budget_signals: string
-    timeline: string
-    history: string
-  }
-  key_contact: {
-    role_accountability: string
-    background: string
-    personal_priorities: string
-    influence_level: string
-  }
-  fit_signals: {
-    problem_mapping: string
-    implementation_readiness: string
-    timing_trigger: string
-  }
+  _dynamic: true
+  sales_context: string
+  dimensions: ProspectDimension[]
+}
+
+// Legacy fixed-shape type for backward compatibility with old deals
+export type LegacyProspectDimensions = {
+  company?: Record<string, string>
+  strategic_context?: Record<string, string>
+  buying_environment?: Record<string, string>
+  key_contact?: Record<string, string>
+  fit_signals?: Record<string, string>
 }
 
 export const EMPTY_VENDOR_DIMENSIONS: VendorDimensions = {
@@ -122,11 +118,32 @@ export const EMPTY_VENDOR_DIMENSIONS: VendorDimensions = {
 }
 
 export const EMPTY_PROSPECT_DIMENSIONS: ProspectDimensions = {
-  company: { core_business: '', industry: '', size_stage: '', geography: '' },
-  strategic_context: { priorities: '', challenges: '', recent_signals: '', pressures: '' },
-  buying_environment: { decision_process: '', budget_signals: '', timeline: '', history: '' },
-  key_contact: { role_accountability: '', background: '', personal_priorities: '', influence_level: '' },
-  fit_signals: { problem_mapping: '', implementation_readiness: '', timing_trigger: '' },
+  _dynamic: true,
+  sales_context: '',
+  dimensions: [],
+}
+
+export function isLegacyDimensions(d: unknown): d is LegacyProspectDimensions {
+  return !!d && typeof d === 'object' && !('_dynamic' in (d as Record<string, unknown>))
+}
+
+export function migrateLegacyDimensions(d: LegacyProspectDimensions): ProspectDimensions {
+  const dims: ProspectDimension[] = []
+  const sections: { key: string; label: string; data?: Record<string, string> }[] = [
+    { key: 'company', label: 'Company', data: d.company },
+    { key: 'strategic_context', label: 'Strategic Context', data: d.strategic_context },
+    { key: 'buying_environment', label: 'Buying Environment', data: d.buying_environment },
+    { key: 'key_contact', label: 'Key Contact', data: d.key_contact },
+    { key: 'fit_signals', label: 'Fit Signals', data: d.fit_signals },
+  ]
+  for (const s of sections) {
+    if (!s.data) continue
+    const fields: ProspectField[] = Object.entries(s.data)
+      .filter(([, v]) => v.trim())
+      .map(([k, v]) => ({ key: k, label: k.replace(/_/g, ' '), hint: '', value: v }))
+    if (fields.length > 0) dims.push({ key: s.key, label: s.label, fields })
+  }
+  return { _dynamic: true, sales_context: '', dimensions: dims }
 }
 
 export type UserRole = 'sales' | 'director'

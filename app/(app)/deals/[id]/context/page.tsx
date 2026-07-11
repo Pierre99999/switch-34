@@ -3,9 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { type Deal, type Stakeholder, type ProspectDimensions, EMPTY_PROSPECT_DIMENSIONS } from '@/lib/types'
+import { type Deal, type Stakeholder, type ProspectDimensions, type ProspectDimension, EMPTY_PROSPECT_DIMENSIONS, isLegacyDimensions, migrateLegacyDimensions } from '@/lib/types'
 import { useI18n } from '@/lib/i18n/context'
-import { getContextDimensions, type ContextDimDef } from '@/lib/i18n/context-dimensions'
 
 const ACTOR_COLORS: Record<string, string> = {
   champion: 'bg-emerald-50 text-emerald-600 border-emerald-200',
@@ -27,34 +26,25 @@ const ACTOR_KEYS: Record<string, string> = {
 
 const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
 
-function filledCount(dim: Record<string, string>) {
-  return Object.values(dim).filter(v => v.trim().length > 0).length
-}
-
-function deepMerge(base: ProspectDimensions, saved: Partial<ProspectDimensions>): ProspectDimensions {
-  const result = { ...base }
-  for (const key of Object.keys(saved) as (keyof ProspectDimensions)[]) {
-    if (saved[key]) result[key] = { ...base[key], ...saved[key] } as never
-  }
-  return result
+function filledCount(dim: ProspectDimension) {
+  return dim.fields.filter(f => f.value.trim().length > 0).length
 }
 
 // ── Dimension section ────────────────────────────────────────
 
 function DimensionSection({
-  def, values, onChange, onSave, saving, isDirty,
+  dim, onChange, onSave, saving, isDirty,
 }: {
-  def: ContextDimDef
-  values: Record<string, string>
-  onChange: (key: string, val: string) => void
+  dim: ProspectDimension
+  onChange: (fieldKey: string, val: string) => void
   onSave: () => void
   saving: boolean
   isDirty: boolean
 }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
-  const filled = filledCount(values)
-  const total = def.questions.length
+  const filled = filledCount(dim)
+  const total = dim.fields.length
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
@@ -62,7 +52,7 @@ function DimensionSection({
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-neutral-50/50 transition-colors"
       >
-        <span className="text-sm font-semibold text-neutral-800">{def.label}</span>
+        <span className="text-sm font-semibold text-neutral-800">{dim.label}</span>
         <div className="flex items-center gap-3">
           {isDirty && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{t('context.unsaved')}</span>}
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${filled === total ? 'text-emerald-600 bg-emerald-50' : filled > 0 ? 'text-amber-600 bg-amber-50' : 'text-neutral-400 bg-neutral-100'}`}>
@@ -73,13 +63,13 @@ function DimensionSection({
       </button>
       {open && (
         <div className="border-t border-neutral-100 px-5 py-5 space-y-5">
-          {def.questions.map(q => (
-            <div key={q.key}>
-              <label className="text-sm font-medium text-neutral-700">{q.label}</label>
-              <p className="text-xs text-neutral-400 mt-0.5 mb-2">{q.hint}</p>
+          {dim.fields.map(f => (
+            <div key={f.key}>
+              <label className="text-sm font-medium text-neutral-700">{f.label}</label>
+              {f.hint && <p className="text-xs text-neutral-400 mt-0.5 mb-2">{f.hint}</p>}
               <textarea
-                value={values[q.key] ?? ''}
-                onChange={e => onChange(q.key, e.target.value)}
+                value={f.value}
+                onChange={e => onChange(f.key, e.target.value)}
                 rows={3}
                 placeholder="..."
                 className={inputClass}
@@ -107,15 +97,14 @@ function DimensionSection({
 
 export default function AccountContextPage() {
   const { t, locale } = useI18n()
-  const DIMENSIONS = getContextDimensions(locale)
   const params = useParams()
   const router = useRouter()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([])
-  const [dims, setDims] = useState<ProspectDimensions>(EMPTY_PROSPECT_DIMENSIONS)
-  const [savedDims, setSavedDims] = useState<ProspectDimensions>(EMPTY_PROSPECT_DIMENSIONS)
+  const [profile, setProfile] = useState<ProspectDimensions>(EMPTY_PROSPECT_DIMENSIONS)
+  const [savedProfile, setSavedProfile] = useState<ProspectDimensions>(EMPTY_PROSPECT_DIMENSIONS)
   const [savingDim, setSavingDim] = useState<string | null>(null)
 
   const [companyUrl, setCompanyUrl] = useState('')
@@ -137,6 +126,12 @@ export default function AccountContextPage() {
   const [newStk, setNewStk] = useState({ name: '', role: '', actor_type: 'unknown' as Stakeholder['actor_type'], notes: '' })
   const [addingStk, setAddingStk] = useState(false)
 
+  function loadDimensions(raw: unknown): ProspectDimensions {
+    if (!raw) return EMPTY_PROSPECT_DIMENSIONS
+    if (isLegacyDimensions(raw)) return migrateLegacyDimensions(raw)
+    return raw as ProspectDimensions
+  }
+
   const load = useCallback(async () => {
     const supabase = createClient()
     const [{ data: dealData }, { data: stkData }] = await Promise.all([
@@ -146,34 +141,38 @@ export default function AccountContextPage() {
     if (dealData) {
       setDeal(dealData)
       setRevenue(dealData.potential_revenue != null ? String(dealData.potential_revenue) : '')
-      const merged = deepMerge(EMPTY_PROSPECT_DIMENSIONS, dealData.prospect_dimensions ?? {})
-      setDims(merged)
-      setSavedDims(merged)
+      const loaded = loadDimensions(dealData.prospect_dimensions)
+      setProfile(loaded)
+      setSavedProfile(loaded)
     }
     if (stkData) setStakeholders(stkData)
   }, [dealId])
 
   useEffect(() => { load() }, [load])
 
-  function handleChange(dimKey: keyof ProspectDimensions, subKey: string, val: string) {
-    setDims(d => ({ ...d, [dimKey]: { ...d[dimKey], [subKey]: val } }))
+  function handleFieldChange(dimKey: string, fieldKey: string, val: string) {
+    setProfile(p => ({
+      ...p,
+      dimensions: p.dimensions.map(d =>
+        d.key === dimKey
+          ? { ...d, fields: d.fields.map(f => f.key === fieldKey ? { ...f, value: val } : f) }
+          : d
+      ),
+    }))
   }
 
-  async function handleSaveDim(dimKey: keyof ProspectDimensions) {
-    if (!deal) return
+  async function handleSaveDim(dimKey: string) {
     setSavingDim(dimKey)
     const supabase = createClient()
-    const merged = { ...(deal.prospect_dimensions ?? {}), [dimKey]: dims[dimKey] }
-    await supabase.from('deals').update({ prospect_dimensions: merged }).eq('id', dealId)
-    setSavedDims(d => ({ ...d, [dimKey]: dims[dimKey] }))
-    await load()
+    await supabase.from('deals').update({ prospect_dimensions: profile }).eq('id', dealId)
+    setSavedProfile({ ...profile })
     setSavingDim(null)
   }
 
-  async function saveAllDims(newDims: ProspectDimensions) {
+  async function saveAllProfile(newProfile: ProspectDimensions) {
     const supabase = createClient()
-    await supabase.from('deals').update({ prospect_dimensions: newDims }).eq('id', dealId)
-    setSavedDims(newDims)
+    await supabase.from('deals').update({ prospect_dimensions: newProfile }).eq('id', dealId)
+    setSavedProfile(newProfile)
   }
 
   async function handleTranslate() {
@@ -183,16 +182,13 @@ export default function AccountContextPage() {
       const res = await fetch('/api/ai/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dimensions: dims, locale }),
+        body: JSON.stringify({ data: profile, locale }),
       })
       const data = await res.json()
-      if (data.dimensions) {
-        const newDims = { ...EMPTY_PROSPECT_DIMENSIONS }
-        for (const key of Object.keys(data.dimensions) as (keyof ProspectDimensions)[]) {
-          if (data.dimensions[key]) newDims[key] = { ...EMPTY_PROSPECT_DIMENSIONS[key], ...data.dimensions[key] } as never
-        }
-        setDims(newDims)
-        await saveAllDims(newDims)
+      if (data.data) {
+        const translated = data.data as ProspectDimensions
+        setProfile(translated)
+        await saveAllProfile(translated)
         setTranslateSuccess(t('common.translated'))
       }
     } catch { /* ignore */ }
@@ -208,13 +204,13 @@ export default function AccountContextPage() {
       const res = await fetch('/api/context/from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: companyUrl.trim(), locale }),
+        body: JSON.stringify({ url: companyUrl.trim(), locale, salesContext: profile.sales_context || undefined }),
       })
       const data = await res.json()
       if (!res.ok || data.error) { setCompanyImportError(data.error ?? 'Failed'); return }
-      const newDims = deepMerge(dims, data.dimensions)
-      setDims(newDims)
-      await saveAllDims(newDims)
+      const newProfile = data.dimensions as ProspectDimensions
+      setProfile(newProfile)
+      await saveAllProfile(newProfile)
       setCompanyImportSuccess(t('context.companyImported'))
     } catch {
       setCompanyImportError(t('context.networkError'))
@@ -233,12 +229,13 @@ export default function AccountContextPage() {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('locale', locale)
+      if (profile.sales_context) formData.append('salesContext', profile.sales_context)
       const res = await fetch('/api/context/from-doc', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok || data.error) { setCompanyImportError(data.error ?? 'Failed'); return }
-      const newDims = deepMerge(dims, data.dimensions)
-      setDims(newDims)
-      await saveAllDims(newDims)
+      const newProfile = data.dimensions as ProspectDimensions
+      setProfile(newProfile)
+      await saveAllProfile(newProfile)
       setCompanyImportSuccess(t('context.companyImported'))
     } catch {
       setCompanyImportError(t('context.networkError'))
@@ -261,9 +258,26 @@ export default function AccountContextPage() {
       })
       const data = await res.json()
       if (!res.ok || data.error) { setLinkedinError(data.error ?? 'Failed'); return }
-      const newDims = deepMerge(dims, data.dimensions)
-      setDims(newDims)
-      await saveAllDims(newDims)
+      if (data.dimensions) {
+        const contactDim = data.dimensions as { key_contact?: Record<string, string> }
+        if (contactDim.key_contact) {
+          const fields = Object.entries(contactDim.key_contact)
+            .filter(([, v]) => (v as string).trim())
+            .map(([k, v]) => ({ key: k, label: k.replace(/_/g, ' '), hint: '', value: v as string }))
+          if (fields.length > 0) {
+            const existingIdx = profile.dimensions.findIndex(d => d.key === 'key_contact')
+            const newDims = [...profile.dimensions]
+            if (existingIdx >= 0) {
+              newDims[existingIdx] = { ...newDims[existingIdx], fields }
+            } else {
+              newDims.push({ key: 'key_contact', label: t('context.keyContact'), fields })
+            }
+            const newProfile = { ...profile, dimensions: newDims }
+            setProfile(newProfile)
+            await saveAllProfile(newProfile)
+          }
+        }
+      }
       setLinkedinSuccess(t('context.contactImported'))
     } catch {
       setLinkedinError(t('context.networkError'))
@@ -293,8 +307,8 @@ export default function AccountContextPage() {
 
   if (!deal) return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">{t('common.loading')}</div>
 
-  const totalFilled = DIMENSIONS.reduce((acc, d) => acc + filledCount(dims[d.key] as Record<string, string>), 0)
-  const totalQ = DIMENSIONS.reduce((acc, d) => acc + d.questions.length, 0)
+  const totalFilled = profile.dimensions.reduce((acc, d) => acc + filledCount(d), 0)
+  const totalFields = profile.dimensions.reduce((acc, d) => acc + d.fields.length, 0)
   const importing = importingCompany || importingLinkedin
 
   return (
@@ -309,13 +323,23 @@ export default function AccountContextPage() {
             {t('context.title')} · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
           </h1>
         </div>
-        <div className="text-right">
-          <div className="text-xs font-medium text-neutral-400 mb-1">{t('context.completion')}</div>
-          <div className={`text-lg font-bold ${totalFilled === totalQ ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
-            {totalFilled}/{totalQ}
+        {totalFields > 0 && (
+          <div className="text-right">
+            <div className="text-xs font-medium text-neutral-400 mb-1">{t('context.completion')}</div>
+            <div className={`text-lg font-bold ${totalFilled === totalFields ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
+              {totalFilled}/{totalFields}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Sales context */}
+      {profile.sales_context && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
+          <div className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-1">{t('context.salesFocus')}</div>
+          <p className="text-sm text-amber-900">{profile.sales_context}</p>
+        </div>
+      )}
 
       {/* Translate button */}
       {totalFilled > 0 && (
@@ -363,7 +387,7 @@ export default function AccountContextPage() {
 
         {/* Company context */}
         <div className="mb-5">
-          <div className="text-xs font-medium text-neutral-500 mb-2">{t('context.companyContext')} <span className="text-neutral-300">{t('context.fillsDims13')}</span></div>
+          <div className="text-xs font-medium text-neutral-500 mb-2">{t('context.companyContext')}</div>
           <div className="flex gap-2 mb-2">
             <input
               value={companyUrl}
@@ -400,7 +424,7 @@ export default function AccountContextPage() {
 
         {/* LinkedIn */}
         <div>
-          <div className="text-xs font-medium text-neutral-500 mb-2">{t('context.keyContactLinkedin')} <span className="text-neutral-300">{t('context.fillsDim4')}</span></div>
+          <div className="text-xs font-medium text-neutral-500 mb-2">{t('context.keyContactLinkedin')}</div>
           <div className="flex gap-2">
             <input
               value={linkedinUrl}
@@ -425,22 +449,29 @@ export default function AccountContextPage() {
       </div>
 
       {/* Prospect dimensions */}
-      <section className="mb-10">
-        <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">{t('context.prospectProfile')}</h2>
-        <div className="space-y-3">
-          {DIMENSIONS.map(def => (
-            <DimensionSection
-              key={def.key}
-              def={def}
-              values={dims[def.key] as Record<string, string>}
-              onChange={(subKey, val) => handleChange(def.key, subKey, val)}
-              onSave={() => handleSaveDim(def.key)}
-              saving={savingDim === def.key}
-              isDirty={JSON.stringify(dims[def.key]) !== JSON.stringify(savedDims[def.key])}
-            />
-          ))}
+      {profile.dimensions.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">{t('context.prospectProfile')}</h2>
+          <div className="space-y-3">
+            {profile.dimensions.map(dim => (
+              <DimensionSection
+                key={dim.key}
+                dim={dim}
+                onChange={(fieldKey, val) => handleFieldChange(dim.key, fieldKey, val)}
+                onSave={() => handleSaveDim(dim.key)}
+                saving={savingDim === dim.key}
+                isDirty={JSON.stringify(dim) !== JSON.stringify(savedProfile.dimensions.find(d => d.key === dim.key))}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {profile.dimensions.length === 0 && (
+        <div className="bg-neutral-50 border border-neutral-200 rounded-2xl px-6 py-8 mb-10 text-center">
+          <p className="text-sm text-neutral-400">{t('context.noDimensions')}</p>
         </div>
-      </section>
+      )}
 
       {/* Stakeholder ecosystem */}
       <section>
