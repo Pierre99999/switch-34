@@ -456,6 +456,17 @@ export default function DealDashboardPage() {
         </div>
       )}
 
+      {/* ── The Read — deal situation ── */}
+      {currentRoundData?.briefing_read && (
+        <div className="mb-6 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-1 h-6 rounded-full bg-neutral-400" />
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('briefing.theRead')}</span>
+          </div>
+          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{currentRoundData.briefing_read}</p>
+        </div>
+      )}
+
       {/* ── State machine for latest round ── */}
       {isLatestRound && roundState === 'UNSTARTED' && (
         <div className="mb-8 bg-white rounded-2xl border-2 border-dashed border-neutral-200 p-10 text-center">

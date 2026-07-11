@@ -370,21 +370,6 @@ export default function BriefingPage() {
         )}
       </Section>
 
-      {/* The Read */}
-      <Section title={t('briefing.theRead')} subtitle={t('briefing.readSubtitle')} accent="bg-neutral-400" defaultOpen={true}>
-        {isLatestRound ? (
-          <textarea
-            value={read}
-            onChange={e => { setRead(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
-            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
-            placeholder="Where the deal stands, honestly. What do you know, what is missing?"
-            className={inputClass + ' overflow-hidden'}
-          />
-        ) : (
-          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{read || '—'}</p>
-        )}
-      </Section>
-
       {/* The Angle */}
       <Section title={t('briefing.theAngle')} subtitle={t('briefing.angleSubtitle')} accent="bg-orange-400" defaultOpen={false}>
         {isLatestRound ? (
