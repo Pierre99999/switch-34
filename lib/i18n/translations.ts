@@ -306,7 +306,7 @@ export const translations = {
   'context.import': { en: 'Import from URL', fr: 'Importer depuis URL' },
   'context.importing': { en: 'Importing…', fr: 'Import…' },
   'context.completion': { en: 'Completion', fr: 'Complétion' },
-  'context.importContext': { en: 'Import context', fr: 'Importer le contexte' },
+  'context.importContext': { en: 'Update profile', fr: 'Mise à jour du profil' },
   'context.companyContext': { en: 'Company context', fr: 'Contexte entreprise' },
   'context.fillsDims13': { en: '(fills dims 1-3)', fr: '(remplit dims 1-3)' },
   'context.fetch': { en: 'Fetch', fr: 'Récupérer' },
