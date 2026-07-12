@@ -14,7 +14,8 @@ export default function NavBar() {
   const { role, fullName } = useRole()
 
   const dealMatch = pathname.match(/\/deals\/([^/]+)/)
-  const dealId = dealMatch?.[1]
+  const rawDealId = dealMatch?.[1]
+  const dealId = rawDealId && rawDealId !== 'new' ? rawDealId : undefined
 
   function dealHref(view: string) {
     if (!dealId) return '#'
