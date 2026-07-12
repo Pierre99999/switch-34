@@ -266,7 +266,7 @@ export const translations = {
   'dashboard.welcomeTitle': { en: 'Welcome to your deal dashboard', fr: 'Bienvenue sur le tableau de bord du deal' },
   'dashboard.welcomeDesc': { en: 'This is where you track the progress of your deal across each conversation round. Here\'s where you stand:', fr: 'C\'est ici que vous suivez l\'avancement de votre deal à chaque round de conversation. Voici où vous en êtes :' },
   'dashboard.welcomePoint1': { en: 'Your company profile and prospect context have been set up.', fr: 'Votre profil entreprise et le contexte prospect ont été configurés.' },
-  'dashboard.welcomePoint2': { en: 'You are at round 0 — no conversation has taken place yet.', fr: 'Vous êtes au round 0 — aucune conversation n\'a encore eu lieu.' },
+  'dashboard.welcomePoint2': { en: 'You are at round 1 — no conversation has taken place yet.', fr: 'Vous êtes au round 1 — aucune conversation n\'a encore eu lieu.' },
   'dashboard.welcomePoint3': { en: 'All scores are at zero — this is normal, they will evolve as you capture information.', fr: 'Tous les scores sont à zéro — c\'est normal, ils évolueront au fur et à mesure de vos captures.' },
   'dashboard.welcomeAction': { en: 'Generate your first briefing below to prepare your first conversation.', fr: 'Générez votre premier briefing ci-dessous pour préparer votre première conversation.' },
 

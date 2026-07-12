@@ -203,7 +203,7 @@ export default function BriefingPage() {
             Briefing · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
           </h1>
           <p className="text-sm text-neutral-500 mt-0.5">
-            Round {selectedRound === 0 ? '0 (initial)' : selectedRound}
+            Round {selectedRound}
           </p>
         </div>
         <div className="flex items-center gap-3">

@@ -418,7 +418,7 @@ export default function DealDashboardPage() {
         <div className="text-right">
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('dashboard.round')}</div>
           <div className="text-3xl font-bold text-neutral-900 leading-none">
-            {selectedRound === 0 ? '0' : selectedRound}
+            {selectedRound}
           </div>
         </div>
       </div>
