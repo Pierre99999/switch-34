@@ -125,6 +125,8 @@ export default function AccountContextPage() {
 
   const [newStk, setNewStk] = useState({ name: '', role: '', actor_type: 'unknown' as Stakeholder['actor_type'], notes: '' })
   const [addingStk, setAddingStk] = useState(false)
+  const [editingStk, setEditingStk] = useState<string | null>(null)
+  const [editStkData, setEditStkData] = useState({ name: '', role: '', actor_type: 'unknown' as Stakeholder['actor_type'], notes: '' })
 
   function loadDimensions(raw: unknown): ProspectDimensions {
     if (!raw) return EMPTY_PROSPECT_DIMENSIONS
@@ -315,6 +317,24 @@ export default function AccountContextPage() {
     await load()
   }
 
+  function startEditStakeholder(s: Stakeholder) {
+    setEditingStk(s.id)
+    setEditStkData({ name: s.name, role: s.role || '', actor_type: s.actor_type, notes: s.notes || '' })
+  }
+
+  async function handleUpdateStakeholder() {
+    if (!editingStk || !editStkData.name.trim()) return
+    const supabase = createClient()
+    await supabase.from('deal_stakeholders').update({
+      name: editStkData.name,
+      role: editStkData.role || null,
+      actor_type: editStkData.actor_type,
+      notes: editStkData.notes || null,
+    }).eq('id', editingStk)
+    setEditingStk(null)
+    await load()
+  }
+
   if (!deal) return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">{t('common.loading')}</div>
 
   const totalFilled = profile.dimensions.reduce((acc, d) => acc + filledCount(d), 0)
@@ -473,8 +493,30 @@ export default function AccountContextPage() {
         )}
 
         <div className="space-y-3 mb-6">
-          {stakeholders.map(s => (
-            <div key={s.id} className="bg-white rounded-2xl border border-neutral-200 px-5 py-4 shadow-sm group">
+          {stakeholders.map(s => editingStk === s.id ? (
+            <div key={s.id} className="bg-white rounded-2xl border-2 border-blue-200 px-5 py-4 shadow-sm space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <input value={editStkData.name} onChange={e => setEditStkData(d => ({ ...d, name: e.target.value }))} placeholder={t('context.name')} className={inputClass} autoFocus />
+                <input value={editStkData.role} onChange={e => setEditStkData(d => ({ ...d, role: e.target.value }))} placeholder={t('context.titleRole')} className={inputClass} />
+              </div>
+              <select value={editStkData.actor_type} onChange={e => setEditStkData(d => ({ ...d, actor_type: e.target.value as Stakeholder['actor_type'] }))}
+                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+                {Object.entries(ACTOR_KEYS).map(([val, key]) => <option key={val} value={val}>{t(key as any)}</option>)}
+              </select>
+              <textarea value={editStkData.notes} onChange={e => setEditStkData(d => ({ ...d, notes: e.target.value }))} rows={2} placeholder={t('context.notesPlaceholder')} className={inputClass} />
+              <div className="flex gap-2">
+                <button onClick={handleUpdateStakeholder} disabled={!editStkData.name.trim()}
+                  className="px-4 py-2 bg-blue-500 text-white text-xs font-medium rounded-xl hover:bg-blue-600 disabled:opacity-40 transition-all">
+                  {t('zones.save')}
+                </button>
+                <button onClick={() => setEditingStk(null)}
+                  className="px-4 py-2 bg-white border border-neutral-200 text-neutral-500 text-xs font-medium rounded-xl hover:border-neutral-400 transition-all">
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div key={s.id} className="bg-white rounded-2xl border border-neutral-200 px-5 py-4 shadow-sm group cursor-pointer hover:border-blue-200 transition-colors" onClick={() => startEditStakeholder(s)}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h5 className="text-sm font-semibold text-neutral-800">{s.name}</h5>
@@ -484,7 +526,7 @@ export default function AccountContextPage() {
                   {s.role && <span className="text-xs text-neutral-400">{s.role}</span>}
                 </div>
                 <button
-                  onClick={() => handleDeleteStakeholder(s.id)}
+                  onClick={e => { e.stopPropagation(); handleDeleteStakeholder(s.id) }}
                   className="text-xs text-neutral-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
                 >
                   {t('context.remove')}
