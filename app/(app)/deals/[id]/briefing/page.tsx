@@ -248,47 +248,43 @@ export default function BriefingPage() {
             </div>
             <div className="space-y-4">
               {questions.map((q, i) => q.priority === 'opportunistic' ? null : (
-                <div key={i} className="bg-neutral-50 rounded-xl p-4 border border-neutral-200">
-                  {isLatestRound ? (
-                    <div className="space-y-2.5">
-                      <div className="flex gap-2">
-                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                          {[1, 2, 3, 4].map(l => <option key={l} value={l}>L{l}</option>)}
-                        </select>
-                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                          <option value="pressing">{t('briefing.pressing')}</option>
-                          <option value="opportunistic">{t('briefing.opportunistic')}</option>
-                        </select>
-                        <button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors">✕</button>
-                      </div>
-                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent — what are you trying to establish?" className="w-full bg-amber-50 border border-amber-200 text-xs px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 text-amber-800 italic placeholder:text-amber-300" />
-                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full bg-white border border-neutral-200 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium" />
-                      <div className="pl-4 space-y-1.5">
-                        {(q.sub_questions ?? []).map((sq, si) => (
-                          <div key={si} className="flex gap-1.5 items-center">
-                            <span className="text-neutral-300 text-xs">↳</span>
-                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 bg-white border border-neutral-200 text-xs px-2.5 py-1.5 rounded-lg focus:outline-none text-neutral-600" />
-                            <button onClick={() => removeSubQuestion(i, si)} className="text-neutral-300 hover:text-rose-500 text-xs transition-colors">✕</button>
-                          </div>
-                        ))}
-                        <button onClick={() => addSubQuestion(i)} className="text-[11px] font-medium text-neutral-400 hover:text-blue-500 transition-colors">+ sub-question</button>
-                      </div>
-                    </div>
-                  ) : (
+                <div key={i} className="bg-neutral-50 rounded-xl p-4 border border-neutral-200 space-y-3">
+                  {isLatestRound && <div className="flex justify-end"><button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors text-xs">✕</button></div>}
+                  {(q.intent || isLatestRound) && (
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">L{q.layer} · {q.variable}</span>
-                      </div>
-                      {q.intent && <p className="text-xs text-amber-700 italic mb-2 bg-amber-50 px-3 py-1.5 rounded-lg inline-block">→ {q.intent}</p>}
-                      <p className="text-sm text-neutral-800 font-medium mb-2">"{q.text}"</p>
-                      {(q.sub_questions ?? []).length > 0 && (
-                        <ul className="space-y-1 pl-3">
-                          {q.sub_questions.map((sq, si) => (
-                            <li key={si} className="text-xs text-neutral-500 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
-                          ))}
-                        </ul>
+                      <div className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1">{t('briefing.intentLabel')}</div>
+                      {isLatestRound ? (
+                        <textarea value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="..." className="w-full bg-amber-50 border border-amber-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 text-amber-800 italic placeholder:text-amber-300 resize-none" rows={2} />
+                      ) : (
+                        <p className="text-sm text-amber-800 italic">{q.intent}</p>
                       )}
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[10px] font-semibold text-neutral-700 uppercase tracking-wide mb-1">{t('briefing.questionLabel')}</div>
+                    {isLatestRound ? (
+                      <textarea value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="..." className="w-full bg-white border border-neutral-200 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium resize-none" rows={2} />
+                    ) : (
+                      <p className="text-sm text-neutral-800 font-medium">{q.text}</p>
+                    )}
+                  </div>
+                  {((q.sub_questions ?? []).length > 0 || isLatestRound) && (
+                    <div>
+                      <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1">{t('briefing.subQuestionsLabel')}</div>
+                      <div className="pl-3 space-y-1.5">
+                        {(q.sub_questions ?? []).map((sq, si) => (
+                          isLatestRound ? (
+                            <div key={si} className="flex gap-1.5 items-center">
+                              <span className="text-neutral-300 text-xs">↳</span>
+                              <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="..." className="flex-1 bg-white border border-neutral-200 text-xs px-2.5 py-1.5 rounded-lg focus:outline-none text-neutral-600" />
+                              <button onClick={() => removeSubQuestion(i, si)} className="text-neutral-300 hover:text-rose-500 text-xs transition-colors">✕</button>
+                            </div>
+                          ) : (
+                            <p key={si} className="text-xs text-neutral-500 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</p>
+                          )
+                        ))}
+                        {isLatestRound && <button onClick={() => addSubQuestion(i)} className="text-[11px] font-medium text-neutral-400 hover:text-blue-500 transition-colors">+ sub-question</button>}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -306,45 +302,43 @@ export default function BriefingPage() {
             </div>
             <div className="space-y-4">
               {questions.map((q, i) => q.priority !== 'opportunistic' ? null : (
-                <div key={i} className="bg-neutral-50/50 rounded-xl p-4 border border-dashed border-neutral-200">
-                  {isLatestRound ? (
-                    <div className="space-y-2.5">
-                      <div className="flex gap-2">
-                        <select value={q.layer} onChange={e => updateQuestion(i, 'layer', Number(e.target.value))} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none">
-                          {[1, 2, 3, 4].map(l => <option key={l} value={l}>L{l}</option>)}
-                        </select>
-                        <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none" />
-                        <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none">
-                          <option value="pressing">{t('briefing.pressing')}</option>
-                          <option value="opportunistic">{t('briefing.opportunistic')}</option>
-                        </select>
-                        <button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors">✕</button>
-                      </div>
-                      <input value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="Intent…" className="w-full bg-amber-50/50 border border-amber-100 text-xs px-3 py-2 rounded-lg focus:outline-none text-amber-700 italic placeholder:text-amber-200" />
-                      <input value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="Main question…" className="w-full bg-white border border-neutral-200 text-sm px-3 py-2.5 rounded-lg focus:outline-none text-neutral-600" />
-                      <div className="pl-4 space-y-1.5">
-                        {(q.sub_questions ?? []).map((sq, si) => (
-                          <div key={si} className="flex gap-1.5 items-center">
-                            <span className="text-neutral-300 text-xs">↳</span>
-                            <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="Sub-question…" className="flex-1 bg-white border border-neutral-200 text-xs px-2.5 py-1.5 rounded-lg focus:outline-none text-neutral-500" />
-                            <button onClick={() => removeSubQuestion(i, si)} className="text-neutral-300 hover:text-rose-500 text-xs transition-colors">✕</button>
-                          </div>
-                        ))}
-                        <button onClick={() => addSubQuestion(i)} className="text-[11px] font-medium text-neutral-400 hover:text-blue-500 transition-colors">+ sub-question</button>
-                      </div>
-                    </div>
-                  ) : (
+                <div key={i} className="bg-neutral-50/50 rounded-xl p-4 border border-dashed border-neutral-200 space-y-3">
+                  {isLatestRound && <div className="flex justify-end"><button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors text-xs">✕</button></div>}
+                  {(q.intent || isLatestRound) && (
                     <div>
-                      <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">L{q.layer} · {q.variable}</div>
-                      {q.intent && <p className="text-xs text-amber-600 italic mb-2">→ {q.intent}</p>}
-                      <p className="text-sm text-neutral-600 mb-2">"{q.text}"</p>
-                      {(q.sub_questions ?? []).length > 0 && (
-                        <ul className="space-y-1 pl-3">
-                          {q.sub_questions.map((sq, si) => (
-                            <li key={si} className="text-xs text-neutral-400 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
-                          ))}
-                        </ul>
+                      <div className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1">{t('briefing.intentLabel')}</div>
+                      {isLatestRound ? (
+                        <textarea value={q.intent ?? ''} onChange={e => updateQuestion(i, 'intent', e.target.value)} placeholder="..." className="w-full bg-amber-50/50 border border-amber-100 text-sm px-3 py-2 rounded-lg focus:outline-none text-amber-700 italic placeholder:text-amber-200 resize-none" rows={2} />
+                      ) : (
+                        <p className="text-sm text-amber-700 italic">{q.intent}</p>
                       )}
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1">{t('briefing.questionLabel')}</div>
+                    {isLatestRound ? (
+                      <textarea value={q.text} onChange={e => updateQuestion(i, 'text', e.target.value)} placeholder="..." className="w-full bg-white border border-neutral-200 text-sm px-3 py-2.5 rounded-lg focus:outline-none text-neutral-600 font-medium resize-none" rows={2} />
+                    ) : (
+                      <p className="text-sm text-neutral-600 font-medium">{q.text}</p>
+                    )}
+                  </div>
+                  {((q.sub_questions ?? []).length > 0 || isLatestRound) && (
+                    <div>
+                      <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{t('briefing.subQuestionsLabel')}</div>
+                      <div className="pl-3 space-y-1.5">
+                        {(q.sub_questions ?? []).map((sq, si) => (
+                          isLatestRound ? (
+                            <div key={si} className="flex gap-1.5 items-center">
+                              <span className="text-neutral-300 text-xs">↳</span>
+                              <input value={sq} onChange={e => updateSubQuestion(i, si, e.target.value)} placeholder="..." className="flex-1 bg-white border border-neutral-200 text-xs px-2.5 py-1.5 rounded-lg focus:outline-none text-neutral-500" />
+                              <button onClick={() => removeSubQuestion(i, si)} className="text-neutral-300 hover:text-rose-500 text-xs transition-colors">✕</button>
+                            </div>
+                          ) : (
+                            <p key={si} className="text-xs text-neutral-400 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</p>
+                          )
+                        ))}
+                        {isLatestRound && <button onClick={() => addSubQuestion(i)} className="text-[11px] font-medium text-neutral-400 hover:text-blue-500 transition-colors">+ sub-question</button>}
+                      </div>
                     </div>
                   )}
                 </div>
