@@ -167,8 +167,8 @@ Be specific — reference actual prospect details, actual scores, actual capture
           }],
         })
 
-        // Forward stream events as heartbeat spaces to keep connection alive
-        anthropicStream.on('text', () => {
+        // Send heartbeat spaces on every stream event to keep Vercel connection alive
+        anthropicStream.on('streamEvent', () => {
           controller.enqueue(encoder.encode(' '))
         })
 
