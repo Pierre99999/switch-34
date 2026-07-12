@@ -457,13 +457,33 @@ export default function DealDashboardPage() {
       )}
 
       {/* ── The Read — deal situation ── */}
-      {currentRoundData?.briefing_read && (
+      {currentRoundData?.briefing_read ? (
         <div className="mb-6 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-1 h-6 rounded-full bg-neutral-400" />
             <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('briefing.theRead')}</span>
           </div>
           <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{currentRoundData.briefing_read}</p>
+        </div>
+      ) : (
+        <div className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 p-6 shadow-sm">
+          <h3 className="text-base font-semibold text-neutral-800 mb-2">{t('dashboard.welcomeTitle')}</h3>
+          <p className="text-sm text-neutral-600 mb-4">{t('dashboard.welcomeDesc')}</p>
+          <ul className="space-y-2 mb-4">
+            <li className="flex items-start gap-2 text-sm text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
+              {t('dashboard.welcomePoint1')}
+            </li>
+            <li className="flex items-start gap-2 text-sm text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+              {t('dashboard.welcomePoint2')}
+            </li>
+            <li className="flex items-start gap-2 text-sm text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 mt-1.5 flex-shrink-0" />
+              {t('dashboard.welcomePoint3')}
+            </li>
+          </ul>
+          <p className="text-sm font-medium text-blue-700">{t('dashboard.welcomeAction')}</p>
         </div>
       )}
 
