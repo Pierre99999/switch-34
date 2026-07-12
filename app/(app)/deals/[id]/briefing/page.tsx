@@ -362,19 +362,21 @@ export default function BriefingPage() {
               {isLatestRound ? (
                 <div className="space-y-2">
                   <div className="flex gap-2 items-start">
-                    <input
+                    <textarea
                       value={o.likely}
                       onChange={e => updateObjection(i, 'likely', e.target.value)}
                       placeholder="Likely objection…"
-                      className="flex-1 bg-white border border-amber-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 font-medium"
+                      rows={2}
+                      className="flex-1 bg-white border border-amber-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/20 font-medium resize-none"
                     />
                     <button onClick={() => removeObjection(i)} className="text-amber-300 hover:text-rose-500 transition-colors mt-2">✕</button>
                   </div>
-                  <input
+                  <textarea
                     value={o.frame}
                     onChange={e => updateObjection(i, 'frame', e.target.value)}
                     placeholder="How to reframe it"
-                    className="w-full bg-white border border-amber-200 text-xs px-3 py-2 rounded-lg focus:outline-none text-neutral-600"
+                    rows={2}
+                    className="w-full bg-white border border-amber-200 text-xs px-3 py-2 rounded-lg focus:outline-none text-neutral-600 resize-none"
                   />
                 </div>
               ) : (
@@ -399,11 +401,12 @@ export default function BriefingPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400 flex-shrink-0" />
               {isLatestRound ? (
                 <>
-                  <input
+                  <textarea
                     value={item}
                     onChange={e => updateDoNot(i, e.target.value)}
                     placeholder="Something to avoid…"
-                    className="flex-1 bg-rose-50 border border-rose-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                    rows={2}
+                    className="flex-1 bg-rose-50 border border-rose-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500/20 resize-none"
                   />
                   <button onClick={() => removeDoNot(i)} className="text-rose-300 hover:text-rose-500 transition-colors">✕</button>
                 </>
