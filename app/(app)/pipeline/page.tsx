@@ -3,19 +3,12 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { getLayerVerdict, LAYER_VARIABLES, type EvidenceLevel, EVIDENCE_LABELS } from '@/lib/types'
+import { getLayerVerdict, getLayerAverage, LAYER_VARIABLES, type EvidenceLevel, EVIDENCE_LABELS } from '@/lib/types'
 import type { Deal, DealRound } from '@/lib/types'
 import EditableProspectName from '@/components/deal/EditableProspectName'
 import { useI18n } from '@/lib/i18n/context'
 import { useRole } from '@/lib/role-context'
 
-function getLayerScore(round: DealRound | null, layer: number): number | null {
-  if (!round) return null
-  const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
-  const scores = vars.map(v => round[v as keyof DealRound] as number | null).filter(s => s !== null) as number[]
-  if (scores.length === 0) return null
-  return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
-}
 
 const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
 const EVIDENCE_SHORT: Record<EvidenceLevel, string> = { declared: 'D', corroborated: 'C', verified: 'V' }
@@ -45,7 +38,7 @@ const VERDICT_COLORS: Record<string, { text: string; bg: string }> = {
 
 function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: number; label: string }) {
   const verdict = getLayerVerdict(round, layer)
-  const score = getLayerScore(round, layer)
+  const score = getLayerAverage(round, layer)
   const minEvidence = getLayerMinEvidence(round, layer)
   const vc = VERDICT_COLORS[verdict] ?? VERDICT_COLORS.EMPTY
 
