@@ -97,6 +97,19 @@ export default function NewDealPage() {
 
     await supabase.from('deal_rounds').insert({ deal_id: deal.id, round: 0 })
 
+    const validContacts = contacts.filter(c => c.name.trim())
+    if (validContacts.length > 0) {
+      await supabase.from('deal_stakeholders').insert(
+        validContacts.map(c => ({
+          deal_id: deal.id,
+          name: c.name,
+          role: c.title || null,
+          actor_type: 'unknown' as const,
+          notes: null,
+        }))
+      )
+    }
+
     router.push(`/deals/${deal.id}/context`)
     router.refresh()
   }

@@ -333,28 +333,6 @@ export default function AccountContextPage() {
         )}
       </div>
 
-      {/* Sales context */}
-      {profile.sales_context && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
-          <div className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-1">{t('context.salesFocus')}</div>
-          <p className="text-sm text-amber-900">{profile.sales_context}</p>
-        </div>
-      )}
-
-      {/* Translate button */}
-      {totalFilled > 0 && (
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={handleTranslate}
-            disabled={translating}
-            className="px-4 py-2 text-sm font-medium text-neutral-600 border border-neutral-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-40"
-          >
-            {translating ? t('common.translating') : t('common.translateContent')}
-          </button>
-          {translateSuccess && <span className="text-xs text-emerald-600 font-medium">{translateSuccess}</span>}
-        </div>
-      )}
-
       {/* Revenue */}
       <div className="bg-white rounded-2xl border border-neutral-200 p-5 mb-6 shadow-sm">
         <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('deal.potentialRevenue')}</label>
