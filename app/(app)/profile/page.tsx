@@ -115,8 +115,6 @@ export default function ProfilePage() {
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
-  const [translating, setTranslating] = useState(false)
-  const [translateSuccess, setTranslateSuccess] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (roleLoading) return
@@ -164,26 +162,6 @@ export default function ProfilePage() {
     setSavedDims(newDims)
   }
 
-  async function handleTranslate() {
-    if (!vendor) return
-    setTranslating(true)
-    setTranslateSuccess(null)
-    try {
-      const res = await fetch('/api/ai/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dimensions: dims, locale }),
-      })
-      const data = await res.json()
-      if (data.dimensions) {
-        const newDims = deepMerge(EMPTY_VENDOR_DIMENSIONS, data.dimensions)
-        setDims(newDims)
-        await saveAllDims(newDims, vendor)
-        setTranslateSuccess(t('common.translated'))
-      }
-    } catch { /* ignore */ }
-    setTranslating(false)
-  }
 
   async function applyExtracted(extracted: Partial<VendorDimensions>) {
     const newDims = deepMerge(dims, extracted)
@@ -258,19 +236,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Translate button */}
-      {totalFilled > 0 && !isReadOnly && (
-        <div className="flex items-center gap-3 mb-6">
-          <button
-            onClick={handleTranslate}
-            disabled={translating}
-            className="px-4 py-2 text-sm font-medium text-neutral-600 border border-neutral-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-40"
-          >
-            {translating ? t('common.translating') : t('common.translateContent')}
-          </button>
-          {translateSuccess && <span className="text-xs text-emerald-600 font-medium">{translateSuccess}</span>}
-        </div>
-      )}
 
       {/* Read-only banner for sales reps */}
       {isReadOnly && (

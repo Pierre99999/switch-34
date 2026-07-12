@@ -329,7 +329,9 @@ export default function DealDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealId, roundId, locale }),
       })
-      const data = await res.json()
+      const text = await res.text()
+      let data: { error?: string; briefing?: unknown }
+      try { data = JSON.parse(text) } catch { throw new Error(text.slice(0, 200) || 'Unknown server error') }
       if (!res.ok) throw new Error(data.error ?? 'AI error')
       router.push(`/deals/${dealId}/briefing`)
     } catch (e) {
