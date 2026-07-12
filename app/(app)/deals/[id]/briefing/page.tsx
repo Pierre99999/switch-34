@@ -291,19 +291,19 @@ export default function BriefingPage() {
         </div>
       )}
 
-      {/* The Line */}
+      {/* The Angle */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 mb-5 text-white shadow-lg shadow-blue-500/20">
-        <div className="text-xs font-semibold uppercase tracking-wide text-blue-200 mb-3">{t('briefing.theLine')}</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-blue-200 mb-3">{t('briefing.theAngle')}</div>
         {isLatestRound ? (
           <textarea
-            value={line}
-            onChange={e => setLine(e.target.value)}
-            placeholder="One sentence that frames the entire conversation…"
-            rows={2}
-            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-lg placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
+            value={angle}
+            onChange={e => { setAngle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
+            placeholder={t('briefing.angleSubtitle')}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white text-base placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none overflow-hidden"
           />
         ) : (
-          <p className="text-xl font-medium leading-snug">"{line || '—'}"</p>
+          <p className="text-base font-medium leading-relaxed whitespace-pre-wrap">{angle || '—'}</p>
         )}
         <div className="grid grid-cols-4 gap-2 mt-4">
           {[1, 2, 3, 4].map((l, i) => (
@@ -367,21 +367,6 @@ export default function BriefingPage() {
         </div>
         {isLatestRound && (
           <button onClick={addMandatory} className="mt-3 text-sm font-medium text-red-500 hover:text-red-600 transition-colors">+ {t('briefing.addMandatory')}</button>
-        )}
-      </Section>
-
-      {/* The Angle */}
-      <Section title={t('briefing.theAngle')} subtitle={t('briefing.angleSubtitle')} accent="bg-orange-400" defaultOpen={false}>
-        {isLatestRound ? (
-          <textarea
-            value={angle}
-            onChange={e => { setAngle(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
-            ref={el => { if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px' } }}
-            placeholder="The diagnostic objective — what must be resolved in this conversation."
-            className={inputClass + ' overflow-hidden'}
-          />
-        ) : (
-          <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{angle || '—'}</p>
         )}
       </Section>
 
