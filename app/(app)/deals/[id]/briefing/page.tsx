@@ -6,11 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
 import {
   type Deal, type DealRound, type BriefingQuestion, type BriefingObjection,
-  type QuestionTemplate,
   LAYER_LABELS, getLayerVerdict,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
-import { useRole } from '@/lib/role-context'
 
 // ── Collapsible section ─────────────────────────────────────
 
@@ -70,11 +68,9 @@ export default function BriefingPage() {
   const router = useRouter()
   const dealId = params.id as string
   const { t, locale } = useI18n()
-  const { organizationId } = useRole()
+
 
   const [deal, setDeal] = useState<Deal | null>(null)
-  const [orgTemplates, setOrgTemplates] = useState<QuestionTemplate[]>([])
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [selectedRound, setSelectedRound] = useState<number>(0)
   const [saving, setSaving] = useState(false)
@@ -90,7 +86,6 @@ export default function BriefingPage() {
   const [doNot, setDoNot] = useState<string[]>([])
   const [mirror, setMirror] = useState<string[]>([])
   const [objections, setObjections] = useState<BriefingObjection[]>([])
-  const [mandatoryQuestions, setMandatoryQuestions] = useState<string[]>([])
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -104,8 +99,6 @@ export default function BriefingPage() {
     setDoNot(r?.briefing_do_not ?? [])
     setMirror(r?.briefing_mirror ?? [])
     setObjections(r?.briefing_objections ?? [])
-    setMandatoryQuestions(r?.mandatory_questions ?? [])
-    setSelectedTemplateIds(r?.selected_templates ?? [])
   }
 
   const load = useCallback(async () => {
@@ -114,11 +107,6 @@ export default function BriefingPage() {
       supabase.from('deals').select('*').eq('id', dealId).single(),
       supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
     ])
-    if (organizationId) {
-      const { data: tplData } = await supabase.from('question_templates').select('*').eq('organization_id', organizationId).order('created_at')
-      if (tplData) setOrgTemplates(tplData as QuestionTemplate[])
-    }
-
     if (dealData) setDeal(dealData)
     if (roundData) {
       setRounds(roundData)
@@ -128,7 +116,7 @@ export default function BriefingPage() {
         populateFromRound(latest)
       }
     }
-  }, [dealId, organizationId])
+  }, [dealId])
 
   useEffect(() => { load() }, [load])
 
@@ -148,8 +136,6 @@ export default function BriefingPage() {
         briefing_line: line, briefing_read: read, briefing_angle: angle,
         briefing_win_condition: winCondition, briefing_questions: questions,
         briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
-        mandatory_questions: mandatoryQuestions,
-        selected_templates: selectedTemplateIds,
       })
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
@@ -166,7 +152,6 @@ export default function BriefingPage() {
         briefing_line: line, briefing_read: read, briefing_angle: angle,
         briefing_win_condition: winCondition, briefing_questions: questions,
         briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
-        mandatory_questions: mandatoryQuestions,
       }
       if (currentRoundData.capture_notes) data.capture_notes = currentRoundData.capture_notes
       if (currentRoundData.narrative) data.narrative = currentRoundData.narrative
@@ -186,7 +171,6 @@ export default function BriefingPage() {
         if (d.briefing_do_not) setDoNot(d.briefing_do_not)
         if (d.briefing_mirror) setMirror(d.briefing_mirror)
         if (d.briefing_objections) setObjections(d.briefing_objections)
-        if (d.mandatory_questions) setMandatoryQuestions(d.mandatory_questions)
         const supabase = createClient()
         await supabase.from('deal_rounds').update(d).eq('id', currentRoundData.id)
         setTranslateSuccess(t('common.translated'))
@@ -195,11 +179,6 @@ export default function BriefingPage() {
     } catch { /* ignore */ }
     setTranslating(false)
   }
-
-  // ── Mandatory question helpers ────────────────────────────
-  function addMandatory() { setMandatoryQuestions(m => [...m, '']) }
-  function updateMandatory(i: number, val: string) { setMandatoryQuestions(m => m.map((item, idx) => idx === i ? val : item)) }
-  function removeMandatory(i: number) { setMandatoryQuestions(m => m.filter((_, idx) => idx !== i)) }
 
   // ── List helpers ──────────────────────────────────────────
 
@@ -308,63 +287,6 @@ export default function BriefingPage() {
       </div>
 
       {/* Mandatory Questions */}
-      <Section title={t('briefing.mandatoryQuestions')} subtitle={t('briefing.mandatorySubtitle')} accent="bg-red-500" defaultOpen={true}>
-        {/* Template questions from org bank */}
-        {orgTemplates.length > 0 && (
-          <div className="mb-4">
-            <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">{t('team.questionsDesc')}</div>
-            <div className="space-y-1.5">
-              {orgTemplates.map(tpl => {
-                const active = selectedTemplateIds.includes(tpl.id)
-                return (
-                  <label key={tpl.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${active ? 'border-red-300 bg-red-50' : 'border-neutral-200 bg-neutral-50 hover:border-red-200'}`}>
-                    <input
-                      type="checkbox"
-                      checked={active}
-                      onChange={() => {
-                        if (!isLatestRound) return
-                        setSelectedTemplateIds(ids =>
-                          active ? ids.filter(id => id !== tpl.id) : [...ids, tpl.id]
-                        )
-                      }}
-                      disabled={!isLatestRound}
-                      className="accent-red-500"
-                    />
-                    <span className={`text-sm ${active ? 'text-red-800 font-medium' : 'text-neutral-600'}`}>{tpl.text}</span>
-                  </label>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Custom mandatory questions for this round */}
-        <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">{t('briefing.addMandatory')}</div>
-        <div className="space-y-2">
-          {mandatoryQuestions.map((item, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-              {isLatestRound ? (
-                <>
-                  <input
-                    value={item}
-                    onChange={e => updateMandatory(i, e.target.value)}
-                    placeholder={t('briefing.mandatoryPlaceholder')}
-                    className="flex-1 bg-red-50 border border-red-200 text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                  />
-                  <button onClick={() => removeMandatory(i)} className="text-red-300 hover:text-red-500 transition-colors">✕</button>
-                </>
-              ) : (
-                <p className="text-sm text-neutral-700">{item}</p>
-              )}
-            </div>
-          ))}
-        </div>
-        {isLatestRound && (
-          <button onClick={addMandatory} className="mt-3 text-sm font-medium text-red-500 hover:text-red-600 transition-colors">+ {t('briefing.addMandatory')}</button>
-        )}
-      </Section>
-
       {/* Field Questions */}
       <Section title={t('briefing.fieldQuestions')} subtitle={t('briefing.questionsSubtitle')} accent="bg-violet-400" defaultOpen={false}>
         {/* Pressing */}
