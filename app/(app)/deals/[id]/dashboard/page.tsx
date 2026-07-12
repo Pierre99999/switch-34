@@ -275,7 +275,6 @@ export default function DealDashboardPage() {
   const [pendingEvidence, setPendingEvidence] = useState<Record<string, EvidenceLevel>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [generatingNarrative, setGeneratingNarrative] = useState(false)
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
@@ -374,24 +373,6 @@ export default function DealDashboardPage() {
     }
   }
 
-  async function handleGenerateNarrative() {
-    if (!currentRoundData) return
-    setGeneratingNarrative(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/ai/narrative', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'AI error')
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to generate narrative')
-    }
-    setGeneratingNarrative(false)
-  }
 
   if (!deal) {
     return (
@@ -533,9 +514,6 @@ export default function DealDashboardPage() {
 
       {isLatestRound && roundState === 'SCORED' && (
         <div className="flex items-center gap-3 mb-6">
-          <SecondaryButton onClick={handleGenerateNarrative} disabled={generatingNarrative}>
-            {generatingNarrative ? t('dashboard.generating') : '✦ Narrative'}
-          </SecondaryButton>
           <div className="flex-1" />
           <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
             {generatingBriefing ? t('dashboard.generating') : locale === 'fr' ? `✦ Démarrer round ${deal.current_round + 1} →` : `✦ Start round ${deal.current_round + 1} →`}
@@ -560,16 +538,6 @@ export default function DealDashboardPage() {
         ))}
       </div>
 
-      {/* Engine narrative */}
-      {currentRoundData?.narrative && (
-        <div className="mt-8 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm">✦</span>
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('dashboard.engineNarrative')}</span>
-          </div>
-          <p className="text-sm text-neutral-700 leading-relaxed">{currentRoundData.narrative}</p>
-        </div>
-      )}
     </div>
   )
 }
