@@ -87,6 +87,16 @@ export const translations = {
   'pipeline.totalRevenue': { en: 'Total pipeline', fr: 'Pipeline total' },
   'pipeline.rep': { en: 'Rep', fr: 'Commercial' },
   'pipeline.allReps': { en: 'All reps', fr: 'Tous les commerciaux' },
+  'pipeline.markLost': { en: 'Mark as lost', fr: 'Marquer perdu' },
+  'pipeline.markWon': { en: 'Mark as won', fr: 'Marquer gagné' },
+  'pipeline.markPaused': { en: 'Pause deal', fr: 'Mettre en pause' },
+  'pipeline.markActive': { en: 'Reactivate', fr: 'Réactiver' },
+  'pipeline.archived': { en: 'Archived deals', fr: 'Deals archivés' },
+  'pipeline.lost': { en: 'Lost', fr: 'Perdu' },
+  'pipeline.won': { en: 'Won', fr: 'Gagné' },
+  'pipeline.paused': { en: 'Paused', fr: 'En pause' },
+  'pipeline.showArchived': { en: 'Show archived', fr: 'Voir les archivés' },
+  'pipeline.hideArchived': { en: 'Hide archived', fr: 'Masquer les archivés' },
 
   // ── Roles ──
   'role.sales': { en: 'Sales rep', fr: 'Commercial' },

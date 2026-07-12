@@ -85,6 +85,8 @@ export default function PipelinePage() {
   const [loading, setLoading] = useState(true)
   const [sortKey, setSortKey] = useState<SortKey>(null)
   const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [archivedDeals, setArchivedDeals] = useState<Deal[]>([])
+  const [showArchived, setShowArchived] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -131,6 +133,34 @@ export default function PipelinePage() {
     }
     load()
   }, [isDirector])
+
+  async function handleSetStatus(dealId: string, status: Deal['status']) {
+    const supabase = createClient()
+    await supabase.from('deals').update({ status }).eq('id', dealId)
+    if (status === 'active') {
+      const deal = archivedDeals.find(d => d.id === dealId)
+      if (deal) {
+        setArchivedDeals(a => a.filter(d => d.id !== dealId))
+        setDeals(d => [...d, { ...deal, status: 'active' }])
+      }
+    } else {
+      const deal = deals.find(d => d.id === dealId)
+      if (deal) {
+        setDeals(d => d.filter(dd => dd.id !== dealId))
+        setArchivedDeals(a => [...a, { ...deal, status }])
+      }
+    }
+  }
+
+  async function loadArchived() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    let query = supabase.from('deals').select('*').in('status', ['lost', 'won', 'paused']).order('updated_at', { ascending: false })
+    if (!isDirector) query = query.eq('user_id', user.id)
+    const { data } = await query
+    setArchivedDeals(data || [])
+  }
 
   const latestRound = (dealId: string): DealRound | null => {
     const dealRounds = rounds
@@ -278,15 +308,68 @@ export default function PipelinePage() {
                 <ScoreCell round={r} layer={3} label={t('layer.3')} />
                 <ScoreCell round={r} layer={4} label={t('layer.4')} />
               </div>
-              <div className="text-right">
+              <div className="flex items-center justify-end gap-2">
                 <Link href={`/deals/${deal.id}/dashboard`} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
                   {t('pipeline.dashboard')}
                 </Link>
+                <div className="relative group">
+                  <button className="text-neutral-300 hover:text-neutral-500 transition-colors text-lg leading-none px-1">···</button>
+                  <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-10 hidden group-hover:block min-w-[160px]">
+                    <button onClick={() => handleSetStatus(deal.id, 'won')} className="w-full text-left px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                      {t('pipeline.markWon')}
+                    </button>
+                    <button onClick={() => handleSetStatus(deal.id, 'lost')} className="w-full text-left px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                      {t('pipeline.markLost')}
+                    </button>
+                    <button onClick={() => handleSetStatus(deal.id, 'paused')} className="w-full text-left px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                      {t('pipeline.markPaused')}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )
         })}
       </div>
+
+      {/* Archived toggle */}
+      <div className="mt-6 text-center">
+        <button
+          onClick={() => { if (!showArchived) loadArchived(); setShowArchived(s => !s) }}
+          className="text-sm text-neutral-400 hover:text-neutral-600 transition-colors"
+        >
+          {showArchived ? t('pipeline.hideArchived') : t('pipeline.showArchived')}
+        </button>
+      </div>
+
+      {/* Archived deals */}
+      {showArchived && archivedDeals.length > 0 && (
+        <div className="mt-4 bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-neutral-100 bg-neutral-50/50">
+            <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.archived')}</span>
+          </div>
+          {archivedDeals.map(deal => {
+            const statusLabel = deal.status === 'won' ? t('pipeline.won') : deal.status === 'lost' ? t('pipeline.lost') : t('pipeline.paused')
+            const statusColor = deal.status === 'won' ? 'bg-emerald-50 text-emerald-600' : deal.status === 'lost' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+            return (
+              <div key={deal.id} className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-neutral-700">{deal.prospect_name}</span>
+                  <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${statusColor}`}>{statusLabel}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Link href={`/deals/${deal.id}/dashboard`} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
+                    {t('pipeline.dashboard')}
+                  </Link>
+                  <button onClick={() => handleSetStatus(deal.id, 'active')} className="text-xs text-neutral-400 hover:text-blue-500 transition-colors">
+                    {t('pipeline.markActive')}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
