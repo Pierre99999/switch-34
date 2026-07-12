@@ -248,8 +248,71 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
+      {/* Empty state (both views) */}
+      {deals.length === 0 && (
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm py-16 text-center">
+          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">+</span>
+          </div>
+          <p className="text-sm text-neutral-500 mb-4">{t('pipeline.noDeals')}</p>
+          <Link href="/deals/new" className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all">
+            {t('pipeline.newDeal')}
+          </Link>
+        </div>
+      )}
+
+      {/* Mobile card list */}
+      {deals.length > 0 && (
+        <div className="md:hidden space-y-3">
+          {sortedDeals.map((deal: Deal) => {
+            const r = latestRound(deal.id)
+            return (
+              <div key={deal.id} className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <EditableProspectName dealId={deal.id} name={deal.prospect_name} />
+                    {deal.contact_name && (
+                      <div className="text-xs text-neutral-400 mt-0.5 truncate">{deal.contact_name}{deal.contact_title ? ` · ${deal.contact_title}` : ''}</div>
+                    )}
+                    {isDirector && (
+                      <div className="text-xs text-neutral-500 mt-1">{repNames[deal.user_id] || '—'}</div>
+                    )}
+                  </div>
+                  <div className="relative flex-shrink-0">
+                    <button onClick={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)} className="text-neutral-300 hover:text-neutral-500 transition-colors text-lg leading-none px-1">···</button>
+                    {openMenuId === deal.id && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-30 min-w-[180px]">
+                          <button onClick={() => { handleSetStatus(deal.id, 'won'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markWon')}</button>
+                          <button onClick={() => { handleSetStatus(deal.id, 'lost'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markLost')}</button>
+                          <button onClick={() => { handleSetStatus(deal.id, 'paused'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markPaused')}</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
+                  <span className="font-semibold text-neutral-700">{deal.potential_revenue ? fmtRevenue(deal.potential_revenue) : '—'}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-neutral-100">
+                  <ScoreCell round={r} layer={1} label={t('layer.1')} />
+                  <ScoreCell round={r} layer={2} label={t('layer.2')} />
+                  <ScoreCell round={r} layer={3} label={t('layer.3')} />
+                  <ScoreCell round={r} layer={4} label={t('layer.4')} />
+                </div>
+                <Link href={`/deals/${deal.id}/dashboard`} className="block text-center text-sm text-blue-500 hover:text-blue-600 font-medium pt-2 border-t border-neutral-100">
+                  {t('pipeline.dashboard')}
+                </Link>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
         <div className="min-w-[900px]">
         {/* Table header */}
         <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
@@ -260,18 +323,6 @@ export default function PipelinePage() {
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
         </div>
-
-        {deals.length === 0 && (
-          <div className="py-16 text-center">
-            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">+</span>
-            </div>
-            <p className="text-sm text-neutral-500 mb-4">{t('pipeline.noDeals')}</p>
-            <Link href="/deals/new" className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all">
-              {t('pipeline.newDeal')}
-            </Link>
-          </div>
-        )}
 
         {sortedDeals.map((deal: Deal) => {
           const r = latestRound(deal.id)
