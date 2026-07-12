@@ -173,6 +173,7 @@ export type Vendor = {
   full_name: string | null
   role: UserRole
   organization_id: string | null
+  locale: string | null
   onboarding_completed: boolean
   company_url: string | null
   product_description: string | null

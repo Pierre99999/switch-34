@@ -11,11 +11,12 @@ const btnSecondary = "w-full border border-stone-300 text-stone-600 py-3 text-xs
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { t, locale } = useI18n()
+  const { t, locale, setLocale } = useI18n()
 
-  // Step 0: role + name
+  // Step 0: role + name + language
   const [step, setStep] = useState(0)
   const [role, setRole] = useState<'sales' | 'director'>('director')
+  const [selectedLocale, setSelectedLocale] = useState<'fr' | 'en'>(locale as 'fr' | 'en')
   const [fullName, setFullName] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [companyUrl, setCompanyUrl] = useState('')
@@ -59,10 +60,12 @@ export default function OnboardingPage() {
         .single()
       if (!org) { setInviteError(t('onboarding.invalidCode')); setLoading(false); return }
 
+      setLocale(selectedLocale)
       const { error } = await supabase.from('vendors').insert({
         user_id: user.id,
         company_name: org.name,
         full_name: fullName || null,
+        locale: selectedLocale,
         role: 'sales',
         organization_id: org.id,
         onboarding_completed: true,
@@ -81,10 +84,12 @@ export default function OnboardingPage() {
       .single()
     if (orgErr || !org) { setError(orgErr?.message ?? 'Failed to create organization'); setLoading(false); return }
 
+    setLocale(selectedLocale)
     const { error: vendorErr } = await supabase.from('vendors').insert({
       user_id: user.id,
       company_name: companyName,
       full_name: fullName || null,
+      locale: selectedLocale,
       role: 'director',
       organization_id: org.id,
       onboarding_completed: false,
@@ -212,6 +217,26 @@ export default function OnboardingPage() {
         {/* ── Step 0: Role + Name ── */}
         {step === 0 && (
           <div className="space-y-5">
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-2 block">{t('onboarding.language')}</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLocale('fr')}
+                  className={`border px-4 py-3 text-center transition-all ${selectedLocale === 'fr' ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-400'}`}
+                >
+                  <div className="text-sm font-medium text-stone-900 font-mono">Français</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLocale('en')}
+                  className={`border px-4 py-3 text-center transition-all ${selectedLocale === 'en' ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-400'}`}
+                >
+                  <div className="text-sm font-medium text-stone-900 font-mono">English</div>
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono mb-2 block">{t('onboarding.yourRole')}</label>
               <div className="grid grid-cols-2 gap-3">

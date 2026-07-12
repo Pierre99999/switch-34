@@ -33,6 +33,7 @@ export const translations = {
   'onboarding.websitePlaceholder': { en: 'acme.com', fr: 'acme.com' },
   'onboarding.submit': { en: 'Get started →', fr: 'Commencer →' },
   'onboarding.saving': { en: 'Setting up…', fr: 'Configuration…' },
+  'onboarding.language': { en: 'Language', fr: 'Langue' },
   'onboarding.yourRole': { en: 'Your role', fr: 'Votre rôle' },
   'onboarding.roleSales': { en: 'Sales representative', fr: 'Commercial' },
   'onboarding.roleSalesDesc': { en: 'I manage my own deals', fr: 'Je gère mes propres deals' },
