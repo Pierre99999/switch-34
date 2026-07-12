@@ -85,7 +85,14 @@ export default function CapturePage() {
       .update({ capture_notes: merged })
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
-    else await load()
+    else {
+      await load()
+      fetch('/api/ai/update-boxes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
+      }).catch(() => {})
+    }
     setSaving(false)
   }
 

@@ -6,36 +6,36 @@ import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
 import { type Deal, type DealRound, type DealBox, type BoxEntry } from '@/lib/types'
 
-// ── Box definitions (fixed methodology) ─────────────────────
+// ── Zone definitions (fixed methodology) ─────────────────────
 
-type BoxDef = {
+type ZoneDef = {
   id: string
   nameKey: string
   descKey: string
   type: 'collected' | 'prepared' | 'built'
 }
 
-const BOXES: BoxDef[] = [
-  { id: 'perception',       nameKey: 'boxes.perception',       descKey: 'boxes.perceptionDesc',       type: 'collected' },
-  { id: 'problems',         nameKey: 'boxes.problems',         descKey: 'boxes.problemsDesc',         type: 'collected' },
-  { id: 'stakeholders',     nameKey: 'boxes.stakeholders',     descKey: 'boxes.stakeholdersDesc',     type: 'collected' },
-  { id: 'human-pain',       nameKey: 'boxes.humanPain',        descKey: 'boxes.humanPainDesc',        type: 'collected' },
-  { id: 'budget',           nameKey: 'boxes.budget',           descKey: 'boxes.budgetDesc',           type: 'collected' },
-  { id: 'product',          nameKey: 'boxes.product',          descKey: 'boxes.productDesc',          type: 'prepared' },
-  { id: 'fit',              nameKey: 'boxes.fit',              descKey: 'boxes.fitDesc',              type: 'prepared' },
-  { id: 'necessary-actor',  nameKey: 'boxes.necessaryActor',   descKey: 'boxes.necessaryActorDesc',   type: 'prepared' },
-  { id: 'buy-reason',       nameKey: 'boxes.buyReason',        descKey: 'boxes.buyReasonDesc',        type: 'built' },
-  { id: 'implementation',   nameKey: 'boxes.implementation',   descKey: 'boxes.implementationDesc',   type: 'built' },
-  { id: 'urgency',          nameKey: 'boxes.urgency',          descKey: 'boxes.urgencyDesc',          type: 'built' },
-  { id: 'value',            nameKey: 'boxes.value',            descKey: 'boxes.valueDesc',            type: 'built' },
-  { id: 'timing',           nameKey: 'boxes.timing',           descKey: 'boxes.timingDesc',           type: 'built' },
-  { id: 'forces',           nameKey: 'boxes.forces',           descKey: 'boxes.forcesDesc',           type: 'built' },
+const ZONES: ZoneDef[] = [
+  { id: 'perception',       nameKey: 'zones.perception',       descKey: 'zones.perceptionDesc',       type: 'collected' },
+  { id: 'problems',         nameKey: 'zones.problems',         descKey: 'zones.problemsDesc',         type: 'collected' },
+  { id: 'stakeholders',     nameKey: 'zones.stakeholders',     descKey: 'zones.stakeholdersDesc',     type: 'collected' },
+  { id: 'human-pain',       nameKey: 'zones.humanPain',        descKey: 'zones.humanPainDesc',        type: 'collected' },
+  { id: 'budget',           nameKey: 'zones.budget',           descKey: 'zones.budgetDesc',           type: 'collected' },
+  { id: 'product',          nameKey: 'zones.product',          descKey: 'zones.productDesc',          type: 'prepared' },
+  { id: 'fit',              nameKey: 'zones.fit',              descKey: 'zones.fitDesc',              type: 'prepared' },
+  { id: 'necessary-actor',  nameKey: 'zones.necessaryActor',   descKey: 'zones.necessaryActorDesc',   type: 'prepared' },
+  { id: 'buy-reason',       nameKey: 'zones.buyReason',        descKey: 'zones.buyReasonDesc',        type: 'built' },
+  { id: 'implementation',   nameKey: 'zones.implementation',   descKey: 'zones.implementationDesc',   type: 'built' },
+  { id: 'urgency',          nameKey: 'zones.urgency',          descKey: 'zones.urgencyDesc',          type: 'built' },
+  { id: 'value',            nameKey: 'zones.value',            descKey: 'zones.valueDesc',            type: 'built' },
+  { id: 'timing',           nameKey: 'zones.timing',           descKey: 'zones.timingDesc',           type: 'built' },
+  { id: 'forces',           nameKey: 'zones.forces',           descKey: 'zones.forcesDesc',           type: 'built' },
 ]
 
 const TYPE_LABEL_KEY: Record<string, string> = {
-  collected: 'boxes.collected',
-  prepared: 'boxes.prepared',
-  built: 'boxes.built',
+  collected: 'zones.collected',
+  prepared: 'zones.prepared',
+  built: 'zones.built',
 }
 
 const TYPE_STYLE = {
@@ -45,9 +45,9 @@ const TYPE_STYLE = {
 }
 
 const GROUP_LABEL_KEY: Record<string, string> = {
-  collected: 'boxes.groupCollected',
-  prepared: 'boxes.groupPrepared',
-  built: 'boxes.groupBuilt',
+  collected: 'zones.groupCollected',
+  prepared: 'zones.groupPrepared',
+  built: 'zones.groupBuilt',
 }
 
 const GROUPS = [
@@ -58,17 +58,17 @@ const GROUPS = [
 
 const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
 
-// ── BoxCard ──────────────────────────────────────────────────
+// ── ZoneCard ──────────────────────────────────────────────────
 
-function BoxCard({
-  box,
+function ZoneCard({
+  zone,
   entries,
   onAdd,
   onUpdate,
   onDelete,
   rounds,
 }: {
-  box: BoxDef
+  zone: ZoneDef
   entries: BoxEntry[]
   onAdd: (text: string, round: number) => Promise<void>
   onUpdate: (index: number, text: string) => Promise<void>
@@ -76,7 +76,7 @@ function BoxCard({
   rounds: DealRound[]
 }) {
   const { t } = useI18n()
-  const ts = TYPE_STYLE[box.type]
+  const ts = TYPE_STYLE[zone.type]
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [round, setRound] = useState(rounds[rounds.length - 1]?.round ?? 0)
@@ -111,15 +111,15 @@ function BoxCard({
     <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm ${entries.length === 0 ? 'border-neutral-200 opacity-60' : 'border-neutral-200'}`}>
       <div className="px-5 py-4">
         <div className="flex items-start justify-between mb-1.5">
-          <h4 className="text-sm font-semibold text-neutral-800 leading-snug">{t(box.nameKey as any)}</h4>
+          <h4 className="text-sm font-semibold text-neutral-800 leading-snug">{t(zone.nameKey as any)}</h4>
           <span className={`text-[10px] font-medium border rounded-full px-2 py-0.5 ml-3 flex-shrink-0 ${ts.badge}`}>
-            {t(TYPE_LABEL_KEY[box.type] as any)}
+            {t(TYPE_LABEL_KEY[zone.type] as any)}
           </span>
         </div>
-        <p className="text-xs text-neutral-400 mb-3 leading-snug">{t(box.descKey as any)}</p>
+        <p className="text-xs text-neutral-400 mb-3 leading-snug">{t(zone.descKey as any)}</p>
 
         {entries.length === 0 ? (
-          <div className="text-xs text-neutral-300 mb-3">{t('boxes.empty')}</div>
+          <div className="text-xs text-neutral-300 mb-3">{t('zones.empty')}</div>
         ) : (
           <div className="space-y-2 mb-3">
             {entries.map((entry, i) => (
@@ -139,7 +139,7 @@ function BoxCard({
                         disabled={editSaving || !editText.trim()}
                         className="px-4 py-2 bg-blue-500 text-white text-xs font-medium rounded-xl hover:bg-blue-600 disabled:opacity-40 transition-all"
                       >
-                        {editSaving ? t('boxes.saving') : t('boxes.save')}
+                        {editSaving ? t('zones.saving') : t('zones.save')}
                       </button>
                       <button
                         onClick={() => setEditingIndex(null)}
@@ -153,11 +153,11 @@ function BoxCard({
                   <>
                     <div className="flex items-start justify-between gap-2">
                       <span className="text-[10px] font-medium text-neutral-400 bg-neutral-100 rounded px-1.5 py-0.5">
-                        {entry.round === 0 ? t('boxes.initial') : `R${entry.round}`}
+                        {entry.round === 0 ? t('zones.initial') : `R${entry.round}`}
                       </span>
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                        <button onClick={() => startEdit(i)} className="text-xs text-neutral-400 hover:text-blue-500 transition-colors">{t('boxes.edit')}</button>
-                        <button onClick={() => onDelete(i)} className="text-xs text-neutral-300 hover:text-rose-500 transition-colors">{t('boxes.remove')}</button>
+                        <button onClick={() => startEdit(i)} className="text-xs text-neutral-400 hover:text-blue-500 transition-colors">{t('zones.edit')}</button>
+                        <button onClick={() => onDelete(i)} className="text-xs text-neutral-300 hover:text-rose-500 transition-colors">{t('zones.remove')}</button>
                       </div>
                     </div>
                     <p className="text-sm text-neutral-600 leading-relaxed mt-1">{entry.text}</p>
@@ -173,7 +173,7 @@ function BoxCard({
             onClick={() => setOpen(true)}
             className="text-xs text-neutral-400 hover:text-blue-500 border border-dashed border-neutral-200 hover:border-blue-300 rounded-xl px-3 py-1.5 transition-all"
           >
-            {t('boxes.addEntry')}
+            {t('zones.addEntry')}
           </button>
         ) : (
           <div className="mt-2 space-y-2">
@@ -184,14 +184,14 @@ function BoxCard({
             >
               {rounds.map(r => (
                 <option key={r.round} value={r.round}>
-                  {r.round === 0 ? t('boxes.initial') : `${t('boxes.round')} ${r.round}`}
+                  {r.round === 0 ? t('zones.initial') : `${t('zones.round')} ${r.round}`}
                 </option>
               ))}
             </select>
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder={t('boxes.whatDoYouKnow')}
+              placeholder={t('zones.whatDoYouKnow')}
               rows={3}
               className={inputClass}
             />
@@ -201,7 +201,7 @@ function BoxCard({
                 disabled={saving || !text.trim()}
                 className="px-4 py-2 bg-blue-500 text-white text-xs font-medium rounded-xl hover:bg-blue-600 disabled:opacity-40 transition-all"
               >
-                {saving ? t('boxes.saving') : t('boxes.add')}
+                {saving ? t('zones.saving') : t('zones.add')}
               </button>
               <button
                 onClick={() => { setOpen(false); setText('') }}
@@ -219,19 +219,15 @@ function BoxCard({
 
 // ── Page ─────────────────────────────────────────────────────
 
-export default function BoxesPage() {
+export default function ZonesPage() {
   const params = useParams()
   const router = useRouter()
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [boxData, setBoxData] = useState<Record<string, BoxEntry[]>>({})
-  const [fillingPrepared, setFillingPrepared] = useState(false)
-  const [preparedError, setPreparedError] = useState<string | null>(null)
-  const [updatingBoxes, setUpdatingBoxes] = useState(false)
-  const [updateBoxesError, setUpdateBoxesError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -252,51 +248,6 @@ export default function BoxesPage() {
   }, [dealId])
 
   useEffect(() => { load() }, [load])
-
-  async function handleFillPrepared() {
-    setFillingPrepared(true)
-    setPreparedError(null)
-    try {
-      const res = await fetch('/api/ai/fill-prepared-boxes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, locale }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'AI error')
-      await load()
-    } catch (e) {
-      setPreparedError(e instanceof Error ? e.message : 'Failed')
-    }
-    setFillingPrepared(false)
-  }
-
-  async function handleUpdateBoxes() {
-    if (!deal) return
-    setUpdatingBoxes(true)
-    setUpdateBoxesError(null)
-    const bestRound = [...rounds].reverse().find(r => {
-      const notes = r.capture_notes as Record<string, string> | null
-      const hasNotes = notes && Object.values(notes).some(v => v?.trim())
-      const hasScores = Object.values(r).some(v => typeof v === 'number' && v > 0)
-      return hasNotes || hasScores
-    }) ?? rounds[rounds.length - 1]
-    if (!bestRound) { setUpdatingBoxes(false); return }
-    const currentRound = bestRound
-    try {
-      const res = await fetch('/api/ai/update-boxes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRound.id, locale }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'AI error')
-      await load()
-    } catch (e) {
-      setUpdateBoxesError(e instanceof Error ? e.message : 'Failed')
-    }
-    setUpdatingBoxes(false)
-  }
 
   async function saveEntries(boxId: string, entries: BoxEntry[]) {
     const supabase = createClient()
@@ -326,7 +277,7 @@ export default function BoxesPage() {
     return <div className="max-w-6xl mx-auto py-12 px-6 text-sm text-neutral-400">{t('common.loading')}</div>
   }
 
-  const totalFilled = BOXES.filter(b => (boxData[b.id] ?? []).length > 0).length
+  const totalFilled = ZONES.filter(b => (boxData[b.id] ?? []).length > 0).length
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-6">
@@ -336,67 +287,41 @@ export default function BoxesPage() {
           <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
             {t('capture.backToPipeline')}
           </button>
-          <h1 className="text-2xl font-bold text-neutral-900">{t('boxes.title')}</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('zones.title')}</h1>
         </div>
         <div className="text-right">
           <div className="text-xs font-medium text-neutral-400 mb-1">{deal.prospect_name}</div>
-          <div className="text-lg font-bold text-neutral-900">{totalFilled}/{BOXES.length} {t('boxes.filled')}</div>
+          <div className="text-lg font-bold text-neutral-900">{totalFilled}/{ZONES.length} {t('zones.filled')}</div>
         </div>
       </div>
 
       {/* Method info */}
       <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 mb-8">
         <p className="text-sm text-blue-700">
-          {t('boxes.methodInfo')}
+          {t('zones.methodInfo')}
         </p>
       </div>
 
       {/* Groups */}
       {GROUPS.map(group => {
-        const boxes = BOXES.filter(b => (group.types as readonly string[]).includes(b.type))
-        const filledCount = boxes.filter(b => (boxData[b.id] ?? []).length > 0).length
+        const zones = ZONES.filter(b => (group.types as readonly string[]).includes(b.type))
+        const filledCount = zones.filter(b => (boxData[b.id] ?? []).length > 0).length
         return (
           <section key={group.key} className="mb-10">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide">{t(GROUP_LABEL_KEY[group.key] as any)}</h2>
-              <div className="flex items-center gap-3">
-                {(group.types[0] === 'collected' || group.types[0] === 'built') && (
-                  <>
-                    {updateBoxesError && <span className="text-xs text-rose-600">{updateBoxesError}</span>}
-                    <button
-                      onClick={handleUpdateBoxes}
-                      disabled={updatingBoxes}
-                      className="px-4 py-2 bg-white border border-neutral-200 text-neutral-600 text-xs font-medium rounded-xl hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
-                    >
-                      {updatingBoxes ? t('boxes.updating') : t('boxes.updateFromCapture')}
-                    </button>
-                  </>
-                )}
-                {group.types[0] === 'prepared' && (
-                  <>
-                    {preparedError && <span className="text-xs text-rose-600">{preparedError}</span>}
-                    <button
-                      onClick={handleFillPrepared}
-                      disabled={fillingPrepared}
-                      className="px-4 py-2 bg-white border border-neutral-200 text-neutral-600 text-xs font-medium rounded-xl hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
-                    >
-                      {fillingPrepared ? t('boxes.generating') : t('boxes.fillFromProfile')}
-                    </button>
-                  </>
-                )}
-                <span className="text-xs font-medium text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">{filledCount}/{boxes.length}</span>
-              </div>
+              <span className="text-xs font-medium text-neutral-400 bg-neutral-100 rounded-full px-3 py-1">{filledCount}/{zones.length}</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {boxes.map(box => (
-                <BoxCard
-                  key={box.id}
-                  box={box}
-                  entries={boxData[box.id] ?? []}
+              {zones.map(zone => (
+                <ZoneCard
+                  key={zone.id}
+                  zone={zone}
+                  entries={boxData[zone.id] ?? []}
                   rounds={rounds}
-                  onAdd={(text, round) => handleAddEntry(box.id, text, round)}
-                  onUpdate={(index, text) => handleUpdateEntry(box.id, index, text)}
-                  onDelete={(index) => handleDeleteEntry(box.id, index)}
+                  onAdd={(text, round) => handleAddEntry(zone.id, text, round)}
+                  onUpdate={(index, text) => handleUpdateEntry(zone.id, index, text)}
+                  onDelete={(index) => handleDeleteEntry(zone.id, index)}
                 />
               ))}
             </div>

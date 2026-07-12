@@ -80,7 +80,7 @@ export default function NavBar() {
               {dealTab(t('nav.capture'), 'capture', 'bg-violet-500')}
               <div className="w-px h-5 bg-neutral-200 mx-2" />
               {dealTab(t('nav.context'), 'context', 'bg-cyan-600')}
-              {dealTab(t('nav.boxes'), 'boxes', 'bg-emerald-600')}
+              {dealTab(t('nav.zones'), 'zones', 'bg-emerald-600')}
             </>
           )}
         </div>
