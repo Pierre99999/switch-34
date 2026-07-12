@@ -378,7 +378,7 @@ export default function DealDashboardPage() {
 
   if (!deal) {
     return (
-      <div className="max-w-5xl mx-auto py-12 px-6">
+      <div className="max-w-5xl mx-auto py-8 sm:py-12 px-4 sm:px-6">
         <div className="text-sm text-neutral-400">Loading…</div>
       </div>
     )
@@ -402,7 +402,7 @@ export default function DealDashboardPage() {
   const roundState = !hasBriefing ? 'UNSTARTED' : !hasCapture ? 'BRIEFED' : 'SCORED'
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-6">
+    <div className="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>

@@ -221,7 +221,7 @@ export default function ProfilePage() {
   const totalQuestions = DIMENSIONS.reduce((acc, d) => acc + d.questions.length, 0)
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-6">
+    <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>

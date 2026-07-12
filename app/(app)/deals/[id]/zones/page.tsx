@@ -274,13 +274,13 @@ export default function ZonesPage() {
   }
 
   if (!deal) {
-    return <div className="max-w-6xl mx-auto py-12 px-6 text-sm text-neutral-400">{t('common.loading')}</div>
+    return <div className="max-w-6xl mx-auto py-8 sm:py-12 px-4 sm:px-6 text-sm text-neutral-400">{t('common.loading')}</div>
   }
 
   const totalFilled = ZONES.filter(b => (boxData[b.id] ?? []).length > 0).length
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-6">
+    <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>

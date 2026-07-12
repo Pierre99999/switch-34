@@ -335,14 +335,14 @@ export default function AccountContextPage() {
     await load()
   }
 
-  if (!deal) return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">{t('common.loading')}</div>
+  if (!deal) return <div className="max-w-4xl mx-auto py-8 sm:py-12 px-4 sm:px-6 text-sm text-neutral-400">{t('common.loading')}</div>
 
   const totalFilled = profile.dimensions.reduce((acc, d) => acc + filledCount(d), 0)
   const totalFields = profile.dimensions.reduce((acc, d) => acc + d.fields.length, 0)
   const importing = importingCompany || importingLinkedin
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-6">
+    <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>

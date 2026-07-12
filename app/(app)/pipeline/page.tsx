@@ -210,26 +210,26 @@ export default function PipelinePage() {
   if (loading) return null
 
   return (
-    <div className="max-w-6xl mx-auto py-8 px-6">
+    <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6 sm:mb-8">
         <div>
           <p className="text-sm text-neutral-400 mb-1">Switch</p>
-          <h1 className="text-2xl font-bold text-neutral-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">
             {t('pipeline.title')}
             {isDirector && <span className="text-sm font-medium text-neutral-400 ml-2">· {t('pipeline.allReps')}</span>}
           </h1>
         </div>
         <Link
           href="/deals/new"
-          className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
+          className="self-start sm:self-auto px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
         >
           {t('pipeline.newDeal')}
         </Link>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{t('pipeline.active')}</div>
           <div className="text-3xl font-bold text-neutral-900">{summary.total}</div>
@@ -249,7 +249,8 @@ export default function PipelinePage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-visible">
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
+        <div className="min-w-[900px]">
         {/* Table header */}
         <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
           <button onClick={() => toggleSort('prospect')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.prospect')}{sortIndicator('prospect')}</button>
@@ -329,6 +330,7 @@ export default function PipelinePage() {
             </div>
           )
         })}
+        </div>
       </div>
 
       {/* Archived toggle */}
