@@ -144,13 +144,14 @@ export default function NewDealPage() {
               autoFocus
             />
           </div>
-          <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.salesContext')}</label>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
+            <label className="text-sm font-semibold text-amber-900">{t('newDeal.salesContext')}</label>
+            <p className="text-xs text-amber-700 leading-relaxed">{t('newDeal.salesContextHint')}</p>
             <textarea
               value={salesContext} onChange={e => setSalesContext(e.target.value)}
               placeholder={t('newDeal.salesContextPlaceholder')}
-              rows={4}
-              className="mt-1 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900 resize-y"
+              rows={6}
+              className="w-full border border-amber-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-amber-500 resize-y rounded-lg"
             />
           </div>
           <div className="flex gap-3">
