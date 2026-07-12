@@ -3,18 +3,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { type Deal, type DealRound, type BriefingQuestion, type QuestionTemplate } from '@/lib/types'
+import { type Deal, type DealRound, type BriefingQuestion } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import { useI18n } from '@/lib/i18n/context'
-import { useRole } from '@/lib/role-context'
 
 export default function CapturePage() {
   const params = useParams()
   const router = useRouter()
   const { t, locale } = useI18n()
-  const { organizationId } = useRole()
   const dealId = params.id as string
-  const [orgTemplates, setOrgTemplates] = useState<QuestionTemplate[]>([])
 
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
@@ -31,9 +28,6 @@ export default function CapturePage() {
   const isLatestRound = deal ? selectedRound === deal.current_round : false
 
   const questions: BriefingQuestion[] = currentRoundData?.briefing_questions ?? []
-  const mandatoryQuestions: string[] = currentRoundData?.mandatory_questions ?? []
-  const selectedTemplateIds: string[] = currentRoundData?.selected_templates ?? []
-  const activeTemplates = orgTemplates.filter(t => selectedTemplateIds.includes(t.id))
 
   function populateFromRound(r: DealRound | null) {
     setNotes(r?.capture_notes ?? {})
@@ -46,10 +40,6 @@ export default function CapturePage() {
       supabase.from('deals').select('*').eq('id', dealId).single(),
       supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
     ])
-    if (organizationId) {
-      const { data: tplData } = await supabase.from('question_templates').select('*').eq('organization_id', organizationId).order('created_at')
-      if (tplData) setOrgTemplates(tplData as QuestionTemplate[])
-    }
     if (dealData) setDeal(dealData)
     if (roundData) {
       setRounds(roundData)
@@ -59,7 +49,7 @@ export default function CapturePage() {
         populateFromRound(latest)
       }
     }
-  }, [dealId, organizationId])
+  }, [dealId])
 
   useEffect(() => { load() }, [load])
 
@@ -150,21 +140,7 @@ export default function CapturePage() {
     setError(null)
     setTranscriptSuccess(null)
     try {
-      const templatePayload = activeTemplates.map(tpl => ({
-        key: `tpl_${tpl.id}`,
-        variable: `tpl_${tpl.id}`,
-        text: tpl.text,
-        intent: 'Mandatory template question — must be answered',
-      }))
-      const mandatoryPayload = mandatoryQuestions.map((mq, i) => ({
-        key: `mandatory_${i}`,
-        variable: `mandatory_${i}`,
-        text: mq,
-        intent: 'Mandatory question — must be answered',
-      }))
       const questionPayload = [
-        ...templatePayload,
-        ...mandatoryPayload,
         ...questions.map((q, i) => ({
           key: q.variable || (q.priority === 'opportunistic' ? `opp-${i}` : String(i)),
           variable: q.variable,
@@ -285,78 +261,6 @@ export default function CapturePage() {
           {transcriptSuccess && (
             <span className="text-xs text-green-600 font-medium">{transcriptSuccess}</span>
           )}
-        </div>
-      )}
-
-      {/* Template questions activated for this round */}
-      {activeTemplates.length > 0 && (
-        <div className="space-y-4 mb-8">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-            <span className="text-xs font-semibold text-red-600 uppercase tracking-wide">{t('briefing.mandatoryQuestions')}</span>
-          </div>
-          {activeTemplates.map(tpl => {
-            const key = `tpl_${tpl.id}`
-            const val = notes[key] ?? ''
-            return (
-              <div key={key} className="bg-white rounded-2xl border-2 border-red-200 overflow-hidden shadow-sm">
-                <div className="bg-red-50 px-5 py-3 border-b border-red-100">
-                  <p className="text-sm text-red-800 font-medium">{tpl.text}</p>
-                </div>
-                <div className="px-5 py-4">
-                  {isLatestRound ? (
-                    <textarea
-                      value={val}
-                      onChange={e => setNote(key, e.target.value)}
-                      placeholder={t('capture.pressingPlaceholder')}
-                      rows={3}
-                      className={inputClass}
-                    />
-                  ) : (
-                    <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-700 whitespace-pre-wrap min-h-[3rem]">
-                      {val || <span className="text-neutral-300">{t('capture.nothingCaptured')}</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Custom mandatory questions */}
-      {mandatoryQuestions.length > 0 && (
-        <div className="space-y-4 mb-8">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-            <span className="text-xs font-semibold text-red-600 uppercase tracking-wide">{t('briefing.mandatoryQuestions')}</span>
-          </div>
-          {mandatoryQuestions.map((mq, i) => {
-            const key = `mandatory_${i}`
-            const val = notes[key] ?? ''
-            return (
-              <div key={key} className="bg-white rounded-2xl border-2 border-red-200 overflow-hidden shadow-sm">
-                <div className="bg-red-50 px-5 py-3 border-b border-red-100">
-                  <p className="text-sm text-red-800 font-medium">{mq}</p>
-                </div>
-                <div className="px-5 py-4">
-                  {isLatestRound ? (
-                    <textarea
-                      value={val}
-                      onChange={e => setNote(key, e.target.value)}
-                      placeholder={t('capture.pressingPlaceholder')}
-                      rows={3}
-                      className={inputClass}
-                    />
-                  ) : (
-                    <div className="bg-neutral-50 rounded-xl p-3 text-sm text-neutral-700 whitespace-pre-wrap min-h-[3rem]">
-                      {val || <span className="text-neutral-300">{t('capture.nothingCaptured')}</span>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
         </div>
       )}
 

@@ -31,10 +31,7 @@ export default function OnboardingPage() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
 
-  // Director step 3: mandatory questions
-  const [questions, setQuestions] = useState<string[]>([''])
-
-  // Director step 4: invite code display
+  // Director step 2: invite code display
   const [orgInviteCode, setOrgInviteCode] = useState('')
   const [codeCopied, setCodeCopied] = useState(false)
 
@@ -156,29 +153,7 @@ export default function OnboardingPage() {
     e.target.value = ''
   }
 
-  // ── Step 2: Save mandatory questions ──
-  async function handleSaveQuestions() {
-    const filtered = questions.filter(q => q.trim())
-    if (filtered.length === 0) return
-    setLoading(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: vendor } = await supabase.from('vendors').select('organization_id').eq('user_id', user.id).single()
-    if (!vendor?.organization_id) { setLoading(false); return }
-
-    for (const text of filtered) {
-      await supabase.from('question_templates').insert({
-        organization_id: vendor.organization_id,
-        text,
-        created_by: user.id,
-      })
-    }
-    setLoading(false)
-    setStep(3)
-  }
-
-  // ── Step 3: Finish ──
+  // ── Step 2: Finish ──
   async function handleFinish() {
     setLoading(true)
     const supabase = createClient()
@@ -197,7 +172,7 @@ export default function OnboardingPage() {
   }
 
   // ── Render ──
-  const totalSteps = role === 'director' ? 4 : 1
+  const totalSteps = role === 'director' ? 3 : 1
 
   return (
     <div className="min-h-screen bg-white">
@@ -341,49 +316,8 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ── Step 2 (Director): Mandatory questions ── */}
+        {/* ── Step 2 (Director): Team invite code ── */}
         {step === 2 && (
-          <div className="space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-stone-900 font-mono">{t('onboarding.questionsStep')}</h2>
-              <p className="text-sm text-stone-500 mt-1">{t('onboarding.questionsStepDesc')}</p>
-            </div>
-
-            <div className="space-y-2">
-              {questions.map((q, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <span className="text-xs text-stone-400 font-mono w-5 text-right flex-shrink-0">{i + 1}.</span>
-                  <input
-                    value={q}
-                    onChange={e => setQuestions(qs => qs.map((item, idx) => idx === i ? e.target.value : item))}
-                    placeholder={t('onboarding.questionPlaceholder')}
-                    className="flex-1 border border-stone-300 bg-white px-3 py-2 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
-                  />
-                  {questions.length > 1 && (
-                    <button onClick={() => setQuestions(qs => qs.filter((_, idx) => idx !== i))} className="text-stone-300 hover:text-rose-500 transition-colors">✕</button>
-                  )}
-                </div>
-              ))}
-              <button onClick={() => setQuestions(qs => [...qs, ''])} className="text-sm font-medium text-stone-500 hover:text-stone-900 font-mono transition-colors">
-                {t('onboarding.addQuestion')}
-              </button>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button onClick={() => setStep(1)} className={btnSecondary}>{t('onboarding.back')}</button>
-              <button
-                onClick={questions.some(q => q.trim()) ? handleSaveQuestions : () => setStep(3)}
-                disabled={loading}
-                className={btnPrimary}
-              >
-                {loading ? '…' : questions.some(q => q.trim()) ? t('onboarding.next') : t('onboarding.skipForNow')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Step 3 (Director): Team invite code ── */}
-        {step === 3 && (
           <div className="space-y-5">
             <div>
               <h2 className="text-lg font-semibold text-stone-900 font-mono">{t('onboarding.teamStep')}</h2>
@@ -400,7 +334,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <button onClick={() => setStep(2)} className={btnSecondary}>{t('onboarding.back')}</button>
+              <button onClick={() => setStep(1)} className={btnSecondary}>{t('onboarding.back')}</button>
               <button onClick={handleFinish} disabled={loading} className={btnPrimary}>
                 {loading ? '…' : t('onboarding.finish')}
               </button>
