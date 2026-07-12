@@ -26,8 +26,6 @@ export default function CapturePage() {
   const [suggestingScores, setSuggestingScores] = useState(false)
   const [parsingTranscript, setParsingTranscript] = useState(false)
   const [transcriptSuccess, setTranscriptSuccess] = useState<string | null>(null)
-  const [translating, setTranslating] = useState(false)
-  const [translateSuccess, setTranslateSuccess] = useState<string | null>(null)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
@@ -198,49 +196,6 @@ export default function CapturePage() {
     }
   }
 
-  async function handleTranslate() {
-    if (!currentRoundData) return
-    setTranslating(true)
-    setTranslateSuccess(null)
-    try {
-      const r = currentRoundData
-      const data: Record<string, unknown> = {
-        capture_notes: { ...notes, __free__: freeNote },
-      }
-      if (r.briefing_line) data.briefing_line = r.briefing_line
-      if (r.briefing_read) data.briefing_read = r.briefing_read
-      if (r.briefing_angle) data.briefing_angle = r.briefing_angle
-      if (r.briefing_win_condition) data.briefing_win_condition = r.briefing_win_condition
-      if (r.briefing_questions?.length) data.briefing_questions = r.briefing_questions
-      if (r.briefing_do_not?.length) data.briefing_do_not = r.briefing_do_not
-      if (r.briefing_mirror?.length) data.briefing_mirror = r.briefing_mirror
-      if (r.briefing_objections?.length) data.briefing_objections = r.briefing_objections
-      if (r.narrative) data.narrative = r.narrative
-
-      const res = await fetch('/api/ai/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data, locale }),
-      })
-      const result = await res.json()
-      if (result.data) {
-        const d = result.data
-        if (d.capture_notes) {
-          const translated = d.capture_notes as Record<string, string>
-          const free = translated.__free__ ?? ''
-          delete translated.__free__
-          setNotes(translated)
-          setFreeNote(free)
-          d.capture_notes = { ...translated, __free__: free }
-        }
-        const supabase = createClient()
-        await supabase.from('deal_rounds').update(d).eq('id', currentRoundData.id)
-        setTranslateSuccess(t('common.translated'))
-        await load()
-      }
-    } catch { /* ignore */ }
-    setTranslating(false)
-  }
 
   if (!deal) {
     return <div className="max-w-4xl mx-auto py-12 px-6 text-sm text-neutral-400">Loading…</div>
@@ -267,18 +222,6 @@ export default function CapturePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {isLatestRound && (
-            <>
-              <button
-                onClick={handleTranslate}
-                disabled={translating}
-                className="px-4 py-2 text-sm font-medium text-neutral-600 border border-neutral-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-40"
-              >
-                {translating ? t('common.translating') : t('common.translateContent')}
-              </button>
-              {translateSuccess && <span className="text-xs text-emerald-600 font-medium">{translateSuccess}</span>}
-            </>
-          )}
         </div>
       </div>
 
@@ -427,18 +370,23 @@ export default function CapturePage() {
             return (
               <div key={`p-${i}`} className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
                 <div className="bg-neutral-50 px-5 py-3 border-b border-neutral-100">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="w-2 h-2 rounded-full bg-neutral-800" />
-                    <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">L{q.layer} · {t(('var.' + q.variable) as any) || q.variable} · {t('briefing.pressing')}</span>
-                  </div>
-                  {q.intent && <p className="text-xs text-amber-700 italic bg-amber-50 px-2.5 py-1 rounded-lg inline-block mt-1">→ {q.intent}</p>}
-                  <p className="text-sm text-neutral-800 font-medium mt-2">"{q.text}"</p>
+                  {q.intent && (
+                    <div className="mb-2">
+                      <div className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1">{t('briefing.intentLabel')}</div>
+                      <p className="text-sm text-amber-800 italic">{q.intent}</p>
+                    </div>
+                  )}
+                  <div className="text-[10px] font-semibold text-neutral-700 uppercase tracking-wide mb-1">{t('briefing.questionLabel')}</div>
+                  <p className="text-sm text-neutral-800 font-medium">{q.text}</p>
                   {(q.sub_questions ?? []).length > 0 && (
-                    <ul className="mt-1.5 space-y-0.5 pl-3">
-                      {q.sub_questions.map((sq, si) => (
-                        <li key={si} className="text-xs text-neutral-500 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
-                      ))}
-                    </ul>
+                    <div className="mt-2">
+                      <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1">{t('briefing.subQuestionsLabel')}</div>
+                      <ul className="space-y-0.5 pl-3">
+                        {q.sub_questions.map((sq, si) => (
+                          <li key={si} className="text-xs text-neutral-500 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
                 <div className="px-5 py-4">
@@ -473,15 +421,23 @@ export default function CapturePage() {
                 return (
                   <div key={`opp-${i}`} className="bg-white rounded-2xl border border-dashed border-neutral-200 overflow-hidden">
                     <div className="bg-neutral-50/50 px-5 py-3 border-b border-neutral-100">
-                      <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide">L{q.layer} · {t(('var.' + q.variable) as any) || q.variable}</span>
-                      {q.intent && <p className="text-xs text-amber-600 italic mt-1">→ {q.intent}</p>}
-                      <p className="text-sm text-neutral-600 mt-2">"{q.text}"</p>
+                      {q.intent && (
+                        <div className="mb-2">
+                          <div className="text-[10px] font-semibold text-amber-600 uppercase tracking-wide mb-1">{t('briefing.intentLabel')}</div>
+                          <p className="text-sm text-amber-700 italic">{q.intent}</p>
+                        </div>
+                      )}
+                      <div className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide mb-1">{t('briefing.questionLabel')}</div>
+                      <p className="text-sm text-neutral-600">{q.text}</p>
                       {(q.sub_questions ?? []).length > 0 && (
-                        <ul className="mt-1.5 space-y-0.5 pl-3">
-                          {q.sub_questions.map((sq, si) => (
-                            <li key={si} className="text-xs text-neutral-400 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
-                          ))}
-                        </ul>
+                        <div className="mt-2">
+                          <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wide mb-1">{t('briefing.subQuestionsLabel')}</div>
+                          <ul className="space-y-0.5 pl-3">
+                            {q.sub_questions.map((sq, si) => (
+                              <li key={si} className="text-xs text-neutral-400 flex items-start gap-1.5"><span className="text-neutral-300">↳</span>{sq}</li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
                     </div>
                     <div className="px-5 py-4">
