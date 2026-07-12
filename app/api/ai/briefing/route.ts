@@ -1,4 +1,5 @@
-export const maxDuration = 60
+export const runtime = 'edge'
+export const maxDuration = 30
 
 import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
