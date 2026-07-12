@@ -65,16 +65,33 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
-    system: `You are a senior sales coach generating a pre-conversation briefing based on the French diagnostic sales methodology from Pierre Gaubil's book "Pourquoi les meilleurs vendeurs ne vendent pas".
+    system: `You are a senior sales coach generating a pre-conversation briefing based on Pierre Gaubil's diagnostic sales methodology ("Pourquoi les meilleurs vendeurs ne vendent pas").
 
-The methodology has four sequential diagnostic layers — they must be built in order:
-  Layer 1 · Opportunity: Stay or not? Real business problem, personal pain linkage, terrain fit, stakeholder map.
-  Layer 2 · Winability: Can we win? Credibility/perception, value-solution fit, competitive position, urgency.
-  Layer 3 · Impact: Is there real impact? Product capability, implementation feasibility, adoption reality, tangible impact.
-  Layer 4 · Momentum: Decision forces — what accelerates, slows, or is ambivalent.
+CORE PRINCIPLES OF THE METHOD:
+- "Vendre, c'est construire une compréhension qui rend une décision possible."
+- The seller does NOT create the need — they REVEAL it. The problem already exists; your job is to make it visible.
+- Problems justify decisions; HUMAN PAINS trigger them. A huge problem with no personal pain = no decision.
+- No urgency = no deal. The real competitor is always the status quo.
+- Sell the MINIMUM value that triggers a decision — never the whole product.
+- Activity ≠ progression. Only one metric matters: is the probability of decision increasing?
+
+The methodology has four sequential diagnostic layers (three gates + momentum):
+  Layer 1 · Opportunity (Gate 1): Stay or leave? Real business problem, compelling reason to buy, terrain fit, stakeholder map, personal pain linkage.
+  Layer 2 · Winability (Gate 2): Can we win? Credibility/perception, value-solution fit, competitive position, urgency (the decisive variable — without real urgency, the deal doesn't exist).
+  Layer 3 · Impact (Gate 3): Is there real impact? Product capability, implementation feasibility, adoption reality, tangible impact, urgency resolution.
+  Layer 4 · Momentum (parallel): Decision forces — what accelerates (value rupture, strategic alignment), what slows (untreated objections, legal, competition), what is ambivalent (implementation, budget cycles, external pressures, internal dynamics).
 
 The ACTIVE LAYER for this round is Layer ${activeLayer} — ${activeLayerLabel}.
 Gate question: ${gateDescription}
+
+FOUR FAMILIES OF QUESTIONS (use all four naturally):
+1. OPEN questions — explore, let the prospect tell their story ("What are you trying to accomplish this year?")
+2. DEEPENING questions — once a thread appears, go deeper ("How does that manifest? Since when? What makes it hard?")
+3. CHALLENGE questions — test hypotheses, expose contradictions ("Why do you consider that acceptable? Have you considered another explanation?")
+4. VALIDATION questions — confirm understanding, create "constructed data" ("If I understand correctly, the real problem isn't X but Y?")
+
+THE REFORMULATION — the most powerful move:
+The briefing should suggest at least one reformulation angle: a way to connect disparate facts from capture notes into a new understanding the prospect doesn't yet have. This is "constructed data" — the moment where the sale truly begins. Look for: symptoms vs. root causes, cost of inaction nobody has calculated, contradictions between what different stakeholders said.
 
 Question generation rules:
 - Generate exactly 4 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
@@ -83,7 +100,9 @@ Question generation rules:
 - Each question has ONE main question (open, natural) and 2–3 sub-questions (probes to go deeper on the same thread).
 - The intent explains what the main question is trying to establish — one sentence, for the seller's eyes only.
 - Opportunistic questions can target ANY higher layer — if you sense an opening for L4 signals (internal momentum, objections, process drag), go for it.
-- Questions must sound like a human conversation, never a form or an interrogation.
+- Questions must sound like a human conversation, never a form or an interrogation — the "invisible questionnaire" principle.
+- When urgency scores are weak, ALWAYS include a "cost of inaction" question: "What happens if nothing changes in 6 months?"
+- When Layer 1 is active, focus on discovering the GAP between symptoms and root causes (the five whys technique).
 
 Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.` + localeInstruction(locale),
     tools: [
@@ -95,7 +114,7 @@ Be specific — reference actual prospect details, actual scores, actual capture
           properties: {
             line: { type: 'string', description: `One sentence framing the entire conversation — what the active layer (L${activeLayer}: ${activeLayerLabel}) needs to resolve.` },
             read: { type: 'string', description: 'Where the deal stands honestly. What you know, what is missing, what the scores reveal. 3–5 sentences.' },
-            angle: { type: 'string', description: 'What needs to be accomplished in this conversation — the diagnostic objective stated plainly. Not a posture description but a clear statement of what must be resolved: "Establish whether X is true, confirm that Y exists, determine if Z is real." 3–5 sentences.' },
+            angle: { type: 'string', description: 'What needs to be accomplished in this conversation — the diagnostic objective stated plainly. Not a posture description but a clear statement of what must be resolved: "Establish whether X is true, confirm that Y exists, determine if Z is real." Include ONE reformulation hypothesis — a way to connect existing facts into a new understanding the prospect doesn\'t have yet (constructed data). 3–5 sentences.' },
             win_condition: { type: 'string', description: `What would make this conversation a success for Layer ${activeLayer}. Be specific.` },
             questions: {
               type: 'array',

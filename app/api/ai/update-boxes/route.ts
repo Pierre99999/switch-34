@@ -71,7 +71,13 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
-    system: `You are a sales intelligence engine updating a knowledge base after a prospect conversation.
+    system: `You are a sales intelligence engine based on Pierre Gaubil's Switch methodology, updating a knowledge base after a prospect conversation.
+
+METHODOLOGY FRAMEWORK — the four types of data:
+1. PERCEPTION data: how they see us before we even speak
+2. SELF-KNOWLEDGE data: what we know about our own strengths (pre-filled)
+3. DISCOVERY data: what we learn from the prospect (problems, actors, pains, budget)
+4. CONSTRUCTED data: insights WE build by connecting everything else — this is what separates good from great
 
 CRITICAL RULE: Only write what is NEW in this round. Do NOT repeat, rephrase, or summarize information that already exists in previous entries. Each entry should add incremental value — a new fact, a changed signal, or a deeper understanding that wasn't there before. If nothing new emerged for a box in this round, return "" for it.
 
@@ -79,10 +85,18 @@ Here is what already exists in the knowledge base:
 ${existingBoxSummary || '(empty — first round)'}
 
 For COLLECTED boxes (perception, problems, stakeholders, human_pain, budget): extract ONLY new information from this round's capture notes that wasn't captured before.
+- problems: distinguish SYMPTOMS from ROOT CAUSES. If the prospect describes a symptom, note it but flag it as such.
+- stakeholders: identify the FIVE ACTOR TYPES when possible: champion (acts when you're not there), user (lives with it daily), technical buyer (seeks reasons to say no), decision-maker (can say yes), blocker (protects something).
+- human_pain: focus on what individuals PERSONALLY risk or hope to gain — career, reputation, stress, ambition, recognition. "The company loses money" is a problem; "the VP loses his credibility" is a pain.
 
 For BUILT boxes (buy_reason, implementation, urgency, value, timing, forces): synthesize ONLY new analytical insights from this round's scores and context. If your analysis hasn't changed from previous rounds, return "".
+- buy_reason: state the LEGITIMATE REASON TO BUY — not interest, not curiosity, but why they MUST act. Include cost of inaction if known.
+- urgency: qualify across the 7 dimensions (frequency, intensity, spectrum of people affected, financial/strategic/client impact, risk). State which dimensions are "lit" and which remain dark.
+- value: express as the MINIMUM VALUE that triggers the decision — not everything the product does, but the one consequence that matters most to the decision-maker.
+- forces: explicitly categorize into ACCELERATING (value rupture, strategic initiative alignment), BRAKING (untreated objections, legal friction, cheaper competition), and AMBIVALENT (implementation complexity, budget cycle timing, external pressures, champion strength). State whether forces are converging or diverging.
+- timing: link to a concrete event or deadline. "Soon" is not timing; "before the Q3 board meeting" is.
 
-Be concise: 1-2 sentences per entry. Return "" if nothing new to add. Do not hallucinate specific facts not in the context.` + localeInstruction(locale),
+Be concise: 1-3 sentences per entry. Return "" if nothing new to add. Do not hallucinate specific facts not in the context.` + localeInstruction(locale),
     tools: [
       {
         name: 'update_boxes',
@@ -90,17 +104,17 @@ Be concise: 1-2 sentences per entry. Return "" if nothing new to add. Do not hal
         input_schema: {
           type: 'object' as const,
           properties: {
-            perception: { type: 'string', description: 'How the prospect perceives the vendor. Any signals about brand, reputation, or preconceptions from capture notes.' },
-            problems: { type: 'string', description: "The prospect's real operational problems that emerged. Specific, in their words." },
-            stakeholders: { type: 'string', description: 'Stakeholders or roles mentioned. Who is involved, who has influence, who is missing.' },
-            human_pain: { type: 'string', description: 'Personal stakes — what individuals feel, fear, or want to avoid.' },
-            budget: { type: 'string', description: 'Any signals about budget: existence, size, approval process, timing, constraints.' },
-            buy_reason: { type: 'string', description: 'Why this prospect should buy — now. The strongest argument for action given scores and context.' },
-            implementation: { type: 'string', description: 'How the solution fits into their specific reality based on what is known.' },
-            urgency: { type: 'string', description: 'What makes this urgent — frequency, intensity, stakes — based on scores and context.' },
-            value: { type: 'string', description: 'The minimum value this prospect needs to see to make a decision, based on their priorities.' },
-            timing: { type: 'string', description: 'When a decision needs to happen and what is driving that timeline.' },
-            forces: { type: 'string', description: 'Forces that accelerate, slow, or are ambivalent — based on stakeholder map and buying environment.' },
+            perception: { type: 'string', description: 'How the prospect perceives us: credible peer or mere vendor? Signals about trust, brand, reputation, or preconceptions.' },
+            problems: { type: 'string', description: "Business problems — distinguish symptoms from root causes. Use their words. Flag if we've only heard symptoms, not the underlying cause." },
+            stakeholders: { type: 'string', description: 'Actor map: champion (acts for us internally), user, technical buyer, decision-maker, blocker. Note who is missing from the map.' },
+            human_pain: { type: 'string', description: 'Personal pain per individual — what they personally lose (career, credibility, stress) or gain (promotion, recognition, autonomy). Not company problems.' },
+            budget: { type: 'string', description: 'Budget signals. Remember: a budget is a consequence, not a cause. Note if the REASON to create budget exists even if the line item does not.' },
+            buy_reason: { type: 'string', description: 'The legitimate reason to buy NOW — a problem grave enough to justify a decision, with visible consequences and time pressure. Not interest — necessity.' },
+            implementation: { type: 'string', description: 'Can we deploy without friction? Who pilots client-side? Is it a big-bang or a scoped first step? Think implementation early — not after the contract.' },
+            urgency: { type: 'string', description: 'Urgency qualified on 7 dimensions: frequency, intensity, spectrum, financial/strategic/client impact, risk. Which are lit? Which are dark?' },
+            value: { type: 'string', description: 'The MINIMUM value that triggers the decision — not everything we do, but the one impact that matters to the decision-maker. Express as consequence, not feature.' },
+            timing: { type: 'string', description: 'Concrete deadline or event driving the timeline. A deal without a calendar is a deal that stretches indefinitely.' },
+            forces: { type: 'string', description: 'Decision forces: ACCELERATING (value rupture, strategic alignment), BRAKING (objections, legal, competition), AMBIVALENT (implementation, budget cycle, external pressure, champion strength). Are they converging?' },
           },
           required: ['perception', 'problems', 'stakeholders', 'human_pain', 'budget', 'buy_reason', 'implementation', 'urgency', 'value', 'timing', 'forces'],
         },

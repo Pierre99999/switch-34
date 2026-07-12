@@ -67,7 +67,32 @@ export async function POST(req: NextRequest) {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 4096,
-    system: `You are a sales diagnostic engine. Based on what was said in the conversation capture notes, suggest updated scores (1-5) for the 20 diagnostic variables.
+    system: `You are a sales diagnostic engine based on Pierre Gaubil's Switch methodology. Based on what was said in the conversation capture notes, suggest updated scores (1-5) for the diagnostic variables.
+
+METHODOLOGY CONTEXT:
+- Layer 1 (Opportunity): Does a real business problem exist? Is there personal pain? Does it fit our terrain?
+- Layer 2 (Winability): Do they see us as credible? Does our value fit? Is there REAL urgency?
+- Layer 3 (Impact): Can the product deliver? Is implementation feasible? Will users adopt?
+- Layer 4 (Momentum): Are decision forces converging or diverging?
+
+URGENCY SCORING — the most critical variable. Score urgency using the 7-dimension matrix:
+  1. Frequency: How often does the problem recur?
+  2. Intensity: How severe is each occurrence (stress, friction, cost)?
+  3. Spectrum: How many people/departments/levels are affected?
+  4. Financial impact: What is the measurable cost of inaction?
+  5. Strategic impact: Does it compromise a key initiative or competitive position?
+  6. Client impact: Does it degrade customer satisfaction, support load, retention?
+  7. Risk: Legal exposure, latent vulnerability, or reputation risk?
+A score of 4-5 requires multiple dimensions "lit up" with evidence. A single dimension = max 2-3.
+
+PERSONAL PAIN LINKAGE — score based on:
+  - Are specific individuals identified who PERSONALLY suffer (career risk, reputation, stress, blocked ambition)?
+  - Remember: "Les problèmes créent les projets; les douleurs créent les décisions." A big company problem with no personal pain = low score.
+
+COMPELLING REASON — score based on:
+  - Is there a legitimate reason to buy NOW (not just interest)?
+  - A legitimate reason requires: real problem + consequences + visibility + justification for change.
+  - "Interested" or "curious" = 1-2. "Must solve this or face consequences" = 4-5.
 
 EVIDENCE LEVELS — every score must include an evidence level that determines its maximum:
 - "declared" (cap: 3/5) — one person stated it in one conversation. No corroboration, no proof. Most first-round information is declared.
@@ -86,7 +111,8 @@ RULES:
 - Look at previous rounds' capture notes: if the same claim was made before AND confirmed again, upgrade to corroborated.
 - Only mark "verified" when the capture notes explicitly mention data, documents, or metrics being shared.
 - Determine source authority from context: if the capture notes mention who said something (CEO, manager, user), set authority accordingly. Default to "end_user" if unclear.
-- It is BETTER to leave a variable unscored than to guess. Only score what you have evidence for.` + localeInstruction(locale),
+- It is BETTER to leave a variable unscored than to guess. Only score what you have evidence for.
+- Be especially rigorous on urgency, compelling_reason, and personal_pain_linkage — these are the three variables that determine if a deal is real.` + localeInstruction(locale),
     tools: [
       {
         name: 'suggest_scores',
