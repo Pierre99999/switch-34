@@ -305,11 +305,6 @@ export default function BriefingPage() {
         ) : (
           <p className="text-base font-medium leading-relaxed whitespace-pre-wrap">{angle || '—'}</p>
         )}
-        <div className="grid grid-cols-4 gap-2 mt-4">
-          {[1, 2, 3, 4].map((l, i) => (
-            <StatusBand key={l} layer={l} verdict={verdicts[i]} />
-          ))}
-        </div>
       </div>
 
       {/* Mandatory Questions */}
