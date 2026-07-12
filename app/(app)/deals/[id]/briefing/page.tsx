@@ -75,8 +75,6 @@ export default function BriefingPage() {
   const [selectedRound, setSelectedRound] = useState<number>(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [translating, setTranslating] = useState(false)
-  const [translateSuccess, setTranslateSuccess] = useState<string | null>(null)
 
   const [line, setLine] = useState('')
   const [read, setRead] = useState('')
@@ -143,42 +141,6 @@ export default function BriefingPage() {
     setSaving(false)
   }
 
-  async function handleTranslate() {
-    if (!currentRoundData) return
-    setTranslating(true)
-    setTranslateSuccess(null)
-    try {
-      const data: Record<string, unknown> = {
-        briefing_line: line, briefing_read: read, briefing_angle: angle,
-        briefing_win_condition: winCondition, briefing_questions: questions,
-        briefing_do_not: doNot, briefing_mirror: mirror, briefing_objections: objections,
-      }
-      if (currentRoundData.capture_notes) data.capture_notes = currentRoundData.capture_notes
-      if (currentRoundData.narrative) data.narrative = currentRoundData.narrative
-      const res = await fetch('/api/ai/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data, locale }),
-      })
-      const result = await res.json()
-      if (result.data) {
-        const d = result.data
-        if (d.briefing_line != null) setLine(d.briefing_line)
-        if (d.briefing_read != null) setRead(d.briefing_read)
-        if (d.briefing_angle != null) setAngle(d.briefing_angle)
-        if (d.briefing_win_condition != null) setWinCondition(d.briefing_win_condition)
-        if (d.briefing_questions) setQuestions(d.briefing_questions)
-        if (d.briefing_do_not) setDoNot(d.briefing_do_not)
-        if (d.briefing_mirror) setMirror(d.briefing_mirror)
-        if (d.briefing_objections) setObjections(d.briefing_objections)
-        const supabase = createClient()
-        await supabase.from('deal_rounds').update(d).eq('id', currentRoundData.id)
-        setTranslateSuccess(t('common.translated'))
-        await load()
-      }
-    } catch { /* ignore */ }
-    setTranslating(false)
-  }
 
   // ── List helpers ──────────────────────────────────────────
 
@@ -245,18 +207,6 @@ export default function BriefingPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {isLatestRound && (
-            <>
-              <button
-                onClick={handleTranslate}
-                disabled={translating}
-                className="px-4 py-2 text-sm font-medium text-neutral-600 border border-neutral-200 rounded-xl hover:border-blue-400 hover:text-blue-600 transition-all disabled:opacity-40"
-              >
-                {translating ? t('common.translating') : t('common.translateContent')}
-              </button>
-              {translateSuccess && <span className="text-xs text-emerald-600 font-medium">{translateSuccess}</span>}
-            </>
-          )}
         </div>
       </div>
 
@@ -294,7 +244,7 @@ export default function BriefingPage() {
           <div className="mb-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-2 h-2 rounded-full bg-neutral-800" />
-              <span className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">Pressing — must ask this round</span>
+              <span className="text-xs font-semibold text-neutral-700 uppercase tracking-wide">{t('briefing.pressingLabel')}</span>
             </div>
             <div className="space-y-4">
               {questions.map((q, i) => q.priority === 'opportunistic' ? null : (
@@ -307,8 +257,8 @@ export default function BriefingPage() {
                         </select>
                         <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
                         <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                          <option value="pressing">pressing</option>
-                          <option value="opportunistic">opportunistic</option>
+                          <option value="pressing">{t('briefing.pressing')}</option>
+                          <option value="opportunistic">{t('briefing.opportunistic')}</option>
                         </select>
                         <button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors">✕</button>
                       </div>
@@ -365,8 +315,8 @@ export default function BriefingPage() {
                         </select>
                         <input value={q.variable} onChange={e => updateQuestion(i, 'variable', e.target.value)} placeholder="variable" className="flex-1 bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none" />
                         <select value={q.priority} onChange={e => updateQuestion(i, 'priority', e.target.value)} className="bg-white border border-neutral-200 text-xs font-medium px-2.5 py-1.5 rounded-lg focus:outline-none">
-                          <option value="pressing">pressing</option>
-                          <option value="opportunistic">opportunistic</option>
+                          <option value="pressing">{t('briefing.pressing')}</option>
+                          <option value="opportunistic">{t('briefing.opportunistic')}</option>
                         </select>
                         <button onClick={() => removeQuestion(i)} className="text-neutral-300 hover:text-rose-500 transition-colors">✕</button>
                       </div>

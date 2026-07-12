@@ -219,6 +219,7 @@ export const translations = {
   'briefing.winCondition': { en: 'Win condition', fr: 'Condition de victoire' },
   'briefing.fieldQuestions': { en: 'Field questions', fr: 'Questions terrain' },
   'briefing.pressing': { en: 'pressing', fr: 'prioritaire' },
+  'briefing.pressingLabel': { en: 'Pressing — must ask this round', fr: 'Prioritaire — à poser ce round' },
   'briefing.opportunistic': { en: 'opportunistic', fr: 'opportuniste' },
   'briefing.opportunisticCapture': { en: 'Opportunistic — capture if it came up', fr: 'Opportuniste — à capturer si abordé' },
   'briefing.mirror': { en: 'Mirror terms', fr: 'Termes miroir' },
