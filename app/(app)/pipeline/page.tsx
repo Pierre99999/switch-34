@@ -87,6 +87,7 @@ export default function PipelinePage() {
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [archivedDeals, setArchivedDeals] = useState<Deal[]>([])
   const [showArchived, setShowArchived] = useState(false)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -312,19 +313,24 @@ export default function PipelinePage() {
                 <Link href={`/deals/${deal.id}/dashboard`} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
                   {t('pipeline.dashboard')}
                 </Link>
-                <div className="relative group">
-                  <button className="text-neutral-300 hover:text-neutral-500 transition-colors text-lg leading-none px-1">···</button>
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-10 hidden group-hover:block min-w-[160px]">
-                    <button onClick={() => handleSetStatus(deal.id, 'won')} className="w-full text-left px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                      {t('pipeline.markWon')}
-                    </button>
-                    <button onClick={() => handleSetStatus(deal.id, 'lost')} className="w-full text-left px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                      {t('pipeline.markLost')}
-                    </button>
-                    <button onClick={() => handleSetStatus(deal.id, 'paused')} className="w-full text-left px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                      {t('pipeline.markPaused')}
-                    </button>
-                  </div>
+                <div className="relative">
+                  <button onClick={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)} className="text-neutral-300 hover:text-neutral-500 transition-colors text-lg leading-none px-1">···</button>
+                  {openMenuId === deal.id && (
+                    <>
+                      <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
+                      <div className="absolute right-0 bottom-full mb-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-30 min-w-[180px]">
+                        <button onClick={() => { handleSetStatus(deal.id, 'won'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                          {t('pipeline.markWon')}
+                        </button>
+                        <button onClick={() => { handleSetStatus(deal.id, 'lost'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                          {t('pipeline.markLost')}
+                        </button>
+                        <button onClick={() => { handleSetStatus(deal.id, 'paused'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                          {t('pipeline.markPaused')}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
