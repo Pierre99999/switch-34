@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n/context'
@@ -12,10 +13,18 @@ export default function NavBar() {
   const router = useRouter()
   const { t, locale, setLocale } = useI18n()
   const { role, fullName } = useRole()
+  const [prospectName, setProspectName] = useState<string | null>(null)
 
   const dealMatch = pathname.match(/\/deals\/([^/]+)/)
   const rawDealId = dealMatch?.[1]
   const dealId = rawDealId && rawDealId !== 'new' ? rawDealId : undefined
+
+  useEffect(() => {
+    if (!dealId) { setProspectName(null); return }
+    const supabase = createClient()
+    supabase.from('deals').select('prospect_name').eq('id', dealId).single()
+      .then(({ data }) => setProspectName(data?.prospect_name ?? null))
+  }, [dealId])
 
   function dealHref(view: string) {
     if (!dealId) return '#'
@@ -76,11 +85,10 @@ export default function NavBar() {
           {dealId && (
             <>
               <div className="w-px h-5 bg-neutral-200 mx-2" />
+              {dealTab(prospectName ? `${t('nav.context')} ${prospectName}` : t('nav.context'), 'context', 'bg-cyan-600')}
               {dealTab(t('nav.dashboard'), 'dashboard', 'bg-neutral-800')}
               {dealTab(t('nav.briefing'), 'briefing', 'bg-orange-500')}
               {dealTab(t('nav.capture'), 'capture', 'bg-violet-500')}
-              <div className="w-px h-5 bg-neutral-200 mx-2" />
-              {dealTab(t('nav.context'), 'context', 'bg-cyan-600')}
               {dealTab(t('nav.zones'), 'zones', 'bg-emerald-600')}
             </>
           )}

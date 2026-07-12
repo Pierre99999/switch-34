@@ -6,9 +6,9 @@ export const translations = {
   'nav.profile': { en: 'My Profile', fr: 'Mon Profil' },
   'nav.dashboard': { en: 'Dashboard', fr: 'Tableau de bord' },
   'nav.briefing': { en: 'Briefing', fr: 'Briefing' },
-  'nav.capture': { en: 'Capture', fr: 'Capture' },
+  'nav.capture': { en: 'Conversation', fr: 'Conversation' },
   'nav.context': { en: 'Context', fr: 'Contexte' },
-  'nav.zones': { en: 'Zones', fr: 'Zones' },
+  'nav.zones': { en: 'Analysis', fr: 'Analyse' },
   'nav.signOut': { en: 'Sign out', fr: 'Déconnexion' },
   'nav.team': { en: 'Team', fr: 'Équipe' },
 
