@@ -55,7 +55,6 @@ function DimensionSection({
       >
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold text-neutral-800">{def.label}</span>
-          <span className="text-xs text-neutral-400 hidden sm:block max-w-sm truncate">{def.description}</span>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0 ml-4">
           {isDirty && !readOnly && <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{t('profile.unsaved')}</span>}
@@ -68,12 +67,10 @@ function DimensionSection({
 
       {open && (
         <div className="border-t border-neutral-100 px-5 py-5">
-          <p className="text-xs text-neutral-500 leading-relaxed mb-6 bg-neutral-50 rounded-xl px-4 py-3">{def.description}</p>
           <div className="space-y-5">
             {def.questions.map(q => (
               <div key={q.key}>
                 <label className="text-sm font-medium text-neutral-700">{q.label}</label>
-                <p className="text-xs text-neutral-400 mt-0.5 mb-2">{q.hint}</p>
                 <textarea
                   value={values[q.key] ?? ''}
                   onChange={e => !readOnly && onChange(q.key, e.target.value)}
