@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
     buildCaptureContext(allRounds ?? []),
   ].filter(Boolean).join('\n\n')
 
+  try {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
@@ -165,4 +166,8 @@ Be specific — reference actual prospect details, actual scores, actual capture
   }).eq('id', roundId)
 
   return NextResponse.json({ briefing: input })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown AI error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
