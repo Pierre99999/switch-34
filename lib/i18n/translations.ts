@@ -89,8 +89,8 @@ export const translations = {
   'pipeline.allReps': { en: 'All reps', fr: 'Tous les commerciaux' },
 
   // ── Roles ──
-  'role.sales': { en: 'Sales', fr: 'Commercial' },
-  'role.director': { en: 'Director', fr: 'Directeur' },
+  'role.sales': { en: 'Sales rep', fr: 'Commercial' },
+  'role.director': { en: 'Sales director', fr: 'Directeur commercial' },
   'profile.readOnly': { en: 'Read-only — configured by your sales director', fr: 'Lecture seule — configuré par votre directeur commercial' },
   'common.translateContent': { en: 'Translate content to English', fr: 'Traduire le contenu en français' },
   'common.translating': { en: 'Translating…', fr: 'Traduction…' },
