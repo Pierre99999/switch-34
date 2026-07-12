@@ -63,9 +63,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        controller.enqueue(encoder.encode(' '))
-
-        const message = await client.messages.create({
+        const anthropicStream = client.messages.stream({
           model: 'claude-sonnet-4-6',
           max_tokens: 4096,
           system: `You are a senior sales coach generating a pre-conversation briefing based on Pierre Gaubil's diagnostic sales methodology ("Pourquoi les meilleurs vendeurs ne vendent pas").
@@ -168,6 +166,13 @@ Be specific — reference actual prospect details, actual scores, actual capture
             content: `Generate the briefing for round ${round.round}. Active diagnostic layer: Layer ${activeLayer} (${activeLayerLabel}). Focus pressing questions on the weakest scored variables within this layer. Use specific details from capture notes for mirror terms.\n\n${context}`,
           }],
         })
+
+        // Forward stream events as heartbeat spaces to keep connection alive
+        anthropicStream.on('text', () => {
+          controller.enqueue(encoder.encode(' '))
+        })
+
+        const message = await anthropicStream.finalMessage()
 
         const toolUse = message.content.find(b => b.type === 'tool_use')
         if (!toolUse || toolUse.type !== 'tool_use') {
