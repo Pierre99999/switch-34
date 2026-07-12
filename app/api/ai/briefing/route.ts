@@ -34,6 +34,7 @@ const LAYER_GATE: Record<number, string> = {
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
+  try {
   const { dealId, roundId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -60,8 +61,6 @@ export async function POST(req: NextRequest) {
     buildScoresContext(round as DealRound),
     buildCaptureContext(allRounds ?? []),
   ].filter(Boolean).join('\n\n')
-
-  try {
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8192,
