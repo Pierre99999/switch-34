@@ -256,7 +256,7 @@ export default function PipelinePage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-visible">
         {/* Table header */}
         <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
           <button onClick={() => toggleSort('prospect')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.prospect')}{sortIndicator('prospect')}</button>
