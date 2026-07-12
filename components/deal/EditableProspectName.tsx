@@ -49,9 +49,9 @@ export default function EditableProspectName({
   }
 
   return (
-    <div className="group/name flex items-center gap-1.5">
+    <div className="group/name flex items-center gap-1.5 min-w-0">
       <span
-        className="font-serif italic text-stone-900 text-sm cursor-text"
+        className="font-serif italic text-stone-900 text-sm cursor-text truncate"
         onClick={() => setEditing(true)}
       >
         {value}

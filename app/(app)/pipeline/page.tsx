@@ -296,11 +296,11 @@ export default function PipelinePage() {
                   <span className="font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
                   <span className="font-semibold text-neutral-700">{deal.potential_revenue ? fmtRevenue(deal.potential_revenue) : '—'}</span>
                 </div>
-                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-neutral-100">
-                  <ScoreCell round={r} layer={1} label={t('layer.1')} />
-                  <ScoreCell round={r} layer={2} label={t('layer.2')} />
-                  <ScoreCell round={r} layer={3} label={t('layer.3')} />
-                  <ScoreCell round={r} layer={4} label={t('layer.4')} />
+                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-neutral-100 min-w-0">
+                  <ScoreCell round={r} layer={1} label="L1" />
+                  <ScoreCell round={r} layer={2} label="L2" />
+                  <ScoreCell round={r} layer={3} label="L3" />
+                  <ScoreCell round={r} layer={4} label="L4" />
                 </div>
                 <Link href={`/deals/${deal.id}/dashboard`} className="block text-center text-sm text-blue-500 hover:text-blue-600 font-medium pt-2 border-t border-neutral-100">
                   {t('pipeline.dashboard')}
