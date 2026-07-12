@@ -1,6 +1,6 @@
 export const maxDuration = 60
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
@@ -9,19 +9,16 @@ import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
 
-// Determine the active diagnostic layer — the first that is NOT solid.
-// A layer is solid when ALL its variables are scored AND the average >= 3.0.
-// This enforces sequential progression: L1 must be solid before L2 gets focus.
 function getActiveLayer(round: DealRound): number {
   for (const layer of [1, 2, 3, 4]) {
     const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
     const scores = vars.map(v => round[v as keyof DealRound] as number | null)
     const filled = scores.filter(s => s !== null) as number[]
-    if (filled.length < vars.length) return layer  // not all variables scored
+    if (filled.length < vars.length) return layer
     const avg = filled.reduce((a, b) => a + b, 0) / filled.length
-    if (avg < 3.0) return layer                    // scored but weak
+    if (avg < 3.0) return layer
   }
-  return 4 // all solid, stay on momentum
+  return 4
 }
 
 const LAYER_GATE: Record<number, string> = {
@@ -32,13 +29,13 @@ const LAYER_GATE: Record<number, string> = {
 }
 
 export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
+  if (!process.env.ANTHROPIC_API_KEY) return Response.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
   try {
   const { dealId, roundId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const [{ data: deal }, { data: round }, { data: vendor }, { data: allRounds }] = await Promise.all([
     supabase.from('deals').select('*').eq('id', dealId).single(),
@@ -47,7 +44,7 @@ export async function POST(req: NextRequest) {
     supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
   ])
 
-  if (!deal || !round) return NextResponse.json({ error: 'Data not found' }, { status: 404 })
+  if (!deal || !round) return Response.json({ error: 'Data not found' }, { status: 404 })
 
   const activeLayer = getActiveLayer(round as DealRound)
   const gateDescription = LAYER_GATE[activeLayer]
@@ -61,10 +58,17 @@ export async function POST(req: NextRequest) {
     buildScoresContext(round as DealRound),
     buildCaptureContext(allRounds ?? []),
   ].filter(Boolean).join('\n\n')
-  const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
-    system: `You are a senior sales coach generating a pre-conversation briefing based on Pierre Gaubil's diagnostic sales methodology ("Pourquoi les meilleurs vendeurs ne vendent pas").
+
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        controller.enqueue(encoder.encode(' '))
+
+        const message = await client.messages.create({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 4096,
+          system: `You are a senior sales coach generating a pre-conversation briefing based on Pierre Gaubil's diagnostic sales methodology ("Pourquoi les meilleurs vendeurs ne vendent pas").
 
 CORE PRINCIPLES OF THE METHOD:
 - "Vendre, c'est construire une compréhension qui rend une décision possible."
@@ -104,88 +108,102 @@ Question generation rules:
 - When Layer 1 is active, focus on discovering the GAP between symptoms and root causes (the five whys technique).
 
 Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.` + localeInstruction(locale),
-    tools: [
-      {
-        name: 'save_briefing',
-        description: 'Save the generated briefing for this deal round',
-        input_schema: {
-          type: 'object' as const,
-          properties: {
-            line: { type: 'string', description: `One sentence framing the entire conversation — what the active layer (L${activeLayer}: ${activeLayerLabel}) needs to resolve.` },
-            read: { type: 'string', description: 'Where the deal stands honestly. What you know, what is missing, what the scores reveal. 3–5 sentences.' },
-            angle: { type: 'string', description: 'What needs to be accomplished in this conversation — the diagnostic objective stated plainly. Not a posture description but a clear statement of what must be resolved: "Establish whether X is true, confirm that Y exists, determine if Z is real." Include ONE reformulation hypothesis — a way to connect existing facts into a new understanding the prospect doesn\'t have yet (constructed data). 3–5 sentences.' },
-            win_condition: { type: 'string', description: `What would make this conversation a success for Layer ${activeLayer}. Be specific.` },
-            questions: {
-              type: 'array',
-              description: `4 pressing questions for Layer ${activeLayer}, then 2 opportunistic questions across higher layers (${opportunisticDesc}). Maximum 6 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
-              items: {
-                type: 'object',
+          tools: [
+            {
+              name: 'save_briefing',
+              description: 'Save the generated briefing for this deal round',
+              input_schema: {
+                type: 'object' as const,
                 properties: {
-                  layer: { type: 'number', description: 'Layer number (1–4)' },
-                  variable: { type: 'string', description: 'The score variable this question targets' },
-                  intent: { type: 'string', description: 'One sentence: what this question is trying to establish or diagnose. The seller reads this, not the prospect.' },
-                  text: { type: 'string', description: 'The single main question to ask — open, conversational, non-leading.' },
-                  sub_questions: { type: 'array', items: { type: 'string' }, description: '2–3 follow-up probes to use if the main question opens a thread. Short, natural, each targeting a deeper dimension of the same variable.' },
-                  priority: { type: 'string', enum: ['pressing', 'opportunistic'], description: `pressing = Layer ${activeLayer} (must ask this round), opportunistic = any higher layer (only if the door opens naturally)` },
+                  line: { type: 'string', description: `One sentence framing the entire conversation — what the active layer (L${activeLayer}: ${activeLayerLabel}) needs to resolve.` },
+                  read: { type: 'string', description: 'Where the deal stands honestly. What you know, what is missing, what the scores reveal. 3–5 sentences.' },
+                  angle: { type: 'string', description: 'What needs to be accomplished in this conversation — the diagnostic objective stated plainly. Not a posture description but a clear statement of what must be resolved: "Establish whether X is true, confirm that Y exists, determine if Z is real." Include ONE reformulation hypothesis — a way to connect existing facts into a new understanding the prospect doesn\'t have yet (constructed data). 3–5 sentences.' },
+                  win_condition: { type: 'string', description: `What would make this conversation a success for Layer ${activeLayer}. Be specific.` },
+                  questions: {
+                    type: 'array',
+                    description: `4 pressing questions for Layer ${activeLayer}, then 2 opportunistic questions across higher layers (${opportunisticDesc}). Maximum 6 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
+                    items: {
+                      type: 'object',
+                      properties: {
+                        layer: { type: 'number', description: 'Layer number (1–4)' },
+                        variable: { type: 'string', description: 'The score variable this question targets' },
+                        intent: { type: 'string', description: 'One sentence: what this question is trying to establish or diagnose. The seller reads this, not the prospect.' },
+                        text: { type: 'string', description: 'The single main question to ask — open, conversational, non-leading.' },
+                        sub_questions: { type: 'array', items: { type: 'string' }, description: '2–3 follow-up probes to use if the main question opens a thread. Short, natural, each targeting a deeper dimension of the same variable.' },
+                        priority: { type: 'string', enum: ['pressing', 'opportunistic'], description: `pressing = Layer ${activeLayer} (must ask this round), opportunistic = any higher layer (only if the door opens naturally)` },
+                      },
+                      required: ['layer', 'variable', 'intent', 'text', 'sub_questions', 'priority'],
+                    },
+                  },
+                  mirror: {
+                    type: 'array',
+                    description: "Exact words or phrases from the prospect's capture notes to echo back.",
+                    items: { type: 'string' },
+                  },
+                  objections: {
+                    type: 'array',
+                    description: 'Likely objections to prepare for, given the active layer focus.',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        likely: { type: 'string', description: 'The objection as the prospect would voice it.' },
+                        frame: { type: 'string', description: 'How to reframe or respond.' },
+                      },
+                      required: ['likely', 'frame'],
+                    },
+                  },
+                  do_not: {
+                    type: 'array',
+                    description: 'Things to avoid in this conversation given the deal state and active layer.',
+                    items: { type: 'string' },
+                  },
                 },
-                required: ['layer', 'variable', 'intent', 'text', 'sub_questions', 'priority'],
+                required: ['line', 'read', 'angle', 'win_condition', 'questions', 'mirror', 'objections', 'do_not'],
               },
             },
-            mirror: {
-              type: 'array',
-              description: "Exact words or phrases from the prospect's capture notes to echo back.",
-              items: { type: 'string' },
-            },
-            objections: {
-              type: 'array',
-              description: 'Likely objections to prepare for, given the active layer focus.',
-              items: {
-                type: 'object',
-                properties: {
-                  likely: { type: 'string', description: 'The objection as the prospect would voice it.' },
-                  frame: { type: 'string', description: 'How to reframe or respond.' },
-                },
-                required: ['likely', 'frame'],
-              },
-            },
-            do_not: {
-              type: 'array',
-              description: 'Things to avoid in this conversation given the deal state and active layer.',
-              items: { type: 'string' },
-            },
-          },
-          required: ['line', 'read', 'angle', 'win_condition', 'questions', 'mirror', 'objections', 'do_not'],
-        },
-      },
-    ],
-    tool_choice: { type: 'any' as const },
-    messages: [{
-      role: 'user',
-      content: `Generate the briefing for round ${round.round}. Active diagnostic layer: Layer ${activeLayer} (${activeLayerLabel}). Focus pressing questions on the weakest scored variables within this layer. Use specific details from capture notes for mirror terms.\n\n${context}`,
-    }],
+          ],
+          tool_choice: { type: 'any' as const },
+          messages: [{
+            role: 'user',
+            content: `Generate the briefing for round ${round.round}. Active diagnostic layer: Layer ${activeLayer} (${activeLayerLabel}). Focus pressing questions on the weakest scored variables within this layer. Use specific details from capture notes for mirror terms.\n\n${context}`,
+          }],
+        })
+
+        const toolUse = message.content.find(b => b.type === 'tool_use')
+        if (!toolUse || toolUse.type !== 'tool_use') {
+          controller.enqueue(encoder.encode(JSON.stringify({ error: 'No structured response from AI' })))
+          controller.close()
+          return
+        }
+
+        const input = toolUse.input as Record<string, unknown>
+
+        await supabase.from('deal_rounds').update({
+          briefing_line: input.line,
+          briefing_read: input.read,
+          briefing_angle: input.angle,
+          briefing_win_condition: input.win_condition,
+          briefing_questions: input.questions,
+          briefing_mirror: input.mirror,
+          briefing_objections: input.objections,
+          briefing_do_not: input.do_not,
+        }).eq('id', roundId)
+
+        controller.enqueue(encoder.encode(JSON.stringify({ briefing: input })))
+        controller.close()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Unknown AI error'
+        controller.enqueue(encoder.encode(JSON.stringify({ error: msg })))
+        controller.close()
+      }
+    },
   })
 
-  const toolUse = message.content.find(b => b.type === 'tool_use')
-  if (!toolUse || toolUse.type !== 'tool_use') {
-    return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
-  }
-
-  const input = toolUse.input as Record<string, unknown>
-
-  await supabase.from('deal_rounds').update({
-    briefing_line: input.line,
-    briefing_read: input.read,
-    briefing_angle: input.angle,
-    briefing_win_condition: input.win_condition,
-    briefing_questions: input.questions,
-    briefing_mirror: input.mirror,
-    briefing_objections: input.objections,
-    briefing_do_not: input.do_not,
-  }).eq('id', roundId)
-
-  return NextResponse.json({ briefing: input })
+  return new Response(stream, {
+    headers: { 'Content-Type': 'application/json', 'Transfer-Encoding': 'chunked' },
+  })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown AI error'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    return Response.json({ error: msg }, { status: 500 })
   }
 }
