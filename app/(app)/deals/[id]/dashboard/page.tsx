@@ -329,8 +329,10 @@ export default function DealDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealId, roundId, locale }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      const text = await res.text()
+      let data: { error?: string; briefing?: unknown }
+      try { data = JSON.parse(text) } catch { throw new Error(`[${res.status}] ${text.slice(0, 300)}`) }
+      if (data.error) throw new Error(data.error)
       router.push(`/deals/${dealId}/briefing`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to generate briefing')
