@@ -148,7 +148,6 @@ export const translations = {
   'dashboard.generateBriefing': { en: 'Generate Round {n} Briefing →', fr: 'Générer le briefing Round {n} →' },
   'dashboard.generating': { en: 'Generating…', fr: 'Génération…' },
   'dashboard.nextRound': { en: '+ Next Round', fr: '+ Round suivant' },
-  'dashboard.engineNarrative': { en: 'Engine narrative', fr: 'Narrative moteur' },
   'dashboard.backToPipeline': { en: '← pipeline', fr: '← pipeline' },
 
   // ── Layer labels ──

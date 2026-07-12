@@ -231,7 +231,6 @@ export type DealRound = {
   process_drag: number | null
   external_friction: number | null
   rationales: Record<string, string>
-  narrative: string | null
   capture_notes: Record<string, string>
   briefing_line: string | null
   briefing_read: string | null
