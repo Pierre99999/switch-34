@@ -48,8 +48,8 @@ const AUTHORITY_PILL: Record<SourceAuthority, string> = {
   end_user: 'text-neutral-600 bg-neutral-100',
 }
 
-function ScoreBar({ score, evidence, authority }: { score: number | null; evidence?: EvidenceLevel; authority?: SourceAuthority }) {
-  if (score === null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
+function ScoreBar({ score, evidence, authority }: { score: number | null | undefined; evidence?: EvidenceLevel; authority?: SourceAuthority }) {
+  if (score == null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
   const ev = evidence ?? 'declared'
   const auth = authority ?? 'end_user'
   const effective = weightedScore(score, ev, auth)
