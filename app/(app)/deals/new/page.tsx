@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
@@ -21,6 +21,42 @@ export default function NewDealPage() {
   // Step 0: Prospect name + context
   const [prospectName, setProspectName] = useState('')
   const [salesContext, setSalesContext] = useState('')
+  const [vendorId, setVendorId] = useState<string | null>(null)
+  const [savedTemplate, setSavedTemplate] = useState<string>('')
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [templateSaved, setTemplateSaved] = useState(false)
+
+  // Load saved template from vendor to pre-fill the sales context
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: vendor } = await supabase
+        .from('vendors')
+        .select('id, sales_context_template')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (vendor) {
+        setVendorId(vendor.id)
+        const tpl = vendor.sales_context_template ?? ''
+        setSavedTemplate(tpl)
+        if (tpl && !salesContext) setSalesContext(tpl)
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleSaveTemplate() {
+    if (!vendorId) return
+    setSavingTemplate(true)
+    const supabase = createClient()
+    await supabase.from('vendors').update({ sales_context_template: salesContext }).eq('id', vendorId)
+    setSavedTemplate(salesContext)
+    setTemplateSaved(true)
+    setSavingTemplate(false)
+    setTimeout(() => setTemplateSaved(false), 2000)
+  }
 
   // Step 1: URL + context fetch
   const [prospectUrl, setProspectUrl] = useState('')
@@ -153,6 +189,23 @@ export default function NewDealPage() {
               rows={6}
               className="w-full border border-amber-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-amber-500 resize-y rounded-lg"
             />
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                disabled={savingTemplate || !vendorId || salesContext.trim() === savedTemplate.trim()}
+                className="text-xs font-medium text-amber-800 hover:text-amber-900 underline underline-offset-2 disabled:opacity-40 disabled:no-underline"
+              >
+                {savingTemplate
+                  ? t('newDeal.templateSaving')
+                  : templateSaved
+                    ? t('newDeal.templateSaved')
+                    : t('newDeal.saveTemplate')}
+              </button>
+              {savedTemplate && (
+                <span className="text-[11px] text-amber-700">{t('newDeal.templateAvailable')}</span>
+              )}
+            </div>
           </div>
           <div className="flex gap-3">
             <button onClick={() => router.back()} className={btnSecondary}>{t('common.cancel')}</button>

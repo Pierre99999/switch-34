@@ -181,6 +181,7 @@ export type Vendor = {
   differentiators: string | null
   ideal_customer: string | null
   past_wins: string | null
+  sales_context_template: string | null
   dimensions: VendorDimensions | null
   created_at: string
   updated_at: string
