@@ -103,10 +103,12 @@ export default function CapturePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
       })
-      const data = await res.json()
+      const text = await res.text()
+      let data: { error?: string; suggestions?: Record<string, { score: number; evidence: string; authority: string; rationale: string }> }
+      try { data = JSON.parse(text) } catch { throw new Error(`[${res.status}] ${text.slice(0, 300) || 'Empty response — the AI call likely timed out.'}`) }
       if (!res.ok) throw new Error(data.error ?? 'AI error')
 
-      const suggestions: Record<string, { score: number; evidence: string; authority: string; rationale: string }> = data.suggestions
+      const suggestions: Record<string, { score: number; evidence: string; authority: string; rationale: string }> = data.suggestions ?? {}
       const scoreUpdate: Record<string, number> = {}
       const evidenceLevels: Record<string, string> = { ...(currentRoundData.evidence_levels ?? {}) }
       const authorityLevels: Record<string, string> = { ...((currentRoundData as Record<string, unknown>).authority_levels as Record<string, string> ?? {}) }
