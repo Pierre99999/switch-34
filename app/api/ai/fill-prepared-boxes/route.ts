@@ -11,6 +11,7 @@ const client = new Anthropic()
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
+  try {
   const { dealId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -107,4 +108,8 @@ Generate sharp, specific content for three preparation boxes. 2-4 sentences per 
   }
 
   return NextResponse.json({ ok: true, boxes: input })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown AI error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }

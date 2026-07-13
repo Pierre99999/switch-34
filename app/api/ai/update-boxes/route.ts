@@ -11,6 +11,7 @@ const client = new Anthropic()
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
+  try {
   const { dealId, roundId, locale } = await req.json()
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -167,4 +168,8 @@ Be concise: 1-3 sentences per entry. Return "" if nothing new to add. Do not hal
   }
 
   return NextResponse.json({ ok: true })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown AI error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
