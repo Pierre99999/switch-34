@@ -363,6 +363,10 @@ export default function DealDashboardPage() {
         }
         const prevEvidence = (prevRound.evidence_levels ?? {}) as Record<string, string>
         if (Object.keys(prevEvidence).length > 0) inheritedScores.evidence_levels = prevEvidence
+        const prevAuthority = ((prevRound as Record<string, unknown>).authority_levels ?? {}) as Record<string, string>
+        if (Object.keys(prevAuthority).length > 0) inheritedScores.authority_levels = prevAuthority
+        const prevRationales = (prevRound.rationales ?? {}) as Record<string, string>
+        if (Object.keys(prevRationales).length > 0) inheritedScores.rationales = prevRationales
       }
 
       const { data: newRound, error: insertErr } = await supabase
