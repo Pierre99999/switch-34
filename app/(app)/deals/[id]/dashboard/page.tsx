@@ -288,8 +288,9 @@ export default function DealDashboardPage() {
     if (dealData) setDeal(dealData)
     if (roundData) {
       setRounds(roundData)
-      const latest = roundData[roundData.length - 1]
-      if (latest) setSelectedRound(latest.round)
+      // Default to the latest round that has a briefing; otherwise stay on Initial (R0).
+      const latestBriefed = [...roundData].reverse().find(r => !!r.briefing_line)
+      setSelectedRound(prev => prev > 0 ? prev : (latestBriefed?.round ?? 0))
     }
   }, [dealId])
 
@@ -440,15 +441,44 @@ export default function DealDashboardPage() {
         onSelect={r => { setSelectedRound(r); setPending({}); setPendingEvidence({}) }}
       />
 
-      {/* Historical notice */}
-      {!isLatestRound && (
+      {/* Historical notice — hide on Initial (R0) since it's not historical */}
+      {!isLatestRound && selectedRound !== 0 && (
         <div className="mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700 font-medium">
           {locale === 'fr' ? 'Round historique — lecture seule' : 'Viewing historical round — scores are read-only'}
         </div>
       )}
 
-      {/* ── The Read — deal situation ── */}
-      {currentRoundData?.briefing_read ? (
+      {/* ── Initial (R0) view — welcome + CTA to brief round 1 ── */}
+      {selectedRound === 0 && (
+        <div className="mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 p-8 shadow-sm">
+          <h3 className="text-lg font-semibold text-neutral-800 mb-2">{t('dashboard.welcomeTitle')}</h3>
+          <p className="text-sm text-neutral-600 mb-4">{t('dashboard.welcomeDesc')}</p>
+          <ul className="space-y-2 mb-6">
+            <li className="flex items-start gap-2 text-sm text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
+              {t('dashboard.welcomePoint1')}
+            </li>
+            <li className="flex items-start gap-2 text-sm text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+              {t('dashboard.welcomePoint2')}
+            </li>
+            <li className="flex items-start gap-2 text-sm text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 mt-1.5 flex-shrink-0" />
+              {t('dashboard.welcomePoint3')}
+            </li>
+          </ul>
+          <PrimaryButton
+            onClick={() => rounds[0] && handleGenerateBriefing(rounds[0].id)}
+            disabled={generatingBriefing || !rounds[0]}
+          >
+            {generatingBriefing ? t('dashboard.generating') : (locale === 'fr' ? '✦ Créer le briefing du round 1' : '✦ Create round 1 briefing')}
+          </PrimaryButton>
+          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+        </div>
+      )}
+
+      {/* ── The Read — deal situation (rounds ≥ 1) ── */}
+      {selectedRound !== 0 && currentRoundData?.briefing_read && (
         <div className="mb-6 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
@@ -468,30 +498,10 @@ export default function DealDashboardPage() {
           </div>
           <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{currentRoundData.briefing_read}</p>
         </div>
-      ) : (
-        <div className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 p-6 shadow-sm">
-          <h3 className="text-base font-semibold text-neutral-800 mb-2">{t('dashboard.welcomeTitle')}</h3>
-          <p className="text-sm text-neutral-600 mb-4">{t('dashboard.welcomeDesc')}</p>
-          <ul className="space-y-2 mb-4">
-            <li className="flex items-start gap-2 text-sm text-neutral-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
-              {t('dashboard.welcomePoint1')}
-            </li>
-            <li className="flex items-start gap-2 text-sm text-neutral-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-              {t('dashboard.welcomePoint2')}
-            </li>
-            <li className="flex items-start gap-2 text-sm text-neutral-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 mt-1.5 flex-shrink-0" />
-              {t('dashboard.welcomePoint3')}
-            </li>
-          </ul>
-          <p className="text-sm font-medium text-blue-700">{t('dashboard.welcomeAction')}</p>
-        </div>
       )}
 
       {/* ── State machine for latest round ── */}
-      {isLatestRound && roundState === 'UNSTARTED' && (
+      {selectedRound !== 0 && isLatestRound && roundState === 'UNSTARTED' && (
         <div className="mb-8 bg-white rounded-2xl border-2 border-dashed border-neutral-200 p-10 text-center">
           <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">✦</span>
@@ -538,27 +548,29 @@ export default function DealDashboardPage() {
         <div className="flex items-center gap-3 mb-6">
           <div className="flex-1" />
           <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
-            {generatingBriefing ? t('dashboard.generating') : locale === 'fr' ? `✦ Démarrer round ${deal.current_round + 1} →` : `✦ Start round ${deal.current_round + 1} →`}
+            {generatingBriefing ? t('dashboard.generating') : locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1} →` : `✦ Create round ${deal.current_round + 1} briefing →`}
           </PrimaryButton>
           {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>
       )}
 
-      {/* Layer cards */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        {[1, 2, 3, 4].map(layer => (
-          <LayerCard
-            key={layer}
-            layer={layer}
-            round={currentRoundData}
-            isEditing={false}
-            pending={pending}
-            pendingEvidence={pendingEvidence}
-            onScore={handleScore}
-            onEvidence={handleEvidence}
-          />
-        ))}
-      </div>
+      {/* Layer cards — hidden on Initial (R0) */}
+      {selectedRound !== 0 && (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          {[1, 2, 3, 4].map(layer => (
+            <LayerCard
+              key={layer}
+              layer={layer}
+              round={currentRoundData}
+              isEditing={false}
+              pending={pending}
+              pendingEvidence={pendingEvidence}
+              onScore={handleScore}
+              onEvidence={handleEvidence}
+            />
+          ))}
+        </div>
+      )}
 
     </div>
   )
