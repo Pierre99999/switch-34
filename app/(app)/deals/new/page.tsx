@@ -124,14 +124,12 @@ export default function NewDealPage() {
         contact_linkedin: primaryContact?.linkedin || null,
         potential_revenue: potentialRevenue ? Number(potentialRevenue) : null,
         prospect_dimensions: fetchedDimensions ?? { _dynamic: true, sales_context: salesContext.trim(), dimensions: [] },
-        current_round: 1,
+        current_round: 0,
       })
       .select()
       .single()
 
     if (dealErr) { setError(dealErr.message); setLoading(false); return }
-
-    await supabase.from('deal_rounds').insert({ deal_id: deal.id, round: 1 })
 
     const validContacts = contacts.filter(c => c.name.trim())
     if (validContacts.length > 0) {

@@ -468,10 +468,10 @@ export default function DealDashboardPage() {
             </li>
           </ul>
           <PrimaryButton
-            onClick={() => rounds[0] && handleGenerateBriefing(rounds[0].id)}
-            disabled={generatingBriefing || !rounds[0]}
+            onClick={handleStartNextRound}
+            disabled={generatingBriefing}
           >
-            {generatingBriefing ? t('dashboard.generating') : (locale === 'fr' ? '✦ Créer le briefing du round 1' : '✦ Create round 1 briefing')}
+            {generatingBriefing ? t('dashboard.generating') : (locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`)}
           </PrimaryButton>
           {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
         </div>
@@ -554,23 +554,21 @@ export default function DealDashboardPage() {
         </div>
       )}
 
-      {/* Layer cards — hidden on Initial (R0) */}
-      {selectedRound !== 0 && (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {[1, 2, 3, 4].map(layer => (
-            <LayerCard
-              key={layer}
-              layer={layer}
-              round={currentRoundData}
-              isEditing={false}
-              pending={pending}
-              pendingEvidence={pendingEvidence}
-              onScore={handleScore}
-              onEvidence={handleEvidence}
-            />
-          ))}
-        </div>
-      )}
+      {/* Layer cards */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        {[1, 2, 3, 4].map(layer => (
+          <LayerCard
+            key={layer}
+            layer={layer}
+            round={currentRoundData}
+            isEditing={false}
+            pending={pending}
+            pendingEvidence={pendingEvidence}
+            onScore={handleScore}
+            onEvidence={handleEvidence}
+          />
+        ))}
+      </div>
 
     </div>
   )
