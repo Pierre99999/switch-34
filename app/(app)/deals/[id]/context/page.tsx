@@ -346,7 +346,7 @@ export default function AccountContextPage() {
   return (
     <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-end justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
           <button onClick={() => router.push('/pipeline')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
             {t('capture.backToPipeline')}
@@ -355,14 +355,28 @@ export default function AccountContextPage() {
             {t('context.title')} · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
           </h1>
         </div>
-        {totalFields > 0 && (
-          <div className="text-right">
-            <div className="text-xs font-medium text-neutral-400 mb-1">{t('context.completion')}</div>
-            <div className={`text-lg font-bold ${totalFilled === totalFields ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
-              {totalFilled}/{totalFields}
+        <div className="flex items-center gap-4 flex-shrink-0">
+          {totalFields > 0 && (
+            <div className="text-right">
+              <div className="text-xs font-medium text-neutral-400 mb-1">{t('context.completion')}</div>
+              <div className={`text-lg font-bold ${totalFilled === totalFields ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
+                {totalFilled}/{totalFields}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => router.push(`/deals/${dealId}/dashboard`)}
+            className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all whitespace-nowrap"
+          >
+            {t('context.goToDashboard')}
+          </button>
+        </div>
+      </div>
+
+      {/* Next-step hint */}
+      <div className="mb-8 flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+        <span className="text-base flex-shrink-0">✦</span>
+        <p className="text-sm text-blue-800">{t('context.nextStepHint')}</p>
       </div>
 
       {/* Revenue */}

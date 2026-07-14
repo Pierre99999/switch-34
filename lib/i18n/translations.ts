@@ -336,6 +336,8 @@ export const translations = {
   'context.import': { en: 'Import from URL', fr: 'Importer depuis URL' },
   'context.importing': { en: 'Importing…', fr: 'Import…' },
   'context.completion': { en: 'Completion', fr: 'Complétion' },
+  'context.goToDashboard': { en: '→ Dashboard', fr: '→ Tableau de bord' },
+  'context.nextStepHint': { en: 'Next step: go to the dashboard to create your first round briefing.', fr: 'Prochaine étape : allez au tableau de bord pour créer le briefing de votre premier round.' },
   'context.importContext': { en: 'Update profile', fr: 'Mise à jour du profil' },
   'context.companyContext': { en: 'Company context', fr: 'Contexte entreprise' },
   'context.fillsDims13': { en: '(fills dims 1-3)', fr: '(remplit dims 1-3)' },

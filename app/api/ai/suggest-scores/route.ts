@@ -32,18 +32,6 @@ export async function POST(req: NextRequest) {
 
   if (!deal || !round || !vendor) return NextResponse.json({ error: 'Data not found' }, { status: 404 })
 
-  // Determine which variables were actually discussed based on capture notes
-  const captureNotes = (round.capture_notes ?? {}) as Record<string, string>
-  const briefingQuestions = (round.briefing_questions ?? []) as Array<{ variable: string; text: string }>
-  const answeredVariables = new Set<string>()
-  for (const q of briefingQuestions) {
-    const noteKey = q.text
-    if (noteKey && captureNotes[noteKey]?.trim()) {
-      if (q.variable) answeredVariables.add(q.variable)
-    }
-  }
-  const hasFreeNotes = !!captureNotes.__free__?.trim()
-
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
 
   // Map known stakeholders to canonical roles so the AI can attach the right voice.
@@ -158,7 +146,6 @@ RULES:
   const prescriptions: string[] = []
 
   for (const [variable, suggestion] of Object.entries(raw)) {
-    if (!hasFreeNotes && answeredVariables.size > 0 && !answeredVariables.has(variable)) continue
     const declarations = Array.isArray(suggestion.declarations) ? suggestion.declarations : []
     const voice = evidenceFromDeclarations(variable, declarations)
     // No declarations → keep the AI's signal but default to declared evidence.
