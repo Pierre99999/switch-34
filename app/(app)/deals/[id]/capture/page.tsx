@@ -158,8 +158,8 @@ export default function CapturePage() {
     setTranscriptSuccess(null)
     try {
       const questionPayload = [
-        ...questions.map((q, i) => ({
-          key: q.variable || (q.priority === 'opportunistic' ? `opp-${i}` : String(i)),
+        ...questions.map((q) => ({
+          key: q.text,
           variable: q.variable,
           text: q.text,
           intent: q.intent,
@@ -286,7 +286,7 @@ export default function CapturePage() {
         <div className="space-y-5 mb-8">
           {/* Pressing */}
           {questions.filter(q => q.priority !== 'opportunistic').map((q, i) => {
-            const key = q.variable || String(i)
+            const key = q.text
             const val = notes[key] ?? ''
             return (
               <div key={`p-${i}`} className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
@@ -337,7 +337,7 @@ export default function CapturePage() {
                 <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wide">{t('briefing.opportunisticCapture')}</span>
               </div>
               {questions.filter(q => q.priority === 'opportunistic').map((q, i) => {
-                const key = q.variable || `opp-${i}`
+                const key = q.text
                 const val = notes[key] ?? ''
                 return (
                   <div key={`opp-${i}`} className="bg-white rounded-2xl border border-dashed border-neutral-200 overflow-hidden">
