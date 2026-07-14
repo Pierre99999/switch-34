@@ -386,9 +386,18 @@ export default function DealDashboardPage() {
     if (dealData) setDeal(dealData)
     if (roundData) {
       setRounds(roundData)
-      // Default to the latest round that has a briefing; otherwise stay on Initial (R0).
-      const latestBriefed = [...roundData].reverse().find(r => !!r.briefing_line)
-      setSelectedRound(prev => prev > 0 ? prev : (latestBriefed?.round ?? 0))
+      // A round only "exists" on the dashboard once its conversation has been
+      // captured/scored. A merely-briefed round is still the Départ phase, so
+      // default to the latest captured round — otherwise Initial (R0).
+      const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
+      const isCaptured = (r: DealRound) => {
+        const notes = (r.capture_notes ?? {}) as Record<string, string>
+        const hasNotes = Object.keys(notes).some(k => k !== '__free__' && notes[k]?.trim()) || !!notes.__free__?.trim()
+        const hasScore = allVars.some(v => (r[v as keyof DealRound] as number | null) !== null)
+        return hasNotes || hasScore
+      }
+      const latestCaptured = [...roundData].reverse().find(isCaptured)
+      setSelectedRound(prev => prev > 0 ? prev : (latestCaptured?.round ?? 0))
     }
   }, [dealId])
 
@@ -520,6 +529,11 @@ export default function DealDashboardPage() {
   const roundState = !hasBriefing ? 'UNSTARTED' : !hasCapture ? 'BRIEFED' : 'SCORED'
   const dealState = computeDealState(rounds, selectedRound)
 
+  // On the Départ view: is round 1 already briefed but not yet captured?
+  // (When it IS captured, load() defaults away from R0.)
+  const inProgressRound = rounds.find(r => r.round === deal.current_round) ?? null
+  const round1Briefed = deal.current_round >= 1 && !!inProgressRound?.briefing_line
+
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
@@ -577,7 +591,22 @@ export default function DealDashboardPage() {
               {t('dashboard.welcomePoint3')}
             </li>
           </ul>
-          {!generatingBriefing && (
+          {!generatingBriefing && round1Briefed && (
+            <div className="bg-white rounded-xl border border-emerald-200 px-5 py-4">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">{locale === 'fr' ? `Briefing du round ${deal.current_round} prêt` : `Round ${deal.current_round} briefing ready`}</span>
+              </div>
+              <p className="text-sm text-neutral-600 mb-3">
+                {locale === 'fr' ? 'Menez la conversation, puis capturez les réponses pour clôturer le round.' : 'Run the conversation, then capture the answers to close the round.'}
+              </p>
+              <div className="flex gap-3">
+                <SecondaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>→ Briefing</SecondaryButton>
+                <PrimaryButton onClick={() => router.push(`/deals/${dealId}/capture`)}>→ {t('nav.capture')}</PrimaryButton>
+              </div>
+            </div>
+          )}
+          {!generatingBriefing && !round1Briefed && (
             <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
               {locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`}
             </PrimaryButton>
@@ -587,8 +616,8 @@ export default function DealDashboardPage() {
         </div>
       )}
 
-      {/* ── The Read — deal situation (rounds ≥ 1) ── */}
-      {selectedRound !== 0 && currentRoundData?.briefing_read && (
+      {/* ── The Read — only once the round is captured (post-conversation read) ── */}
+      {selectedRound !== 0 && currentRoundData?.briefing_read && hasCapture && (
         <div className="mb-6 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
