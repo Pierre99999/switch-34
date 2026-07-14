@@ -245,9 +245,29 @@ export default function NewDealPage() {
               </button>
             </div>
           </div>
+          {fetching && (
+            <p className="text-sm text-neutral-500">{locale === 'fr' ? 'Analyse du site en cours… (jusqu\'à ~30 s)' : 'Analyzing the site… (up to ~30s)'}</p>
+          )}
           {fetchSuccess && (
-            <div className="bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-lg">
+            <div className="bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-xl space-y-3">
               <p className="text-sm text-emerald-700 font-medium">{t('newDeal.contextFetched')}</p>
+              {(() => {
+                const dims = (fetchedDimensions?.dimensions as Array<{ label: string; fields: Array<{ label: string; value: string }> }>) ?? []
+                return dims.length > 0 ? (
+                  <div className="space-y-2">
+                    {dims.map((d, i) => (
+                      <div key={i}>
+                        <p className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">{d.label}</p>
+                        <ul className="mt-0.5 space-y-0.5">
+                          {d.fields.filter(f => f.value?.trim()).map((f, fi) => (
+                            <li key={fi} className="text-xs text-neutral-600"><span className="font-medium text-neutral-700">{f.label}:</span> {f.value}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                ) : null
+              })()}
             </div>
           )}
           {error && <p className="text-sm text-rose-600">{error}</p>}
