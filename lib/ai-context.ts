@@ -84,7 +84,7 @@ export function buildCaptureContext(rounds: DealRound[]): string {
 export function buildPrescriptionsContext(round: DealRound): string {
   const items = prescriptions(round)
   if (items.length === 0) return ''
-  const lockVars = new Set(Object.values(DECISIVE_VARS))
+  const lockVars = new Set(Object.values(DECISIVE_VARS).flat())
   const lines: string[] = ['PRESCRIPTIONS (criteria below 3.5 — each must produce an action in this briefing):']
   for (const it of items) {
     const label = VARIABLE_LABELS[it.variable] ?? it.variable

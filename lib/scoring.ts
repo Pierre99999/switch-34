@@ -47,9 +47,9 @@ export function criterionScore(
 export const GATE_WEIGHTS: Record<number, Record<string, number>> = {
   1: {
     compelling_reason: 0.30,
-    real_business_problem: 0.25,
-    personal_pain_linkage: 0.20,
-    stakeholder_map: 0.15,
+    personal_pain_linkage: 0.30,
+    real_business_problem: 0.20,
+    stakeholder_map: 0.10,
     concerns_fit: 0.10,
   },
   2: {
@@ -79,11 +79,11 @@ export const MOMENTUM_WEIGHTS: Record<string, number> = {
 }
 export const MOMENTUM_BRAKES = new Set(['open_objections', 'process_drag', 'external_friction'])
 
-// ⚡ Exactly one decisive criterion per gate; none on momentum.
-export const DECISIVE_VARS: Record<number, string> = {
-  1: 'compelling_reason',
-  2: 'urgency',
-  3: 'urgency_resolution',
+// ⚡ Decisive criteria per gate; none on momentum.
+export const DECISIVE_VARS: Record<number, string[]> = {
+  1: ['compelling_reason', 'personal_pain_linkage'],
+  2: ['urgency'],
+  3: ['urgency_resolution'],
 }
 
 function scoreOf(round: DealRound, variable: string): number | null {
@@ -251,7 +251,7 @@ export function prescriptions(round: DealRound | null): Prescription[] {
   if (!round) return []
   const out: Prescription[] = []
   const evidenceLevels = (round.evidence_levels ?? {}) as Record<string, EvidenceLevel>
-  const lockVars = new Set(Object.values(DECISIVE_VARS))
+  const lockVars = new Set(Object.values(DECISIVE_VARS).flat())
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
   for (const v of allVars) {
     const s = scoreOf(round, v)

@@ -272,7 +272,7 @@ function LayerCard({
           const currentEvidence: EvidenceLevel = pendingEvidence[v] ?? evidenceLevels[v] ?? 'declared'
           const currentAuthority: SourceAuthority = authorityLevels[v] ?? 'end_user'
           const rationale = (round?.rationales ?? {})[v] as string | undefined
-          const label = DECISIVE_VARS[layer] === v ? `⚡ ${t(`var.${v}` as any)}` : t(`var.${v}` as any)
+          const label = DECISIVE_VARS[layer]?.includes(v) ? `⚡ ${t(`var.${v}` as any)}` : t(`var.${v}` as any)
           const hasEvidence = currentValue !== null && evidenceLevels[v] !== undefined
           return (
             <VariableRow key={v} label={label} rationale={rationale}>
