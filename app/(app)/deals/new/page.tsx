@@ -81,13 +81,18 @@ export default function NewDealPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: prospectUrl.trim(), locale, salesContext: salesContext.trim() || undefined }),
       })
-      const data = await res.json()
+      const text = await res.text()
+      let data: { dimensions?: Record<string, unknown>; error?: string }
+      try { data = JSON.parse(text) } catch { throw new Error(`[${res.status}] ${text.slice(0, 200) || 'Empty response'}`) }
+      if (!res.ok || data.error) throw new Error(data.error ?? `Request failed (${res.status})`)
       if (data.dimensions) {
         setFetchedDimensions(data.dimensions)
         setFetchSuccess(true)
+      } else {
+        throw new Error(locale === 'fr' ? 'Aucune donnée extraite du site.' : 'No data could be extracted from the site.')
       }
-    } catch {
-      setError('Network error')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Network error')
     }
     setFetching(false)
   }

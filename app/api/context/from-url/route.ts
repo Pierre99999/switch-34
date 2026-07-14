@@ -1,4 +1,4 @@
-export const maxDuration = 60
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
@@ -19,6 +19,7 @@ function stripHtml(html: string): string {
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
+  try {
   const { url, locale, salesContext } = await req.json()
   if (!url) return NextResponse.json({ error: 'No URL provided' }, { status: 400 })
 
@@ -103,4 +104,8 @@ Each dimension should have 2-5 fields. Create 3-7 dimensions depending on what i
       dimensions: input.dimensions,
     },
   })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
