@@ -289,8 +289,8 @@ export default function CapturePage() {
         </div>
       )}
 
-      {/* Questions from briefing */}
-      {questions.length > 0 ? (
+      {/* Questions from briefing — hidden entirely when no briefing exists */}
+      {hasBriefing && (questions.length > 0 ? (
         <div className="space-y-5 mb-8">
           {/* Pressing */}
           {questions.filter(q => q.priority !== 'opportunistic').map((q, i) => {
@@ -399,9 +399,10 @@ export default function CapturePage() {
             </button>
           </p>
         </div>
-      )}
+      ))}
 
-      {/* Free-form note */}
+      {/* Free-form note — hidden when no briefing exists */}
+      {hasBriefing && (
       <div className="bg-white rounded-2xl border border-neutral-200 p-5 mb-8 shadow-sm">
         <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-3">{t('capture.freeNote')}</div>
         {isLatestRound ? (
@@ -420,6 +421,7 @@ export default function CapturePage() {
           )
         )}
       </div>
+      )}
 
       {/* Analyze progress */}
       {suggestingScores && (
