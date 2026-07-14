@@ -11,6 +11,7 @@ const ACTOR_COLORS: Record<string, string> = {
   decision_maker: 'bg-blue-50 text-blue-600 border-blue-200',
   user: 'bg-violet-50 text-violet-600 border-violet-200',
   reviewer: 'bg-amber-50 text-amber-600 border-amber-200',
+  budget_guardian: 'bg-teal-50 text-teal-600 border-teal-200',
   blocker: 'bg-rose-50 text-rose-600 border-rose-200',
   unknown: 'bg-neutral-100 text-neutral-500 border-neutral-200',
 }
@@ -20,6 +21,7 @@ const ACTOR_KEYS: Record<string, string> = {
   decision_maker: 'context.decisionMaker',
   user: 'context.endUser',
   reviewer: 'context.reviewer',
+  budget_guardian: 'context.budgetGuardian',
   blocker: 'context.blocker',
   unknown: 'context.unknown',
 }

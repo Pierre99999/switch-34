@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:scoring": "tsx --test lib/scoring.test.ts"
+    "test:scoring": "tsx --test lib/scoring.test.ts lib/voice-credit.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",

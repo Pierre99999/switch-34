@@ -370,7 +370,8 @@ export const translations = {
   'context.champion': { en: 'Champion', fr: 'Champion' },
   'context.decisionMaker': { en: 'Decision Maker', fr: 'Décideur' },
   'context.endUser': { en: 'End User', fr: 'Utilisateur' },
-  'context.reviewer': { en: 'Reviewer', fr: 'Évaluateur' },
+  'context.reviewer': { en: 'Technical decider', fr: 'Décideur technique' },
+  'context.budgetGuardian': { en: 'Budget guardian', fr: 'Gardien du budget' },
   'context.blocker': { en: 'Blocker', fr: 'Bloqueur' },
   'context.unknown': { en: 'Unknown', fr: 'Inconnu' },
 

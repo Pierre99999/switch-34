@@ -4,10 +4,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
-import { LAYER_VARIABLES, VARIABLE_LABELS, type EvidenceLevel, type SourceAuthority } from '@/lib/types'
+import { LAYER_VARIABLES, VARIABLE_LABELS, type EvidenceLevel } from '@/lib/types'
+import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
+import { ACTOR_TYPE_TO_ROLE, type ActorRole } from '@/lib/voice-weights'
 import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
+
+const ROLES: ActorRole[] = ['decideur', 'champion', 'acheteur_technique', 'gardien_du_budget', 'utilisateur', 'bloqueur', 'unknown']
 
 export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
@@ -18,11 +22,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [{ data: deal }, { data: round }, { data: vendor }, { data: allRounds }] = await Promise.all([
+  const [{ data: deal }, { data: round }, { data: vendor }, { data: allRounds }, { data: stakeholders }] = await Promise.all([
     supabase.from('deals').select('*').eq('id', dealId).single(),
     supabase.from('deal_rounds').select('*').eq('id', roundId).single(),
     supabase.from('vendors').select('*').eq('user_id', user.id).single(),
     supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
+    supabase.from('deal_stakeholders').select('name, role, actor_type').eq('deal_id', dealId),
   ])
 
   if (!deal || !round || !vendor) return NextResponse.json({ error: 'Data not found' }, { status: 404 })
@@ -39,20 +44,39 @@ export async function POST(req: NextRequest) {
   }
   const hasFreeNotes = !!captureNotes.__free__?.trim()
 
-  // Build all variable names for the schema
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
+
+  // Map known stakeholders to canonical roles so the AI can attach the right voice.
+  const stakeholderList = (stakeholders ?? []).map(s => {
+    const role = ACTOR_TYPE_TO_ROLE[s.actor_type ?? 'unknown'] ?? 'unknown'
+    return `- ${s.name}${s.role ? ` (${s.role})` : ''} → role: ${role}`
+  }).join('\n') || '(no stakeholders mapped yet — use role "unknown" when the speaker is unqualified)'
 
   const suggestionProperties: Record<string, unknown> = {}
   for (const v of allVars) {
     suggestionProperties[v] = {
       type: 'object',
       properties: {
-        score: { type: 'number', description: 'Raw signal S (0-5): 5 explicit and precise, 4 favorable concrete, 3 favorable vague, 2 ambiguous, 1 unfavorable. The engine caps it by evidence.' },
-        evidence: { type: 'string', enum: ['declared', 'corroborated', 'verified'], description: 'declared = one person said it (caps at 2.5), corroborated = multiple independent sources (caps at 4), verified = CHIFFRÉ, validated by data: amounts, dates, volumes, contracts (up to 5)' },
-        authority: { type: 'string', enum: ['decision_maker', 'influencer', 'end_user'], description: 'Who provided this information: decision_maker = C-level/VP/budget owner, influencer = manager/champion/recommender, end_user = individual contributor/user. Used for the legitimate-actor rule.' },
-        rationale: { type: 'string', description: 'One sentence: what in the capture notes justifies this score AND evidence level' },
+        score: { type: 'number', description: 'Raw signal S (0-5): 5 explicit and precise, 4 favorable concrete, 3 favorable vague, 2 ambiguous/contradictory, 1 unfavorable. The engine caps it by the computed evidence level.' },
+        declarations: {
+          type: 'array',
+          description: 'One entry per person who spoke to this criterion in the capture notes. The engine computes the evidence level (declared/corroborated) from these via a role-weighted voice credit.',
+          items: {
+            type: 'object',
+            properties: {
+              contact: { type: 'string', description: 'Name of the person who said it (as it appears in the notes/stakeholders). Empty if truly unknown.' },
+              role: { type: 'string', enum: ROLES, description: 'Canonical role of the speaker, taken from the stakeholder map. Use "unknown" if the speaker is not qualified.' },
+              stance: { type: 'string', enum: ['pour', 'contre', 'neutre'], description: 'Is the statement favorable (pour), unfavorable (contre) or neutral to the deal on THIS criterion?' },
+              owner: { type: 'boolean', description: 'True only for self-referential criteria (personal pain, own perception) when the speaker talks about themselves.' },
+              quantified: { type: 'boolean', description: 'True if backed by hard data: amounts, dates, volumes, contracts, metrics.' },
+              text: { type: 'string', description: 'Short quote or paraphrase of what this person said.' },
+            },
+            required: ['role', 'stance', 'text'],
+          },
+        },
+        rationale: { type: 'string', description: 'One sentence: what in the capture notes justifies this signal.' },
       },
-      required: ['score', 'evidence', 'authority', 'rationale'],
+      required: ['score', 'declarations', 'rationale'],
     }
   }
 
@@ -67,60 +91,41 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
-    system: `You are a sales diagnostic engine based on Pierre Gaubil's Switch methodology. Based on what was said in the conversation capture notes, suggest updated scores (1-5) for the diagnostic variables.
+    max_tokens: 8192,
+    system: `You are a sales diagnostic engine based on Pierre Gaubil's Switch methodology. From the captured conversation, score the diagnostic criteria AND attribute each statement to the person who made it.
 
 METHODOLOGY CONTEXT:
-- Layer 1 (Opportunity): Does a real business problem exist? Is there personal pain? Does it fit our terrain?
-- Layer 2 (Winability): Do they see us as credible? Does our value fit? Is there REAL urgency?
-- Layer 3 (Impact): Can the product deliver? Is implementation feasible? Will users adopt?
-- Layer 4 (Momentum): Are decision forces converging or diverging?
+- Gate 1 (Opportunity): Does a real business problem exist? Is there personal pain? Does it fit our terrain?
+- Gate 2 (Winning): Do they see us as credible? Does our value fit? Is there REAL urgency?
+- Gate 3 (Impact): Can the product deliver? Is implementation feasible? Will users adopt?
+- Momentum (parallel): Are decision forces converging or diverging?
 
-URGENCY SCORING — the most critical variable. Score urgency using the 7-dimension matrix:
-  1. Frequency: How often does the problem recur?
-  2. Intensity: How severe is each occurrence (stress, friction, cost)?
-  3. Spectrum: How many people/departments/levels are affected?
-  4. Financial impact: What is the measurable cost of inaction?
-  5. Strategic impact: Does it compromise a key initiative or competitive position?
-  6. Client impact: Does it degrade customer satisfaction, support load, retention?
-  7. Risk: Legal exposure, latent vulnerability, or reputation risk?
-A score of 4-5 requires multiple dimensions "lit up" with evidence. A single dimension = max 2-3.
-
-PERSONAL PAIN LINKAGE — score based on:
-  - Are specific individuals identified who PERSONALLY suffer (career risk, reputation, stress, blocked ambition)?
-  - Remember: "Les problèmes créent les projets; les douleurs créent les décisions." A big company problem with no personal pain = low score.
-
-COMPELLING REASON — score based on:
-  - Is there a legitimate reason to buy NOW (not just interest)?
-  - A legitimate reason requires: real problem + consequences + visibility + justification for change.
-  - "Interested" or "curious" = 1-2. "Must solve this or face consequences" = 4-5.
-
-SIGNAL S — the score you give is the raw SIGNAL (0-5): is what was said favorable to the deal?
+SIGNAL S — the score you give is the raw SIGNAL (0-5): is what was said favorable to the deal on this criterion?
   5 = explicit and precise · 4 = favorable and concrete · 3 = favorable but vague/partial · 2 = ambiguous/contradictory · 1 = unfavorable · 0 = nothing.
 
-EVIDENCE LEVELS — every score must include an evidence level. The proof CAPS the final score (applied by the engine), it never boosts it:
-- "declared" (caps at 2.5/5) — one person stated it in one conversation. No corroboration, no proof. Most first-round information is declared. Exception: if the declarant is the natural owner of the dimension (budget owner on budget, end users on adoption, technical team on implementation, the person concerned on personal pain), the cap is 4.0.
-- "corroborated" (caps at 4.0/5) — confirmed by multiple INDEPENDENT sources.
-- "verified" (caps at 5/5) — CHIFFRÉ: validated by data — amounts, dates, volumes, contracts, metrics shared.
+VOICE ATTRIBUTION — for every criterion you score, list the DECLARATIONS: who said what.
+- Attribute each statement to a person and their canonical role from the stakeholder map below.
+- Set "stance" from the deal's point of view: pour (favorable), contre (unfavorable), neutre.
+- Set "quantified": true only when the statement is backed by hard data (amounts, dates, volumes, contracts).
+- Set "owner": true only on self-referential criteria (personal_pain_linkage, credibility_perception) when the person speaks about their own pain or their own perception.
+- Do NOT compute the evidence level yourself — the engine derives it from the declarations. Just report who said what, honestly.
+- A single champion's enthusiasm is only "declared". A blocker conceding a favorable point is heavy. Report the raw stances; the weighting is automatic.
 
-SOURCE AUTHORITY — who provided the information (used for the legitimate-actor rule):
-- "decision_maker" — CEO, VP, budget owner, final decision maker.
-- "influencer" — Manager, champion, technical lead, recommender.
-- "end_user" — Individual contributor, user, operator.
+STAKEHOLDERS (name → role):
+${stakeholderList}
+
+URGENCY — the decisive criterion. Consider frequency, intensity, spread, financial/strategic/client impact, risk. A 4-5 requires multiple dimensions lit up.
+PERSONAL PAIN — specific individuals who PERSONALLY suffer (career, reputation, stress). Company problem with no personal pain = low.
+COMPELLING REASON — a legitimate reason to act NOW: real problem + consequences + visibility + justification.
 
 RULES:
-- ONLY score variables that were explicitly addressed in the capture notes. If a variable was NOT discussed, DO NOT include it in your response — omit it entirely.
-- Report the raw signal S honestly — the engine applies the evidence caps automatically.
-- Be skeptical of first-round claims. One person saying "we have budget" is declared, not verified.
-- Look at previous rounds' capture notes: if the same claim was made before AND confirmed again, upgrade to corroborated.
-- Only mark "verified" when the capture notes explicitly mention data, documents, or metrics being shared.
-- Determine source authority from context: if the capture notes mention who said something (CEO, manager, user), set authority accordingly. Default to "end_user" if unclear.
-- It is BETTER to leave a variable unscored than to guess. Only score what you have evidence for.
-- Be especially rigorous on urgency, compelling_reason, and personal_pain_linkage — these are the three variables that determine if a deal is real.` + localeInstruction(locale),
+- ONLY score criteria explicitly addressed in the capture notes. Omit the rest entirely.
+- Report the raw signal S honestly — the engine applies evidence caps automatically.
+- It is BETTER to leave a criterion unscored than to guess.` + localeInstruction(locale),
     tools: [
       {
         name: 'suggest_scores',
-        description: 'Suggest updated diagnostic scores based on capture notes',
+        description: 'Score criteria and attribute each statement to its speaker',
         input_schema: {
           type: 'object' as const,
           properties: suggestionProperties,
@@ -131,7 +136,7 @@ RULES:
     tool_choice: { type: 'any' as const },
     messages: [{
       role: 'user',
-      content: `Review the capture notes from round ${round.round} and suggest updated scores for all 19 variables.\n\nVariables:\n${variableList}\n\n${context}`,
+      content: `Review the capture notes from round ${round.round}, score the criteria, and attribute each statement.\n\nVariables:\n${variableList}\n\n${context}`,
     }],
   })
 
@@ -140,23 +145,32 @@ RULES:
     return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
   }
 
-  // Apply evidence caps and filter to only variables with actual capture evidence
-  const raw = toolUse.input as Record<string, { score: number; evidence: EvidenceLevel; authority: SourceAuthority; rationale: string }>
-  const capped: Record<string, { score: number; evidence: EvidenceLevel; authority: SourceAuthority; rationale: string }> = {}
+  type AiSuggestion = { score: number; declarations: Declaration[]; rationale: string }
+  const raw = toolUse.input as Record<string, AiSuggestion>
+
+  const suggestions: Record<string, {
+    score: number
+    evidence: EvidenceLevel
+    declarations: Declaration[]
+    rationale: string
+  }> = {}
+  const alarms: string[] = []
+  const prescriptions: string[] = []
+
   for (const [variable, suggestion] of Object.entries(raw)) {
     if (!hasFreeNotes && answeredVariables.size > 0 && !answeredVariables.has(variable)) continue
-    const ev = suggestion.evidence ?? 'declared'
-    const auth = suggestion.authority ?? 'end_user'
-    // Store the raw signal S (integer 0-5). Evidence caps are applied at
-    // computation time by lib/scoring.ts — the proof caps, it never boosts.
-    capped[variable] = {
-      ...suggestion,
-      evidence: ev,
-      authority: auth,
-    }
+    const declarations = Array.isArray(suggestion.declarations) ? suggestion.declarations : []
+    const voice = evidenceFromDeclarations(variable, declarations)
+    // No declarations → keep the AI's signal but default to declared evidence.
+    const evidence: EvidenceLevel = voice.level ?? 'declared'
+    // A heavy contradiction forces the signal to ambiguous (S <= 2).
+    const score = voice.forceMaxSignal !== null ? Math.min(suggestion.score, voice.forceMaxSignal) : suggestion.score
+    suggestions[variable] = { score, evidence, declarations, rationale: suggestion.rationale }
+    for (const a of voice.alarms) alarms.push(a)
+    for (const p of voice.prescriptions) prescriptions.push(p)
   }
 
-  return NextResponse.json({ suggestions: capped })
+  return NextResponse.json({ suggestions, alarms, prescriptions })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown AI error'
     return NextResponse.json({ error: msg }, { status: 500 })

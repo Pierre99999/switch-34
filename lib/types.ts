@@ -245,8 +245,20 @@ export type DealRound = {
   selected_templates: string[]
   evidence_levels: Record<string, EvidenceLevel>
   authority_levels: Record<string, SourceAuthority>
+  declarations: Record<string, VoiceDeclaration[]>
   created_at: string
   updated_at: string
+}
+
+// A statement attributed to a person on a criterion (voice-credit engine).
+export type VoiceDeclaration = {
+  role: string
+  stance: 'pour' | 'contre' | 'neutre'
+  text: string
+  contact?: string | null
+  owner?: boolean
+  quantified?: boolean
+  date?: string
 }
 
 export type BriefingQuestion = {
@@ -268,7 +280,7 @@ export type Stakeholder = {
   deal_id: string
   name: string
   role: string | null
-  actor_type: 'champion' | 'decision_maker' | 'user' | 'reviewer' | 'blocker' | 'unknown'
+  actor_type: 'champion' | 'decision_maker' | 'user' | 'reviewer' | 'budget_guardian' | 'blocker' | 'unknown'
   notes: string | null
   first_seen_round: number | null
   created_at: string

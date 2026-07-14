@@ -3,7 +3,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext } from '@/lib/ai-context'
+import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext, buildVoiceContext } from '@/lib/ai-context'
 import { LAYER_LABELS, type DealRound } from '@/lib/types'
 import { computeDealState } from '@/lib/scoring'
 import { localeInstruction } from '@/lib/ai-locale'
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       buildProspectContext(deal),
       buildScoresContext(round as DealRound),
       buildPrescriptionsContext(round as DealRound),
+      buildVoiceContext(round as DealRound),
       buildCaptureContext(allRounds ?? []),
     ].filter(Boolean).join('\n\n')
 

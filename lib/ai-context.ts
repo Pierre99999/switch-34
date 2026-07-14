@@ -2,6 +2,8 @@
 
 import { type Vendor, type Deal, type DealRound, type EvidenceLevel, LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS, EVIDENCE_LABELS } from './types'
 import { simpleStatus, gateScore, prescriptions, DECISIVE_VARS } from './scoring'
+import { evidenceFromDeclarations } from './voice-credit'
+import type { VoiceDeclaration } from './types'
 
 export function buildVendorContext(vendor: Vendor): string {
   const d = vendor.dimensions
@@ -95,6 +97,30 @@ export function buildPrescriptionsContext(round: DealRound): string {
     } else {
       lines.push(`  ${label}: only DECLARED — prescribe corroboration: who else can confirm? what number proves it?`)
     }
+  }
+  return lines.join('\n')
+}
+
+// Voice-credit alarms & arbitration prescriptions (Switch_credit_de_voix.md).
+// Recomputed from the stored declarations so the next briefing acts on them.
+export function buildVoiceContext(round: DealRound): string {
+  const declarations = ((round as unknown as { declarations?: Record<string, VoiceDeclaration[]> }).declarations) ?? {}
+  const alarms: string[] = []
+  const prescriptions: string[] = []
+  for (const [variable, decls] of Object.entries(declarations)) {
+    const r = evidenceFromDeclarations(variable, decls as unknown as Parameters<typeof evidenceFromDeclarations>[1])
+    for (const a of r.alarms) alarms.push(a)
+    for (const p of r.prescriptions) prescriptions.push(p)
+  }
+  if (alarms.length === 0 && prescriptions.length === 0) return ''
+  const lines: string[] = []
+  if (alarms.length) {
+    lines.push('ALARM SIGNALS (a natural advocate voiced doubt — address head-on):')
+    for (const a of alarms) lines.push(`  ${a}`)
+  }
+  if (prescriptions.length) {
+    lines.push('VOICE PRESCRIPTIONS (resolve these before advancing):')
+    for (const p of [...new Set(prescriptions)]) lines.push(`  ${p}`)
   }
   return lines.join('\n')
 }

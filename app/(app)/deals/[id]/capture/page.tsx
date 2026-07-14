@@ -118,7 +118,7 @@ export default function CapturePage() {
       ])
 
       const text = await scoresRes.text()
-      let data: { error?: string; suggestions?: Record<string, { score: number; evidence: string; authority: string; rationale: string }> }
+      let data: { error?: string; suggestions?: Record<string, { score: number; evidence: string; declarations?: unknown[]; rationale: string }> }
       try { data = JSON.parse(text) } catch { throw new Error(`[${scoresRes.status}] ${text.slice(0, 300) || 'Empty response — the AI call likely timed out.'}`) }
       if (!scoresRes.ok) throw new Error(data.error ?? 'AI error')
 
@@ -129,18 +129,18 @@ export default function CapturePage() {
         throw new Error(boxesErr || 'Knowledge base update failed')
       }
 
-      const suggestions: Record<string, { score: number; evidence: string; authority: string; rationale: string }> = data.suggestions ?? {}
+      const suggestions = data.suggestions ?? {}
       const scoreUpdate: Record<string, number> = {}
       const evidenceLevels: Record<string, string> = { ...(currentRoundData.evidence_levels ?? {}) }
-      const authorityLevels: Record<string, string> = { ...((currentRoundData as Record<string, unknown>).authority_levels as Record<string, string> ?? {}) }
       const rationales: Record<string, string> = { ...(currentRoundData.rationales ?? {}) }
+      const declarations: Record<string, unknown> = { ...((currentRoundData as Record<string, unknown>).declarations as Record<string, unknown> ?? {}) }
       for (const [variable, s] of Object.entries(suggestions)) {
         if (s.score !== null) scoreUpdate[variable] = s.score
         if (s.evidence) evidenceLevels[variable] = s.evidence
-        if (s.authority) authorityLevels[variable] = s.authority
         if (s.rationale) rationales[variable] = s.rationale
+        if (s.declarations) declarations[variable] = s.declarations
       }
-      const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels, authority_levels: authorityLevels, rationales }).eq('id', currentRoundData.id)
+      const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels, rationales, declarations }).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 
       router.push(`/deals/${dealId}/dashboard`)

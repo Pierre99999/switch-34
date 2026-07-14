@@ -12,6 +12,7 @@ import {
   criterionScore, computeDealState, DECISIVE_VARS,
   type GateInfo, type MomentumInfo,
 } from '@/lib/scoring'
+import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import AIProgress from '@/components/ui/AIProgress'
 import { useToast } from '@/components/ui/Toast'
@@ -61,12 +62,21 @@ const AUTHORITY_PILL: Record<SourceAuthority, string> = {
   end_user: 'text-neutral-600 bg-neutral-100',
 }
 
-function ScoreBar({ variable, score, evidence, authority }: { variable: string; score: number | null | undefined; evidence?: EvidenceLevel; authority?: SourceAuthority }) {
+const ROLE_LABEL: Record<string, string> = {
+  decideur: 'Décideur', champion: 'Champion', acheteur_technique: 'Décideur technique',
+  gardien_du_budget: 'Gardien du budget', utilisateur: 'Utilisateur', bloqueur: 'Bloqueur', unknown: 'Rôle inconnu',
+}
+
+function ScoreBar({ variable, score, evidence, authority, declarations }: { variable: string; score: number | null | undefined; evidence?: EvidenceLevel; authority?: SourceAuthority; declarations?: Declaration[] }) {
   const { t } = useI18n()
   if (score == null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
   const effective = criterionScore(variable, score, evidence, authority) ?? 0
   const pct = (effective / 5) * 100
   const barColor = effective <= 2 ? 'bg-rose-500' : effective <= 3 ? 'bg-amber-400' : 'bg-emerald-500'
+  // Voices behind the evidence badge (§4): shown on hover.
+  const voiceTitle = declarations && declarations.length > 0
+    ? declarations.map(d => `${d.contact ?? '?'} · ${ROLE_LABEL[d.role] ?? d.role}${d.stance === 'contre' ? ' (contre)' : ''}${d.quantified ? ' · chiffré' : ''}: ${d.text}`).join('\n')
+    : undefined
   return (
     <div className="mt-1 space-y-1">
       <div className="flex items-center gap-2">
@@ -77,13 +87,9 @@ function ScoreBar({ variable, score, evidence, authority }: { variable: string; 
       </div>
       <div className="flex gap-1.5">
         {evidence && (
-          <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${EVIDENCE_PILL[evidence]}`}>
+          <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${EVIDENCE_PILL[evidence]} ${voiceTitle ? 'cursor-help' : ''}`} title={voiceTitle}>
             {t(`evidence.${evidence}` as never)}
-          </span>
-        )}
-        {authority && authority !== 'end_user' && (
-          <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${AUTHORITY_PILL[authority]}`}>
-            {t(`authority.${authority}` as never)}
+            {declarations && declarations.length > 0 && <span className="ml-1 opacity-60">· {declarations.length}</span>}
           </span>
         )}
       </div>
@@ -208,6 +214,10 @@ function LayerCard({
   const colors = LAYER_COLORS[layer]
   const isMomentum = layer === 4
 
+  // Voice-credit alarms across this card's criteria (advocate voicing doubt).
+  const allDeclarations = (round?.declarations ?? {}) as Record<string, Declaration[]>
+  const cardAlarms = vars.flatMap(v => evidenceFromDeclarations(v, allDeclarations[v]).alarms)
+
   const score = isMomentum ? momentum?.score ?? null : gate?.score ?? null
   const status = round === null ? 'EMPTY' : isMomentum ? (momentum?.status ?? 'EN_OBSERVATION') : (gate?.status ?? 'EMPTY')
   const statusLabel = status === 'PRETE' && gate?.waitingForGate
@@ -262,6 +272,11 @@ function LayerCard({
           {t('gate.momentumStagnant' as never)}
         </div>
       )}
+      {cardAlarms.map((a, i) => (
+        <div key={i} className="px-5 py-2 bg-rose-50 border-b border-rose-100 text-xs font-medium text-rose-600">
+          ⚠ {a}
+        </div>
+      ))}
 
       <div className="px-5 py-4 space-y-4">
         {vars.map(v => {
@@ -285,7 +300,7 @@ function LayerCard({
                   disabled={false}
                 />
               ) : (
-                <ScoreBar variable={v} score={currentValue} evidence={hasEvidence || currentValue !== null ? currentEvidence : undefined} authority={currentAuthority} />
+                <ScoreBar variable={v} score={currentValue} evidence={hasEvidence || currentValue !== null ? currentEvidence : undefined} authority={currentAuthority} declarations={allDeclarations[v]} />
               )}
             </VariableRow>
           )
