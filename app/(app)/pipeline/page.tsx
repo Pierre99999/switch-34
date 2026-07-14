@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { getLayerVerdict, getLayerAverage, LAYER_VARIABLES, type EvidenceLevel, EVIDENCE_LABELS } from '@/lib/types'
+import { LAYER_VARIABLES, type EvidenceLevel, EVIDENCE_LABELS } from '@/lib/types'
+import { simpleStatus, gateScore } from '@/lib/scoring'
 import type { Deal, DealRound } from '@/lib/types'
 import EditableProspectName from '@/components/deal/EditableProspectName'
 import { useI18n } from '@/lib/i18n/context'
@@ -11,7 +12,7 @@ import { useRole } from '@/lib/role-context'
 
 
 const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
-const EVIDENCE_SHORT: Record<EvidenceLevel, string> = { declared: 'D', corroborated: 'C', verified: 'V' }
+const EVIDENCE_SHORT: Record<EvidenceLevel, string> = { declared: 'D', corroborated: 'C', verified: 'Ch' }
 const EVIDENCE_PILL: Record<EvidenceLevel, string> = {
   declared: 'bg-amber-50 text-amber-600 border-amber-200',
   corroborated: 'bg-blue-50 text-blue-600 border-blue-200',
@@ -28,17 +29,16 @@ function getLayerMinEvidence(round: DealRound | null, layer: number): EvidenceLe
 }
 
 const VERDICT_COLORS: Record<string, { text: string; bg: string }> = {
-  PASS:     { text: 'text-emerald-600', bg: 'bg-emerald-500' },
-  HOLD:     { text: 'text-amber-600',   bg: 'bg-amber-400' },
-  'AT RISK':{ text: 'text-rose-600',    bg: 'bg-rose-500' },
-  EMPTY:    { text: 'text-neutral-300',  bg: 'bg-neutral-200' },
-  EMERGING: { text: 'text-amber-500',   bg: 'bg-amber-400' },
-  NASCENT:  { text: 'text-amber-400',   bg: 'bg-amber-300' },
+  FRANCHIE:        { text: 'text-emerald-600', bg: 'bg-emerald-500' },
+  EN_CONSTRUCTION: { text: 'text-amber-600',   bg: 'bg-amber-400' },
+  A_RISQUE:        { text: 'text-rose-600',    bg: 'bg-rose-500' },
+  PRETE:           { text: 'text-blue-600',    bg: 'bg-blue-500' },
+  EMPTY:           { text: 'text-neutral-300', bg: 'bg-neutral-200' },
 }
 
 function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: number; label: string }) {
-  const verdict = getLayerVerdict(round, layer)
-  const score = getLayerAverage(round, layer)
+  const verdict = simpleStatus(round, layer)
+  const score = gateScore(round, layer)
   const minEvidence = getLayerMinEvidence(round, layer)
   const vc = VERDICT_COLORS[verdict] ?? VERDICT_COLORS.EMPTY
 
@@ -169,11 +169,11 @@ export default function PipelinePage() {
     total: deals.length,
     nearClose: deals.filter((d: Deal) => {
       const r = latestRound(d.id)
-      return r && getLayerVerdict(r, 3) === 'PASS'
+      return r && simpleStatus(r, 3) === 'FRANCHIE'
     }).length,
     atRisk: deals.filter((d: Deal) => {
       const r = latestRound(d.id)
-      return r && [1, 2, 3, 4].some(l => getLayerVerdict(r, l) === 'AT RISK')
+      return r && [1, 2, 3, 4].some(l => simpleStatus(r, l) === 'A_RISQUE')
     }).length,
   }
 

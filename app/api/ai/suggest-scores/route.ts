@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
-import { LAYER_VARIABLES, VARIABLE_LABELS, EVIDENCE_CAP, type EvidenceLevel, type SourceAuthority } from '@/lib/types'
+import { LAYER_VARIABLES, VARIABLE_LABELS, type EvidenceLevel, type SourceAuthority } from '@/lib/types'
 import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
@@ -47,9 +47,9 @@ export async function POST(req: NextRequest) {
     suggestionProperties[v] = {
       type: 'object',
       properties: {
-        score: { type: 'number', description: 'Suggested score 1-5. Will be capped by evidence level.' },
-        evidence: { type: 'string', enum: ['declared', 'corroborated', 'verified'], description: 'declared = one person said it (cap 3), corroborated = multiple sources or repeated across rounds (cap 4), verified = hard data/documents/metrics shared (cap 5)' },
-        authority: { type: 'string', enum: ['decision_maker', 'influencer', 'end_user'], description: 'Who provided this information: decision_maker = C-level/VP/budget owner (weight 1.0), influencer = manager/champion/recommender (weight 0.85), end_user = individual contributor/user (weight 0.7)' },
+        score: { type: 'number', description: 'Raw signal S (0-5): 5 explicit and precise, 4 favorable concrete, 3 favorable vague, 2 ambiguous, 1 unfavorable. The engine caps it by evidence.' },
+        evidence: { type: 'string', enum: ['declared', 'corroborated', 'verified'], description: 'declared = one person said it (caps at 2.5), corroborated = multiple independent sources (caps at 4), verified = CHIFFRÉ, validated by data: amounts, dates, volumes, contracts (up to 5)' },
+        authority: { type: 'string', enum: ['decision_maker', 'influencer', 'end_user'], description: 'Who provided this information: decision_maker = C-level/VP/budget owner, influencer = manager/champion/recommender, end_user = individual contributor/user. Used for the legitimate-actor rule.' },
         rationale: { type: 'string', description: 'One sentence: what in the capture notes justifies this score AND evidence level' },
       },
       required: ['score', 'evidence', 'authority', 'rationale'],
@@ -95,20 +95,23 @@ COMPELLING REASON — score based on:
   - A legitimate reason requires: real problem + consequences + visibility + justification for change.
   - "Interested" or "curious" = 1-2. "Must solve this or face consequences" = 4-5.
 
-EVIDENCE LEVELS — every score must include an evidence level that determines its maximum:
-- "declared" (cap: 3/5) — one person stated it in one conversation. No corroboration, no proof. Most first-round information is declared.
-- "corroborated" (cap: 4/5) — confirmed by multiple people, or the same person repeated it with more detail across rounds, or it's consistent with other verified facts.
-- "verified" (cap: 5/5) — backed by hard data: numbers on a slide, a shared document, a metric, a contract clause, an org chart. The prospect showed proof, not just words.
+SIGNAL S — the score you give is the raw SIGNAL (0-5): is what was said favorable to the deal?
+  5 = explicit and precise · 4 = favorable and concrete · 3 = favorable but vague/partial · 2 = ambiguous/contradictory · 1 = unfavorable · 0 = nothing.
 
-SOURCE AUTHORITY — who provided the information affects the weight of the score:
-- "decision_maker" (weight 1.0) — CEO, VP, budget owner, final decision maker. Their word carries full weight.
-- "influencer" (weight 0.85) — Manager, champion, technical lead, recommender. Important but not final authority.
-- "end_user" (weight 0.7) — Individual contributor, user, operator. Valuable perspective but limited authority on business decisions.
+EVIDENCE LEVELS — every score must include an evidence level. The proof CAPS the final score (applied by the engine), it never boosts it:
+- "declared" (caps at 2.5/5) — one person stated it in one conversation. No corroboration, no proof. Most first-round information is declared. Exception: if the declarant is the natural owner of the dimension (budget owner on budget, end users on adoption, technical team on implementation, the person concerned on personal pain), the cap is 4.0.
+- "corroborated" (caps at 4.0/5) — confirmed by multiple INDEPENDENT sources.
+- "verified" (caps at 5/5) — CHIFFRÉ: validated by data — amounts, dates, volumes, contracts, metrics shared.
+
+SOURCE AUTHORITY — who provided the information (used for the legitimate-actor rule):
+- "decision_maker" — CEO, VP, budget owner, final decision maker.
+- "influencer" — Manager, champion, technical lead, recommender.
+- "end_user" — Individual contributor, user, operator.
 
 RULES:
 - ONLY score variables that were explicitly addressed in the capture notes. If a variable was NOT discussed, DO NOT include it in your response — omit it entirely.
-- A score CANNOT exceed its evidence cap. If you think the real score is 4 but the evidence is only "declared", score it 3.
-- Be skeptical of first-round claims. One person saying "we have budget" is declared (max 3), not verified.
+- Report the raw signal S honestly — the engine applies the evidence caps automatically.
+- Be skeptical of first-round claims. One person saying "we have budget" is declared, not verified.
 - Look at previous rounds' capture notes: if the same claim was made before AND confirmed again, upgrade to corroborated.
 - Only mark "verified" when the capture notes explicitly mention data, documents, or metrics being shared.
 - Determine source authority from context: if the capture notes mention who said something (CEO, manager, user), set authority accordingly. Default to "end_user" if unclear.
@@ -144,12 +147,12 @@ RULES:
     if (!hasFreeNotes && answeredVariables.size > 0 && !answeredVariables.has(variable)) continue
     const ev = suggestion.evidence ?? 'declared'
     const auth = suggestion.authority ?? 'end_user'
-    const cap = EVIDENCE_CAP[ev] ?? 3
+    // Store the raw signal S (integer 0-5). Evidence caps are applied at
+    // computation time by lib/scoring.ts — the proof caps, it never boosts.
     capped[variable] = {
       ...suggestion,
       evidence: ev,
       authority: auth,
-      score: suggestion.score !== null ? Math.min(suggestion.score, cap) : suggestion.score,
     }
   }
 

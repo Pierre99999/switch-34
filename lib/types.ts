@@ -310,8 +310,10 @@ export type MirrorTerm = {
 export type EvidenceLevel = 'declared' | 'corroborated' | 'verified'
 export type SourceAuthority = 'decision_maker' | 'influencer' | 'end_user'
 
+// The proof caps the score, it never boosts it (see lib/scoring.ts).
+// "verified" is displayed as CHIFFRÉ: validated by data.
 export const EVIDENCE_CAP: Record<EvidenceLevel, number> = {
-  declared: 3,
+  declared: 2.5,
   corroborated: 4,
   verified: 5,
 }
@@ -319,25 +321,13 @@ export const EVIDENCE_CAP: Record<EvidenceLevel, number> = {
 export const EVIDENCE_LABELS: Record<EvidenceLevel, string> = {
   declared: 'Declared',
   corroborated: 'Corroborated',
-  verified: 'Verified',
+  verified: 'Quantified',
 }
 
 export const EVIDENCE_DESCRIPTIONS: Record<EvidenceLevel, string> = {
-  declared: 'One person said it, no proof',
-  corroborated: 'Multiple sources or repeated across rounds',
-  verified: 'Hard data, documents, or metrics shared',
-}
-
-export const EVIDENCE_WEIGHT: Record<EvidenceLevel, number> = {
-  declared: 0.6,
-  corroborated: 0.85,
-  verified: 1.0,
-}
-
-export const AUTHORITY_WEIGHT: Record<SourceAuthority, number> = {
-  decision_maker: 1.0,
-  influencer: 0.85,
-  end_user: 0.7,
+  declared: 'One person said it, no proof (caps the score at 2.5)',
+  corroborated: 'Multiple independent sources (caps at 4.0)',
+  verified: 'Validated by data: amounts, dates, volumes, contracts (up to 5)',
 }
 
 export const AUTHORITY_LABELS: Record<SourceAuthority, string> = {
@@ -346,19 +336,10 @@ export const AUTHORITY_LABELS: Record<SourceAuthority, string> = {
   end_user: 'End User',
 }
 
-export function capScore(score: number, evidence: EvidenceLevel): number {
-  return Math.min(score, EVIDENCE_CAP[evidence])
-}
-
-export function weightedScore(score: number, evidence: EvidenceLevel, authority: SourceAuthority = 'end_user'): number {
-  return Math.min(score, EVIDENCE_CAP[evidence]) * EVIDENCE_WEIGHT[evidence] * AUTHORITY_WEIGHT[authority]
-}
-
 // ============================================================
 // SCORING HELPERS
 // ============================================================
 
-export type LayerVerdict = 'PASS' | 'HOLD' | 'AT RISK' | 'EMPTY' | 'EMERGING' | 'NASCENT'
 
 export const LAYER_VARIABLES = {
   1: ['real_business_problem', 'compelling_reason', 'concerns_fit', 'stakeholder_map', 'personal_pain_linkage'],
@@ -397,27 +378,5 @@ export const VARIABLE_LABELS: Record<string, string> = {
   external_friction: 'External Friction',
 }
 
-export function getLayerAverage(round: DealRound | null, layer: number): number | null {
-  if (!round) return null
-  const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
-  const evidenceLevels = (round.evidence_levels ?? {}) as Record<string, EvidenceLevel>
-  const authorityLevels = (round.authority_levels ?? {}) as Record<string, SourceAuthority>
-  const weighted: number[] = []
-  for (const v of vars) {
-    const raw = round[v as keyof DealRound] as number | null
-    if (raw === null) continue
-    const ev: EvidenceLevel = evidenceLevels[v] ?? 'declared'
-    const auth: SourceAuthority = authorityLevels[v] ?? 'end_user'
-    weighted.push(weightedScore(raw, ev, auth))
-  }
-  if (weighted.length === 0) return null
-  return weighted.reduce((a, b) => a + b, 0) / vars.length
-}
-
-export function getLayerVerdict(round: DealRound | null, layer: number): LayerVerdict {
-  const avg = getLayerAverage(round, layer)
-  if (avg === null) return 'EMPTY'
-  if (avg >= 3.5) return 'PASS'
-  if (avg < 2.5) return 'AT RISK'
-  return 'HOLD'
-}
+// Gate averages and statuses live in lib/scoring.ts (gateScore, gateInfo,
+// simpleStatus, momentumInfo) — the canonical Switch engine.

@@ -1,6 +1,7 @@
 // Shared helpers for building AI prompts from deal + vendor context
 
-import { type Vendor, type Deal, type DealRound, type EvidenceLevel, LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS, EVIDENCE_LABELS, getLayerVerdict } from './types'
+import { type Vendor, type Deal, type DealRound, type EvidenceLevel, LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS, EVIDENCE_LABELS } from './types'
+import { simpleStatus, gateScore, prescriptions, DECISIVE_VARS } from './scoring'
 
 export function buildVendorContext(vendor: Vendor): string {
   const d = vendor.dimensions
@@ -48,8 +49,10 @@ export function buildProspectContext(deal: Deal): string {
 export function buildScoresContext(round: DealRound): string {
   const lines: string[] = [`ROUND ${round.round} SCORES:`]
   for (const [layer, vars] of Object.entries(LAYER_VARIABLES)) {
-    const verdict = getLayerVerdict(round, Number(layer))
-    lines.push(`\nLayer ${layer} — ${LAYER_LABELS[Number(layer)]} [${verdict}]`)
+    const verdict = simpleStatus(round, Number(layer))
+    const score = gateScore(round, Number(layer))
+    const gateName = Number(layer) === 4 ? 'MOMENTUM (parallel)' : `GATE ${layer}`
+    lines.push(`\n${gateName} — ${LAYER_LABELS[Number(layer)]} [${verdict}${score !== null ? ` · ${score}/5` : ''}]`)
     for (const v of vars as readonly string[]) {
       const score = round[v as keyof DealRound] as number | null
       const ev = (round.evidence_levels ?? {})[v] as EvidenceLevel | undefined
@@ -71,6 +74,27 @@ export function buildCaptureContext(rounds: DealRound[]): string {
     lines.push(`\nROUND ${r.round} CAPTURE:`)
     for (const [k, v] of entries) lines.push(`  [${k}] ${v}`)
     if (free) lines.push(`  [other] ${free}`)
+  }
+  return lines.join('\n')
+}
+
+
+// B5 — Prescriptions: for every criterion < 3.5, tell the briefing engine
+// what the next conversation must accomplish.
+export function buildPrescriptionsContext(round: DealRound): string {
+  const items = prescriptions(round)
+  if (items.length === 0) return ''
+  const lockVars = new Set(Object.values(DECISIVE_VARS))
+  const lines: string[] = ['PRESCRIPTIONS (criteria below 3.5 — each must produce an action in this briefing):']
+  for (const it of items) {
+    const label = VARIABLE_LABELS[it.variable] ?? it.variable
+    if (it.kind === 'MANQUANT') {
+      lines.push(`  ${label}: MISSING — no evidence at all. Prescribe the conversation to open this zone.`)
+    } else if (it.kind === 'NEGATIF') {
+      lines.push(`  ${label}: NEGATIVE and corroborated on a lock criterion${lockVars.has(it.variable) ? '' : ''} — flag the clean exit as an option.`)
+    } else {
+      lines.push(`  ${label}: only DECLARED — prescribe corroboration: who else can confirm? what number proves it?`)
+    }
   }
   return lines.join('\n')
 }

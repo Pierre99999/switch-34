@@ -1,6 +1,7 @@
 'use client'
 
-import { getLayerVerdict, type DealRound } from '@/lib/types'
+import { type DealRound } from '@/lib/types'
+import { simpleStatus } from '@/lib/scoring'
 import { useI18n } from '@/lib/i18n/context'
 
 type RoundNode = {
@@ -19,12 +20,11 @@ type Props = {
 
 function VerdictDot({ verdict }: { verdict: string }) {
   const color = {
-    PASS: 'bg-emerald-500',
-    HOLD: 'bg-amber-400',
-    'AT RISK': 'bg-rose-500',
+    FRANCHIE: 'bg-emerald-500',
+    EN_CONSTRUCTION: 'bg-amber-400',
+    A_RISQUE: 'bg-rose-500',
+    PRETE: 'bg-blue-500',
     EMPTY: 'bg-neutral-200',
-    EMERGING: 'bg-amber-400',
-    NASCENT: 'bg-amber-300',
   }[verdict] ?? 'bg-neutral-200'
   return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${color}`} />
 }
@@ -41,7 +41,7 @@ export default function RoundTimeline({ nodes, currentRound, onSelect, onAddRoun
       {nodes.map((node) => {
         const isSelected = currentRound === node.round
         const verdicts = node.roundData
-          ? { 1: getLayerVerdict(node.roundData, 1), 2: getLayerVerdict(node.roundData, 2), 3: getLayerVerdict(node.roundData, 3), 4: getLayerVerdict(node.roundData, 4) }
+          ? { 1: simpleStatus(node.roundData, 1), 2: simpleStatus(node.roundData, 2), 3: simpleStatus(node.roundData, 3), 4: simpleStatus(node.roundData, 4) }
           : { 1: 'EMPTY', 2: 'EMPTY', 3: 'EMPTY', 4: 'EMPTY' }
         const label = node.round === 0 ? t('timeline.initial' as never) : `R${node.round}`
         return (

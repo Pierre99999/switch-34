@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
 import {
   type Deal, type DealRound, type BriefingQuestion, type BriefingObjection,
-  LAYER_LABELS, getLayerVerdict,
 } from '@/lib/types'
+import { simpleStatus } from '@/lib/scoring'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 
 // ── Collapsible section ─────────────────────────────────────
@@ -42,9 +42,9 @@ const LAYER_BAND_COLORS: Record<number, string> = { 1: 'bg-orange-500', 2: 'bg-b
 
 function StatusBand({ layer, verdict }: { layer: number; verdict: string }) {
   const { t } = useI18n()
-  const verdictStyle = verdict === 'PASS'
+  const verdictStyle = verdict === 'FRANCHIE'
     ? 'text-emerald-600 bg-emerald-50'
-    : verdict === 'AT RISK'
+    : verdict === 'A_RISQUE'
       ? 'text-rose-600 bg-rose-50'
       : verdict === 'EMPTY'
         ? 'text-neutral-400 bg-neutral-50'
@@ -186,7 +186,7 @@ export default function BriefingPage() {
 
   const nodes = rounds.map(r => ({ round: r.round, created_at: r.created_at, roundData: r }))
   const verdicts = currentRoundData
-    ? [1, 2, 3, 4].map(l => getLayerVerdict(currentRoundData, l))
+    ? [1, 2, 3, 4].map(l => simpleStatus(currentRoundData, l))
     : ['EMPTY', 'EMPTY', 'EMPTY', 'EMPTY']
 
   const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"

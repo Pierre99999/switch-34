@@ -3,23 +3,12 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
-import { LAYER_VARIABLES, LAYER_LABELS, type DealRound } from '@/lib/types'
+import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext } from '@/lib/ai-context'
+import { LAYER_LABELS, type DealRound } from '@/lib/types'
+import { computeDealState } from '@/lib/scoring'
 import { localeInstruction } from '@/lib/ai-locale'
 
 const client = new Anthropic()
-
-function getActiveLayer(round: DealRound): number {
-  for (const layer of [1, 2, 3, 4]) {
-    const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
-    const scores = vars.map(v => round[v as keyof DealRound] as number | null)
-    const filled = scores.filter(s => s !== null) as number[]
-    if (filled.length < vars.length) return layer
-    const avg = filled.reduce((a, b) => a + b, 0) / filled.length
-    if (avg < 3.0) return layer
-  }
-  return 4
-}
 
 const LAYER_GATE: Record<number, string> = {
   1: 'Stay or not? — Establish whether a real business problem exists, that personal pain is present, that our terrain fits, and who the real stakeholders are. Nothing else matters until this layer is solid.',
@@ -46,7 +35,8 @@ export async function POST(req: NextRequest) {
 
     if (!deal || !round) return NextResponse.json({ error: 'Deal or round not found' }, { status: 404 })
 
-    const activeLayer = getActiveLayer(round as DealRound)
+    const dealState = computeDealState((allRounds ?? []) as DealRound[], (round as DealRound).round)
+    const activeLayer = dealState.activeGate
     const gateDescription = LAYER_GATE[activeLayer]
     const activeLayerLabel = LAYER_LABELS[activeLayer]
     const opportunisticLayers = [2, 3, 4].filter(l => l > activeLayer)
@@ -56,6 +46,7 @@ export async function POST(req: NextRequest) {
       vendor ? buildVendorContext(vendor) : '',
       buildProspectContext(deal),
       buildScoresContext(round as DealRound),
+      buildPrescriptionsContext(round as DealRound),
       buildCaptureContext(allRounds ?? []),
     ].filter(Boolean).join('\n\n')
 

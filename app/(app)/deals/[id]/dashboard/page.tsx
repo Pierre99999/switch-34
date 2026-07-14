@@ -5,17 +5,17 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   type Deal, type DealRound, type EvidenceLevel, type SourceAuthority,
-  LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS,
+  LAYER_VARIABLES,
   EVIDENCE_CAP, EVIDENCE_DESCRIPTIONS,
-  getLayerVerdict, getLayerAverage, capScore, weightedScore,
 } from '@/lib/types'
+import {
+  criterionScore, computeDealState, DECISIVE_VARS,
+  type GateInfo, type MomentumInfo,
+} from '@/lib/scoring'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import AIProgress from '@/components/ui/AIProgress'
 import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n/context'
-
-// The three variables the methodology calls decisive — highlighted in the UI.
-const DECISIVE_VARS = new Set(['urgency', 'compelling_reason', 'personal_pain_linkage'])
 
 // Map raw API/AI errors to a human message; keep the technical detail separate.
 function humanizeError(raw: string, t: (k: never) => string): { message: string; detail?: string } {
@@ -61,12 +61,10 @@ const AUTHORITY_PILL: Record<SourceAuthority, string> = {
   end_user: 'text-neutral-600 bg-neutral-100',
 }
 
-function ScoreBar({ score, evidence, authority }: { score: number | null | undefined; evidence?: EvidenceLevel; authority?: SourceAuthority }) {
+function ScoreBar({ variable, score, evidence, authority }: { variable: string; score: number | null | undefined; evidence?: EvidenceLevel; authority?: SourceAuthority }) {
   const { t } = useI18n()
   if (score == null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
-  const ev = evidence ?? 'declared'
-  const auth = authority ?? 'end_user'
-  const effective = weightedScore(score, ev, auth)
+  const effective = criterionScore(variable, score, evidence, authority) ?? 0
   const pct = (effective / 5) * 100
   const barColor = effective <= 2 ? 'bg-rose-500' : effective <= 3 ? 'bg-amber-400' : 'bg-emerald-500'
   return (
@@ -152,7 +150,7 @@ function ScorePicker({
             disabled={disabled}
             onClick={() => {
               onEvidenceChange(ev)
-              if (value !== null && value > EVIDENCE_CAP[ev]) onChange(EVIDENCE_CAP[ev])
+              if (value !== null && value > EVIDENCE_CAP[ev]) onChange(Math.floor(EVIDENCE_CAP[ev]))
             }}
             title={EVIDENCE_DESCRIPTIONS[ev]}
             className={`text-[10px] font-medium px-2.5 py-1 rounded-full transition-all ${
@@ -172,6 +170,18 @@ function ScorePicker({
 // ── Layer card ───────────────────────────────────────────────
 
 
+const STATUS_STYLE: Record<string, string> = {
+  FRANCHIE: 'text-emerald-600 bg-emerald-50',
+  VIVANT: 'text-emerald-600 bg-emerald-50',
+  A_RISQUE: 'text-rose-600 bg-rose-50',
+  EN_PANNE: 'text-rose-600 bg-rose-50',
+  EMPTY: 'text-neutral-400 bg-neutral-50',
+  EN_OBSERVATION: 'text-neutral-500 bg-neutral-100',
+  EN_CONSTRUCTION: 'text-amber-600 bg-amber-50',
+  FRAGILE: 'text-amber-600 bg-amber-50',
+  PRETE: 'text-blue-600 bg-blue-50',
+}
+
 function LayerCard({
   layer,
   round,
@@ -180,6 +190,8 @@ function LayerCard({
   pendingEvidence,
   onScore,
   onEvidence,
+  gate,
+  momentum,
 }: {
   layer: number
   round: DealRound | null
@@ -188,43 +200,68 @@ function LayerCard({
   pendingEvidence: Record<string, EvidenceLevel>
   onScore: (field: string, value: number | null) => void
   onEvidence: (field: string, value: EvidenceLevel) => void
+  gate: GateInfo | null
+  momentum: MomentumInfo | null
 }) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
-  const merged = round ? { ...round, ...pending } as DealRound : null
-  const verdict = getLayerVerdict(merged, layer)
-  const avg = getLayerAverage(merged, layer)
   const colors = LAYER_COLORS[layer]
+  const isMomentum = layer === 4
 
-  const verdictStyle = verdict === 'PASS'
-    ? 'text-emerald-600 bg-emerald-50'
-    : verdict === 'AT RISK'
-      ? 'text-rose-600 bg-rose-50'
-      : verdict === 'EMPTY'
-        ? 'text-neutral-400 bg-neutral-50'
-        : 'text-amber-600 bg-amber-50'
+  const score = isMomentum ? momentum?.score ?? null : gate?.score ?? null
+  const status = round === null ? 'EMPTY' : isMomentum ? (momentum?.status ?? 'EN_OBSERVATION') : (gate?.status ?? 'EMPTY')
+  const statusLabel = status === 'PRETE' && gate?.waitingForGate
+    ? t('gate.waiting' as never).replace('{n}', String(gate.waitingForGate))
+    : t(`verdict.${status}` as never)
 
   return (
     <div className={`bg-white rounded-2xl border ${colors.border} overflow-hidden shadow-sm`}>
-      <div className={`${colors.bg} px-5 py-4 flex items-center justify-between`}>
+      <div className={`${colors.bg} px-5 py-4 flex items-center justify-between gap-3`}>
         <div>
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${colors.badge}`} />
-            <span className={`text-xs font-semibold tracking-wide uppercase ${colors.accent}`}>{t('common.layer' as never)} {layer}</span>
+            <span className={`text-xs font-semibold tracking-wide uppercase ${colors.accent}`}>
+              {isMomentum ? t('gate.momentumLabel' as never) : `${t('gate.label' as never)} ${layer}`}
+            </span>
           </div>
           <h3 className="text-base font-semibold text-neutral-800 mt-1">
-            {t(`layer.${layer}` as any)} <span className="font-normal text-neutral-500">— {t(`layer.q${layer}` as any)}</span>
+            {isMomentum
+              ? <span className="font-normal text-neutral-500">{t(`layer.q${layer}` as any)}</span>
+              : <>{t(`layer.${layer}` as any)} <span className="font-normal text-neutral-500">— {t(`layer.q${layer}` as any)}</span></>}
           </h3>
-        </div>
-        <div className="flex items-center gap-2">
-          {avg !== null && (
-            <span className="text-sm font-bold text-neutral-700">{avg.toFixed(1)}<span className="text-neutral-400 font-normal">/5</span></span>
+          {layer === 1 && (
+            <p className="text-[11px] text-neutral-500 mt-0.5">{t('gate.p1Subtitle' as never)}</p>
           )}
-          <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${verdictStyle}`}>
-            {t(`verdict.${verdict}` as never)}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {score !== null && (
+            <span className="text-sm font-bold text-neutral-700">
+              {score.toFixed(1)}<span className="text-neutral-400 font-normal">/5</span>
+              {isMomentum && momentum?.trend && <span className="ml-1 text-base">{momentum.trend}</span>}
+            </span>
+          )}
+          <span className={`text-[11px] font-semibold px-3 py-1 rounded-full whitespace-nowrap ${STATUS_STYLE[status] ?? 'text-neutral-400 bg-neutral-50'}`}>
+            {statusLabel}
           </span>
         </div>
       </div>
+
+      {/* Gate lock / bonus / momentum alerts */}
+      {!isMomentum && gate?.lockMessage && status !== 'EMPTY' && (
+        <div className="px-5 py-2 bg-rose-50 border-b border-rose-100 text-xs font-medium text-rose-600">
+          {t('gate.blocked' as never).replace('{var}', t(`var.${gate.lockMessage}` as any))}
+        </div>
+      )}
+      {layer === 2 && gate?.urgencyProven && (
+        <div className="px-5 py-2 bg-emerald-50 border-b border-emerald-100 text-xs font-medium text-emerald-600">
+          ✓ {t('gate.urgencyProven' as never)}
+        </div>
+      )}
+      {isMomentum && momentum?.stagnant && (
+        <div className="px-5 py-2 bg-amber-50 border-b border-amber-100 text-xs font-medium text-amber-700">
+          {t('gate.momentumStagnant' as never)}
+        </div>
+      )}
 
       <div className="px-5 py-4 space-y-4">
         {vars.map(v => {
@@ -235,7 +272,8 @@ function LayerCard({
           const currentEvidence: EvidenceLevel = pendingEvidence[v] ?? evidenceLevels[v] ?? 'declared'
           const currentAuthority: SourceAuthority = authorityLevels[v] ?? 'end_user'
           const rationale = (round?.rationales ?? {})[v] as string | undefined
-          const label = DECISIVE_VARS.has(v) ? `⚡ ${t(`var.${v}` as any)}` : t(`var.${v}` as any)
+          const label = DECISIVE_VARS[layer] === v ? `⚡ ${t(`var.${v}` as any)}` : t(`var.${v}` as any)
+          const hasEvidence = currentValue !== null && evidenceLevels[v] !== undefined
           return (
             <VariableRow key={v} label={label} rationale={rationale}>
               {isEditing ? (
@@ -247,11 +285,18 @@ function LayerCard({
                   disabled={false}
                 />
               ) : (
-                <ScoreBar score={currentValue} evidence={currentEvidence} authority={currentAuthority} />
+                <ScoreBar variable={v} score={currentValue} evidence={hasEvidence || currentValue !== null ? currentEvidence : undefined} authority={currentAuthority} />
               )}
             </VariableRow>
           )
         })}
+        {isMomentum && (
+          <p className="text-[11px] text-neutral-400 pt-1 border-t border-neutral-100">
+            {locale === 'fr'
+              ? 'Freins notés en santé inversée : 5 = exploré et traité · 0 = jamais exploré.'
+              : 'Brakes scored in inverted health: 5 = explored & handled · 0 = never explored.'}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -455,6 +500,7 @@ export default function DealDashboardPage() {
     return notes && Object.keys(notes).some(k => k !== '__free__' && notes[k]?.trim())
   })()
   const roundState = !hasBriefing ? 'UNSTARTED' : !hasCapture ? 'BRIEFED' : 'SCORED'
+  const dealState = computeDealState(rounds, selectedRound)
 
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
@@ -624,6 +670,8 @@ export default function DealDashboardPage() {
             pendingEvidence={pendingEvidence}
             onScore={handleScore}
             onEvidence={handleEvidence}
+            gate={layer === 4 ? null : dealState.gates[layer]}
+            momentum={layer === 4 ? dealState.momentum : null}
           />
         ))}
       </div>
