@@ -646,7 +646,9 @@ export default function DealDashboardPage() {
             <span className="text-2xl">✦</span>
           </div>
           <h3 className="text-lg font-semibold text-neutral-800 mb-1">
-            {locale === 'fr' ? 'Préparez votre briefing' : 'Prepare your briefing'}
+            {generatingBriefing
+              ? (locale === 'fr' ? 'Préparation de votre briefing' : 'Preparing your briefing')
+              : (locale === 'fr' ? 'Préparez votre briefing' : 'Prepare your briefing')}
           </h3>
           <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
             {locale === 'fr' ? 'Le moteur analysera votre profil vendeur et le contexte prospect pour générer un plan de conversation.' : 'The engine will analyze your vendor profile and prospect context to generate a conversation plan.'}
