@@ -143,6 +143,14 @@ export default function CapturePage() {
       const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels, rationales, declarations }).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 
+      // Regenerate the read AFTER scoring so the dashboard reflects the
+      // post-conversation situation, not the pre-call plan.
+      await fetch('/api/ai/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
+      }).catch(() => {})
+
       router.push(`/deals/${dealId}/dashboard`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to analyze')
@@ -421,6 +429,7 @@ export default function CapturePage() {
             t('ai.step.evidence' as never),
             t('ai.step.scoring' as never),
             t('ai.step.boxes' as never),
+            t('ai.step.read' as never),
           ]} />
         </div>
       )}

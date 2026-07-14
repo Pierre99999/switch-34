@@ -423,7 +423,10 @@ export default function DealDashboardPage() {
     setGeneratingBriefing(true)
     setError(null)
     try {
-      const res = await fetch('/api/ai/briefing', {
+      // "stay" = regenerate just the situational read (fast); otherwise
+      // generate the full pre-conversation briefing and go to it.
+      const endpoint = opts?.stay ? '/api/ai/read' : '/api/ai/briefing'
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealId, roundId, locale }),

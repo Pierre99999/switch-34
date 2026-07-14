@@ -418,6 +418,7 @@ export const translations = {
   'ai.step.evidence': { en: 'Weighing evidence and sources…', fr: 'Pondération des preuves et des sources…' },
   'ai.step.scoring': { en: 'Scoring the diagnostic variables…', fr: 'Notation des variables du diagnostic…' },
   'ai.step.boxes': { en: 'Updating the knowledge base…', fr: 'Mise à jour de la base de connaissance…' },
+  'ai.step.read': { en: 'Writing the situational read…', fr: 'Rédaction de la lecture du deal…' },
   'common.error': { en: 'Error', fr: 'Erreur' },
   'common.cancel': { en: 'Cancel', fr: 'Annuler' },
   'common.confirm': { en: 'Confirm', fr: 'Confirmer' },
