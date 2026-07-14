@@ -102,15 +102,32 @@ export default function CapturePage() {
         .eq('id', currentRoundData.id)
       if (saveErr) throw new Error(saveErr.message)
 
-      const res = await fetch('/api/ai/suggest-scores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
-      })
-      const text = await res.text()
+      // Run scoring and knowledge-base update in parallel; both must finish
+      // before we leave the page, otherwise the Analysis tab stays stale.
+      const [scoresRes, boxesRes] = await Promise.all([
+        fetch('/api/ai/suggest-scores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
+        }),
+        fetch('/api/ai/update-boxes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
+        }),
+      ])
+
+      const text = await scoresRes.text()
       let data: { error?: string; suggestions?: Record<string, { score: number; evidence: string; authority: string; rationale: string }> }
-      try { data = JSON.parse(text) } catch { throw new Error(`[${res.status}] ${text.slice(0, 300) || 'Empty response — the AI call likely timed out.'}`) }
-      if (!res.ok) throw new Error(data.error ?? 'AI error')
+      try { data = JSON.parse(text) } catch { throw new Error(`[${scoresRes.status}] ${text.slice(0, 300) || 'Empty response — the AI call likely timed out.'}`) }
+      if (!scoresRes.ok) throw new Error(data.error ?? 'AI error')
+
+      const boxesText = await boxesRes.text()
+      if (!boxesRes.ok) {
+        let boxesErr = boxesText.slice(0, 300)
+        try { boxesErr = (JSON.parse(boxesText) as { error?: string }).error ?? boxesErr } catch { /* keep raw */ }
+        throw new Error(boxesErr || 'Knowledge base update failed')
+      }
 
       const suggestions: Record<string, { score: number; evidence: string; authority: string; rationale: string }> = data.suggestions ?? {}
       const scoreUpdate: Record<string, number> = {}
@@ -125,12 +142,6 @@ export default function CapturePage() {
       }
       const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels, authority_levels: authorityLevels, rationales }).eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
-
-      fetch('/api/ai/update-boxes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
-      }).catch(() => {})
 
       router.push(`/deals/${dealId}/dashboard`)
     } catch (e) {
