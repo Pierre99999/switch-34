@@ -37,15 +37,15 @@ export async function POST(req: NextRequest) {
   }
 
   const contextInstruction = salesContext
-    ? `\n\nThe salesperson has indicated what is important to understand about this prospect:\n"${salesContext}"\n\nDesign your analysis dimensions specifically around these concerns. Each dimension should help the salesperson understand an aspect they care about.`
+    ? `\n\nThe salesperson wants to understand: "${salesContext}". Let this GUIDE which dimensions you emphasize — but every dimension must still be grounded in what the website actually shows, and every field must be filled from the site content. Do not create empty concern-shaped dimensions.`
     : ''
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 4096,
-    system: `You are building a dynamic prospect intelligence profile for a sales CRM. Based on the website content and what the salesperson needs to understand, you must define the most relevant analysis dimensions and fill them with information from the website.
+    system: `You are building a prospect intelligence profile for a sales CRM from a company's website.
 
-Each dimension should have 2-5 fields. Create 3-7 dimensions depending on what is relevant. Be concise — 1-3 sentences per field value. Leave value as empty string for fields not evidenced in the content.${contextInstruction}` + localeInstruction(locale),
+Extract concrete, factual information from the website content and organize it into 3-7 analysis dimensions, each with 2-5 fields (company activity, offering, target market, clients, positioning, proof points, traction, etc.). ALWAYS fill each field with what the website reveals or reasonably implies — 1-3 sentences per value. Only leave a value empty if the website genuinely says nothing about it; prefer inferring from available content over leaving blanks.${contextInstruction}` + localeInstruction(locale),
     tools: [
       {
         name: 'save_prospect_profile',
