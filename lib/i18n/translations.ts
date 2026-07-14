@@ -337,6 +337,8 @@ export const translations = {
   'context.importing': { en: 'Importing…', fr: 'Import…' },
   'context.completion': { en: 'Completion', fr: 'Complétion' },
   'context.goToDashboard': { en: '→ Dashboard', fr: '→ Tableau de bord' },
+  'briefing.noneTitle': { en: 'No briefing for this round yet', fr: 'Aucun briefing pour ce round' },
+  'briefing.noneDesc': { en: 'The briefing is generated from the dashboard. Go there to create it, then come back to review your conversation plan.', fr: 'Le briefing se génère depuis le tableau de bord. Allez-y pour le créer, puis revenez consulter votre plan de conversation.' },
   'context.nextStepHint': { en: 'Next step: go to the dashboard to create your first round briefing.', fr: 'Prochaine étape : allez au tableau de bord pour créer le briefing de votre premier round.' },
   'context.importContext': { en: 'Update profile', fr: 'Mise à jour du profil' },
   'context.companyContext': { en: 'Company context', fr: 'Contexte entreprise' },
