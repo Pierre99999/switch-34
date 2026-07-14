@@ -43,7 +43,7 @@ export default function EditableProspectName({
         onBlur={save}
         onKeyDown={onKeyDown}
         disabled={saving}
-        className="font-serif italic text-stone-900 text-sm w-full border-b border-stone-900 bg-transparent focus:outline-none disabled:opacity-50"
+        className="text-sm font-semibold text-neutral-800 w-full border-b border-blue-400 bg-transparent focus:outline-none disabled:opacity-50"
       />
     )
   }
@@ -51,14 +51,14 @@ export default function EditableProspectName({
   return (
     <div className="group/name flex items-center gap-1.5 min-w-0">
       <span
-        className="font-serif italic text-stone-900 text-sm cursor-text truncate"
+        className="text-sm font-semibold text-neutral-800 cursor-text truncate"
         onClick={() => setEditing(true)}
       >
         {value}
       </span>
       <button
         onClick={() => setEditing(true)}
-        className="text-[9px] font-mono text-stone-300 hover:text-stone-600 opacity-0 group-hover/name:opacity-100 transition-opacity"
+        className="text-[9px] font-medium text-neutral-300 hover:text-neutral-600 opacity-0 group-hover/name:opacity-100 transition-opacity"
         tabIndex={-1}
       >
         edit

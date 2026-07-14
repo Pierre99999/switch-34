@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
 
-const inputClass = "mt-1 w-full border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
-const btnPrimary = "flex-1 bg-stone-900 text-stone-50 py-2.5 text-xs uppercase tracking-widest font-mono hover:bg-stone-800 disabled:opacity-40"
-const btnSecondary = "px-6 py-2.5 text-xs uppercase tracking-widest font-mono text-stone-600 border border-stone-300 hover:border-stone-600"
+const inputClass = "mt-1 w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 placeholder:text-neutral-300 transition-all"
+const btnPrimary = "flex-1 bg-blue-500 text-white py-2.5 text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
+const btnSecondary = "px-6 py-2.5 text-sm font-medium rounded-xl text-neutral-600 bg-white border border-neutral-200 hover:border-neutral-400 transition-all"
 
 type Contact = { name: string; title: string; linkedin: string }
 
@@ -153,11 +153,11 @@ export default function NewDealPage() {
   return (
     <div className="max-w-2xl mx-auto py-12 px-6">
       <div className="mb-10">
-        <div className="text-xs uppercase tracking-widest text-stone-500 font-mono mb-2">Switch</div>
-        <h1 className="font-serif text-3xl text-stone-900 italic">{t('newDeal.title')}</h1>
+        <p className="text-sm text-neutral-400 mb-1">Switch</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('newDeal.title')}</h1>
         <div className="flex gap-1 mt-4">
           {Array.from({ length: totalSteps }).map((_, i) => (
-            <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-stone-900' : 'bg-stone-200'}`} />
+            <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-blue-500' : 'bg-neutral-200'}`} />
           ))}
         </div>
       </div>
@@ -166,11 +166,11 @@ export default function NewDealPage() {
       {step === 0 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-stone-900 font-mono mb-1">{t('newDeal.prospectCompany')}</h2>
-            <p className="text-sm text-stone-500">{t('newDeal.step0Desc')}</p>
+            <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.prospectCompany')}</h2>
+            <p className="text-sm text-neutral-500">{t('newDeal.step0Desc')}</p>
           </div>
           <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.prospectCompany')} *</label>
+            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.prospectCompany')} *</label>
             <input
               type="text" value={prospectName} onChange={e => setProspectName(e.target.value)}
               placeholder="Acme Manufacturing"
@@ -185,7 +185,7 @@ export default function NewDealPage() {
               value={salesContext} onChange={e => setSalesContext(e.target.value)}
               placeholder={t('newDeal.salesContextPlaceholder')}
               rows={6}
-              className="w-full border border-amber-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-amber-500 resize-y rounded-lg"
+              className="w-full bg-white border border-amber-300 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-y transition-all"
             />
             <div className="flex items-center justify-between gap-3 pt-1">
               <button
@@ -218,23 +218,23 @@ export default function NewDealPage() {
       {step === 1 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-stone-900 font-mono mb-1">{t('newDeal.contextStep')}</h2>
-            <p className="text-sm text-stone-500">{t('newDeal.contextStepDesc')}</p>
+            <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.contextStep')}</h2>
+            <p className="text-sm text-neutral-500">{t('newDeal.contextStepDesc')}</p>
           </div>
           <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.prospectUrl')}</label>
+            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.prospectUrl')}</label>
             <div className="flex gap-2 mt-1">
               <input
                 type="text" value={prospectUrl} onChange={e => setProspectUrl(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleFetchUrl()}
                 placeholder={t('newDeal.prospectUrlPlaceholder')}
                 disabled={fetching}
-                className="flex-1 border border-stone-300 bg-white px-3 py-2.5 text-sm font-mono text-stone-900 focus:outline-none focus:border-stone-900"
+                className="flex-1 bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
               />
               <button
                 onClick={handleFetchUrl}
                 disabled={fetching || !prospectUrl.trim()}
-                className="px-5 py-2.5 bg-stone-900 text-stone-50 text-xs font-mono uppercase tracking-widest hover:bg-stone-800 disabled:opacity-40"
+                className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
               >
                 {fetching ? '…' : t('newDeal.analyze')}
               </button>
@@ -242,10 +242,10 @@ export default function NewDealPage() {
           </div>
           {fetchSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-lg">
-              <p className="text-sm text-emerald-700 font-mono">{t('newDeal.contextFetched')}</p>
+              <p className="text-sm text-emerald-700 font-medium">{t('newDeal.contextFetched')}</p>
             </div>
           )}
-          {error && <p className="text-xs text-rose-700 font-mono">{error}</p>}
+          {error && <p className="text-sm text-rose-600">{error}</p>}
           <div className="flex gap-3">
             <button onClick={() => setStep(0)} className={btnSecondary}>{t('onboarding.back')}</button>
             <button onClick={() => setStep(2)} className={btnPrimary}>
@@ -259,31 +259,31 @@ export default function NewDealPage() {
       {step === 2 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-stone-900 font-mono mb-1">{t('newDeal.contactsStep')}</h2>
-            <p className="text-sm text-stone-500">{t('newDeal.contactsStepDesc')}</p>
+            <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.contactsStep')}</h2>
+            <p className="text-sm text-neutral-500">{t('newDeal.contactsStepDesc')}</p>
           </div>
           <div className="space-y-4">
             {contacts.map((c, i) => (
-              <div key={i} className="border border-stone-200 p-4 space-y-3">
+              <div key={i} className="bg-white border border-neutral-200 rounded-2xl p-4 space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-stone-400 uppercase tracking-widest">{t('newDeal.contact')} {i + 1}</span>
+                  <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('newDeal.contact')} {i + 1}</span>
                   {contacts.length > 1 && (
-                    <button onClick={() => removeContact(i)} className="text-stone-300 hover:text-rose-500 text-sm transition-colors">✕</button>
+                    <button onClick={() => removeContact(i)} className="text-neutral-300 hover:text-rose-500 text-sm transition-colors">✕</button>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.contactName')}</label>
+                    <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.contactName')}</label>
                     <input type="text" value={c.name} onChange={e => updateContact(i, 'name', e.target.value)} placeholder="Sarah Chen" className={inputClass} />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.contactTitle')}</label>
+                    <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.contactTitle')}</label>
                     <input type="text" value={c.title} onChange={e => updateContact(i, 'title', e.target.value)} placeholder="VP Operations" className={inputClass} />
                   </div>
                 </div>
               </div>
             ))}
-            <button onClick={addContact} className="text-sm font-medium text-stone-500 hover:text-stone-900 font-mono transition-colors">
+            <button onClick={addContact} className="text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">
               + {t('newDeal.addContact')}
             </button>
           </div>
@@ -300,18 +300,18 @@ export default function NewDealPage() {
       {step === 3 && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-stone-900 font-mono mb-1">{t('newDeal.revenueStep')}</h2>
-            <p className="text-sm text-stone-500">{t('newDeal.revenueStepDesc')}</p>
+            <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.revenueStep')}</h2>
+            <p className="text-sm text-neutral-500">{t('newDeal.revenueStepDesc')}</p>
           </div>
           <div>
-            <label className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">{t('newDeal.potentialRevenue')}</label>
+            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.potentialRevenue')}</label>
             <input
               type="number" value={potentialRevenue} onChange={e => setPotentialRevenue(e.target.value)}
               placeholder="50000" min="0"
               className={inputClass}
             />
           </div>
-          {error && <p className="text-xs text-rose-700 font-mono">{error}</p>}
+          {error && <p className="text-sm text-rose-600">{error}</p>}
           <div className="flex gap-3">
             <button onClick={() => setStep(2)} className={btnSecondary}>{t('onboarding.back')}</button>
             <button onClick={handleCreate} disabled={loading} className={btnPrimary}>

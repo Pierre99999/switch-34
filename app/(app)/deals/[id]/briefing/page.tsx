@@ -56,7 +56,7 @@ function StatusBand({ layer, verdict }: { layer: number; verdict: string }) {
         <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wide">L{layer}</span>
       </div>
       <div className="text-xs font-medium text-neutral-700">{t(`layer.${layer}` as any)}</div>
-      <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${verdictStyle}`}>{verdict}</span>
+      <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${verdictStyle}`}>{t(`verdict.${verdict}` as never)}</span>
     </div>
   )
 }

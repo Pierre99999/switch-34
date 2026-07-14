@@ -1,6 +1,7 @@
 'use client'
 
 import { getLayerVerdict, type DealRound } from '@/lib/types'
+import { useI18n } from '@/lib/i18n/context'
 
 type RoundNode = {
   round: number
@@ -34,6 +35,7 @@ function fmt(iso: string) {
 }
 
 export default function RoundTimeline({ nodes, currentRound, onSelect, onAddRound, addingRound }: Props) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center mb-8 overflow-x-auto pb-1 gap-2">
       {nodes.map((node) => {
@@ -41,7 +43,7 @@ export default function RoundTimeline({ nodes, currentRound, onSelect, onAddRoun
         const verdicts = node.roundData
           ? { 1: getLayerVerdict(node.roundData, 1), 2: getLayerVerdict(node.roundData, 2), 3: getLayerVerdict(node.roundData, 3), 4: getLayerVerdict(node.roundData, 4) }
           : { 1: 'EMPTY', 2: 'EMPTY', 3: 'EMPTY', 4: 'EMPTY' }
-        const label = node.round === 0 ? 'Initial' : `R${node.round}`
+        const label = node.round === 0 ? t('timeline.initial' as never) : `R${node.round}`
         return (
           <button
             key={node.round}

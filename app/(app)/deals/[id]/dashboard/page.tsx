@@ -6,12 +6,25 @@ import { createClient } from '@/lib/supabase/client'
 import {
   type Deal, type DealRound, type EvidenceLevel, type SourceAuthority,
   LAYER_VARIABLES, LAYER_LABELS, VARIABLE_LABELS,
-  EVIDENCE_CAP, EVIDENCE_LABELS, EVIDENCE_DESCRIPTIONS,
-  AUTHORITY_LABELS,
+  EVIDENCE_CAP, EVIDENCE_DESCRIPTIONS,
   getLayerVerdict, getLayerAverage, capScore, weightedScore,
 } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
+import AIProgress from '@/components/ui/AIProgress'
+import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n/context'
+
+// The three variables the methodology calls decisive — highlighted in the UI.
+const DECISIVE_VARS = new Set(['urgency', 'compelling_reason', 'personal_pain_linkage'])
+
+// Map raw API/AI errors to a human message; keep the technical detail separate.
+function humanizeError(raw: string, t: (k: never) => string): { message: string; detail?: string } {
+  const lower = raw.toLowerCase()
+  if (lower.includes('credit balance') || lower.includes('rate limit') || lower.includes('overloaded') || lower.includes('timeout') || lower.includes('timed out') || raw.includes('"type":"error"') || lower.includes('invalid_request_error')) {
+    return { message: t('common.aiUnavailable' as never), detail: raw }
+  }
+  return { message: raw }
+}
 
 // ── Layer color system ──────────────────────────────────────
 
@@ -49,6 +62,7 @@ const AUTHORITY_PILL: Record<SourceAuthority, string> = {
 }
 
 function ScoreBar({ score, evidence, authority }: { score: number | null | undefined; evidence?: EvidenceLevel; authority?: SourceAuthority }) {
+  const { t } = useI18n()
   if (score == null) return <div className="flex items-center gap-1.5 mt-1"><div className="h-2 flex-1 bg-neutral-100 rounded-full" /><span className="text-xs text-neutral-300 w-8">—</span></div>
   const ev = evidence ?? 'declared'
   const auth = authority ?? 'end_user'
@@ -66,12 +80,12 @@ function ScoreBar({ score, evidence, authority }: { score: number | null | undef
       <div className="flex gap-1.5">
         {evidence && (
           <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${EVIDENCE_PILL[evidence]}`}>
-            {EVIDENCE_LABELS[evidence]}
+            {t(`evidence.${evidence}` as never)}
           </span>
         )}
         {authority && authority !== 'end_user' && (
           <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full ${AUTHORITY_PILL[authority]}`}>
-            {AUTHORITY_LABELS[authority]}
+            {t(`authority.${authority}` as never)}
           </span>
         )}
       </div>
@@ -94,6 +108,7 @@ function ScorePicker({
   onEvidenceChange: (v: EvidenceLevel) => void
   disabled: boolean
 }) {
+  const { t } = useI18n()
   const cap = EVIDENCE_CAP[evidence]
   return (
     <div className="mt-1.5 space-y-2">
@@ -146,7 +161,7 @@ function ScorePicker({
                 : 'bg-neutral-50 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
             } disabled:opacity-40`}
           >
-            {EVIDENCE_LABELS[ev]} ≤{EVIDENCE_CAP[ev]}
+            {t(`evidence.${ev}` as never)} ≤{EVIDENCE_CAP[ev]}
           </button>
         ))}
       </div>
@@ -195,7 +210,7 @@ function LayerCard({
         <div>
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${colors.badge}`} />
-            <span className={`text-xs font-semibold tracking-wide uppercase ${colors.accent}`}>Layer {layer}</span>
+            <span className={`text-xs font-semibold tracking-wide uppercase ${colors.accent}`}>{t('common.layer' as never)} {layer}</span>
           </div>
           <h3 className="text-base font-semibold text-neutral-800 mt-1">
             {t(`layer.${layer}` as any)} <span className="font-normal text-neutral-500">— {t(`layer.q${layer}` as any)}</span>
@@ -206,7 +221,7 @@ function LayerCard({
             <span className="text-sm font-bold text-neutral-700">{avg.toFixed(1)}<span className="text-neutral-400 font-normal">/5</span></span>
           )}
           <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${verdictStyle}`}>
-            {verdict}
+            {t(`verdict.${verdict}` as never)}
           </span>
         </div>
       </div>
@@ -220,8 +235,9 @@ function LayerCard({
           const currentEvidence: EvidenceLevel = pendingEvidence[v] ?? evidenceLevels[v] ?? 'declared'
           const currentAuthority: SourceAuthority = authorityLevels[v] ?? 'end_user'
           const rationale = (round?.rationales ?? {})[v] as string | undefined
+          const label = DECISIVE_VARS.has(v) ? `⚡ ${t(`var.${v}` as any)}` : t(`var.${v}` as any)
           return (
-            <VariableRow key={v} label={t(`var.${v}` as any)} rationale={rationale}>
+            <VariableRow key={v} label={label} rationale={rationale}>
               {isEditing ? (
                 <ScorePicker
                   value={currentValue}
@@ -275,9 +291,31 @@ export default function DealDashboardPage() {
   const [pendingEvidence, setPendingEvidence] = useState<Record<string, EvidenceLevel>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
+  const { toast } = useToast()
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
+
+  const briefingSteps = [
+    t('ai.step.profile' as never),
+    t('ai.step.context' as never),
+    t('ai.step.scores' as never),
+    t('ai.step.questions' as never),
+    t('ai.step.finalize' as never),
+  ]
+
+  const errorBlock = error ? (
+    <div className="mt-4 text-left max-w-md mx-auto">
+      <p className="text-sm text-rose-600">{error}</p>
+      {errorDetail && (
+        <details className="mt-1">
+          <summary className="text-xs text-neutral-400 cursor-pointer">{locale === 'fr' ? 'Détails techniques' : 'Technical details'}</summary>
+          <p className="text-xs text-neutral-400 mt-1 break-all">{errorDetail}</p>
+        </details>
+      )}
+    </div>
+  ) : null
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -337,11 +375,15 @@ export default function DealDashboardPage() {
       if (opts?.stay) {
         await load()
         setGeneratingBriefing(false)
+        toast(locale === 'fr' ? 'Lecture régénérée' : 'Read regenerated')
       } else {
         router.push(`/deals/${dealId}/briefing`)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to generate briefing')
+      const raw = e instanceof Error ? e.message : 'Failed to generate briefing'
+      const { message, detail } = humanizeError(raw, t as (k: never) => string)
+      setError(message)
+      setErrorDetail(detail ?? null)
       setGeneratingBriefing(false)
     }
   }
@@ -471,13 +513,13 @@ export default function DealDashboardPage() {
               {t('dashboard.welcomePoint3')}
             </li>
           </ul>
-          <PrimaryButton
-            onClick={handleStartNextRound}
-            disabled={generatingBriefing}
-          >
-            {generatingBriefing ? t('dashboard.generating') : (locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`)}
-          </PrimaryButton>
-          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+          {!generatingBriefing && (
+            <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
+              {locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`}
+            </PrimaryButton>
+          )}
+          {generatingBriefing && <AIProgress steps={briefingSteps} />}
+          {errorBlock}
         </div>
       )}
 
@@ -516,13 +558,16 @@ export default function DealDashboardPage() {
           <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
             {locale === 'fr' ? 'Le moteur analysera votre profil vendeur et le contexte prospect pour générer un plan de conversation.' : 'The engine will analyze your vendor profile and prospect context to generate a conversation plan.'}
           </p>
-          <PrimaryButton
-            onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
-            disabled={generatingBriefing || !currentRoundData}
-          >
-            {generatingBriefing ? t('dashboard.generating') : locale === 'fr' ? '✦ Générer le briefing' : '✦ Generate briefing'}
-          </PrimaryButton>
-          {error && <p className="mt-4 text-sm text-rose-600">{error}</p>}
+          {!generatingBriefing && (
+            <PrimaryButton
+              onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
+              disabled={!currentRoundData}
+            >
+              {locale === 'fr' ? '✦ Générer le briefing' : '✦ Generate briefing'}
+            </PrimaryButton>
+          )}
+          {generatingBriefing && <AIProgress steps={briefingSteps} />}
+          {errorBlock}
         </div>
       )}
 
@@ -542,19 +587,28 @@ export default function DealDashboardPage() {
               → Briefing
             </SecondaryButton>
             <PrimaryButton onClick={() => router.push(`/deals/${dealId}/capture`)}>
-              → Capture
+              → {t('nav.capture')}
             </PrimaryButton>
           </div>
         </div>
       )}
 
       {isLatestRound && roundState === 'SCORED' && (
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1" />
-          <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
-            {generatingBriefing ? t('dashboard.generating') : locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1} →` : `✦ Create round ${deal.current_round + 1} briefing →`}
-          </PrimaryButton>
-          {error && <span className="text-sm text-rose-600">{error}</span>}
+        <div className="mb-6">
+          {!generatingBriefing && (
+            <div className="flex items-center gap-3">
+              <div className="flex-1" />
+              <PrimaryButton onClick={handleStartNextRound}>
+                {locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1} →` : `✦ Create round ${deal.current_round + 1} briefing →`}
+              </PrimaryButton>
+            </div>
+          )}
+          {generatingBriefing && (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+              <AIProgress steps={briefingSteps} />
+            </div>
+          )}
+          {errorBlock}
         </div>
       )}
 

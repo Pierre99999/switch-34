@@ -60,18 +60,25 @@ export default function NavBar() {
     </Link>
   )
 
-  const dealTab = (label: string, view: string, color: string) => {
+  const dealTab = (label: string, view: string, color: string, step?: number) => {
     const active = isActive(view)
     return (
       <Link
-        key={label}
+        key={view}
         href={dealHref(view)}
-        className={`px-3.5 py-1.5 text-[12px] font-medium tracking-wide rounded-full transition-all whitespace-nowrap ${
+        className={`flex items-center gap-1.5 px-3.5 py-1.5 text-[12px] font-medium tracking-wide rounded-full transition-all whitespace-nowrap ${
           active
             ? `text-white shadow-sm ${color}`
             : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100'
         }`}
       >
+        {step !== undefined && (
+          <span className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${
+            active ? 'bg-white/25 text-white' : 'bg-neutral-200 text-neutral-500'
+          }`}>
+            {step}
+          </span>
+        )}
         {label}
       </Link>
     )
@@ -104,11 +111,11 @@ export default function NavBar() {
           {dealId && (
             <>
               <div className="w-px h-5 bg-neutral-200 mx-2" />
-              {dealTab(prospectName ? `${t('nav.context')} ${prospectName}` : t('nav.context'), 'context', 'bg-cyan-600')}
-              {dealTab(t('nav.dashboard'), 'dashboard', 'bg-neutral-800')}
-              {dealTab(t('nav.briefing'), 'briefing', 'bg-orange-500')}
-              {dealTab(t('nav.capture'), 'capture', 'bg-violet-500')}
-              {dealTab(t('nav.zones'), 'zones', 'bg-emerald-600')}
+              {dealTab(prospectName ? `${t('nav.context')} ${prospectName}` : t('nav.context'), 'context', 'bg-cyan-600', 1)}
+              {dealTab(t('nav.dashboard'), 'dashboard', 'bg-neutral-800', 2)}
+              {dealTab(t('nav.briefing'), 'briefing', 'bg-orange-500', 3)}
+              {dealTab(t('nav.capture'), 'capture', 'bg-violet-500', 4)}
+              {dealTab(t('nav.zones'), 'zones', 'bg-emerald-600', 5)}
             </>
           )}
         </div>
@@ -152,11 +159,11 @@ export default function NavBar() {
             {dealId && (
               <>
                 <div className="h-px bg-neutral-200 my-2" />
-                {mobileItem(prospectName ? `${t('nav.context')} ${prospectName}` : t('nav.context'), dealHref('context'), isActive('context'), 'bg-cyan-600')}
-                {mobileItem(t('nav.dashboard'), dealHref('dashboard'), isActive('dashboard'), 'bg-neutral-800')}
-                {mobileItem(t('nav.briefing'), dealHref('briefing'), isActive('briefing'), 'bg-orange-500')}
-                {mobileItem(t('nav.capture'), dealHref('capture'), isActive('capture'), 'bg-violet-500')}
-                {mobileItem(t('nav.zones'), dealHref('zones'), isActive('zones'), 'bg-emerald-600')}
+                {mobileItem(`1 · ${prospectName ? `${t('nav.context')} ${prospectName}` : t('nav.context')}`, dealHref('context'), isActive('context'), 'bg-cyan-600')}
+                {mobileItem(`2 · ${t('nav.dashboard')}`, dealHref('dashboard'), isActive('dashboard'), 'bg-neutral-800')}
+                {mobileItem(`3 · ${t('nav.briefing')}`, dealHref('briefing'), isActive('briefing'), 'bg-orange-500')}
+                {mobileItem(`4 · ${t('nav.capture')}`, dealHref('capture'), isActive('capture'), 'bg-violet-500')}
+                {mobileItem(`5 · ${t('nav.zones')}`, dealHref('zones'), isActive('zones'), 'bg-emerald-600')}
               </>
             )}
             <div className="h-px bg-neutral-200 my-2" />

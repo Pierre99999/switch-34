@@ -5,12 +5,15 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type DealRound, type BriefingQuestion } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
+import AIProgress from '@/components/ui/AIProgress'
+import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n/context'
 
 export default function CapturePage() {
   const params = useParams()
   const router = useRouter()
   const { t, locale } = useI18n()
+  const { toast } = useToast()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
@@ -75,6 +78,7 @@ export default function CapturePage() {
     if (error) setError(error.message)
     else {
       await load()
+      toast(locale === 'fr' ? 'Notes sauvegardées' : 'Notes saved')
       fetch('/api/ai/update-boxes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,7 +197,7 @@ export default function CapturePage() {
             {t('capture.backToPipeline')}
           </button>
           <h1 className="text-2xl font-bold text-neutral-900">
-            Capture · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
+            {t('nav.capture')} · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
           </h1>
           <p className="text-sm text-neutral-500 mt-0.5">
             Round {selectedRound}
@@ -398,24 +402,44 @@ export default function CapturePage() {
         )}
       </div>
 
-      {/* Save + next action */}
-      {isLatestRound && hasBriefing && (
-        <div className="flex items-center gap-3 pt-4">
-          <button
-            onClick={handleSave}
-            disabled={saving || suggestingScores}
-            className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
-          >
-            {saving ? t('capture.saving') : t('capture.save')}
-          </button>
-          <button
-            onClick={handleAnalyze}
-            disabled={suggestingScores || saving}
-            className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
-          >
-            {suggestingScores ? t('capture.analyzing') : t('capture.analyze')}
-          </button>
-          {error && <span className="text-sm text-rose-600">{error}</span>}
+      {/* Analyze progress */}
+      {suggestingScores && (
+        <div className="mt-6 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
+          <AIProgress steps={[
+            t('ai.step.notes' as never),
+            t('ai.step.evidence' as never),
+            t('ai.step.scoring' as never),
+            t('ai.step.boxes' as never),
+          ]} />
+        </div>
+      )}
+
+      {/* Save + next action — sticky on mobile */}
+      {isLatestRound && hasBriefing && !suggestingScores && (
+        <div className="sticky bottom-0 -mx-4 sm:mx-0 mt-4 px-4 sm:px-0 py-3 sm:py-0 sm:pt-4 bg-neutral-50/95 backdrop-blur-sm sm:bg-transparent border-t border-neutral-200 sm:border-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
+            >
+              {saving ? t('capture.saving') : t('capture.save')}
+            </button>
+            <button
+              onClick={handleAnalyze}
+              disabled={saving}
+              className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
+            >
+              {t('capture.analyze')}
+            </button>
+          </div>
+          {error && (
+            <p className="text-sm text-rose-600 mt-2">
+              {error.toLowerCase().includes('credit') || error.includes('"type":"error"') || error.toLowerCase().includes('timed out')
+                ? t('common.aiUnavailable' as never)
+                : error}
+            </p>
+          )}
         </div>
       )}
     </div>
