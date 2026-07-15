@@ -9,7 +9,18 @@ const inputClass = "mt-1 w-full bg-white border border-neutral-200 rounded-xl px
 const btnPrimary = "flex-1 bg-blue-500 text-white py-2.5 text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
 const btnSecondary = "px-6 py-2.5 text-sm font-medium rounded-xl text-neutral-600 bg-white border border-neutral-200 hover:border-neutral-400 transition-all"
 
-type Contact = { name: string; title: string; linkedin: string }
+type ActorType = 'champion' | 'decision_maker' | 'user' | 'reviewer' | 'budget_guardian' | 'blocker' | 'unknown'
+type Contact = { name: string; title: string; linkedin: string; actor_types: ActorType[] }
+
+// Selectable roles (unknown is the implicit default when none is chosen).
+const ACTOR_KEYS: { value: ActorType; key: string }[] = [
+  { value: 'decision_maker', key: 'context.decisionMaker' },
+  { value: 'champion', key: 'context.champion' },
+  { value: 'reviewer', key: 'context.reviewer' },
+  { value: 'budget_guardian', key: 'context.budgetGuardian' },
+  { value: 'user', key: 'context.endUser' },
+  { value: 'blocker', key: 'context.blocker' },
+]
 
 export default function NewDealPage() {
   const router = useRouter()
@@ -65,7 +76,7 @@ export default function NewDealPage() {
   const [fetchedDimensions, setFetchedDimensions] = useState<Record<string, unknown> | null>(null)
 
   // Step 2: Contacts
-  const [contacts, setContacts] = useState<Contact[]>([{ name: '', title: '', linkedin: '' }])
+  const [contacts, setContacts] = useState<Contact[]>([{ name: '', title: '', linkedin: '', actor_types: [] }])
 
   // Step 3: Revenue
   const [potentialRevenue, setPotentialRevenue] = useState('')
@@ -98,11 +109,16 @@ export default function NewDealPage() {
   }
 
   // ── Contact helpers ──
-  function updateContact(i: number, field: keyof Contact, val: string) {
+  function updateContact(i: number, field: 'name' | 'title' | 'linkedin', val: string) {
     setContacts(cs => cs.map((c, idx) => idx === i ? { ...c, [field]: val } : c))
   }
+  function toggleRole(i: number, role: ActorType) {
+    setContacts(cs => cs.map((c, idx) => idx === i
+      ? { ...c, actor_types: c.actor_types.includes(role) ? c.actor_types.filter(r => r !== role) : [...c.actor_types, role] }
+      : c))
+  }
   function addContact() {
-    setContacts(cs => [...cs, { name: '', title: '', linkedin: '' }])
+    setContacts(cs => [...cs, { name: '', title: '', linkedin: '', actor_types: [] }])
   }
   function removeContact(i: number) {
     if (contacts.length <= 1) return
@@ -143,7 +159,8 @@ export default function NewDealPage() {
           deal_id: deal.id,
           name: c.name,
           role: c.title || null,
-          actor_type: 'unknown' as const,
+          actor_type: c.actor_types[0] ?? 'unknown',
+          actor_types: c.actor_types.length ? c.actor_types : ['unknown'],
           notes: null,
         }))
       )
@@ -288,6 +305,26 @@ export default function NewDealPage() {
                   <div>
                     <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.contactTitle')}</label>
                     <input type="text" value={c.title} onChange={e => updateContact(i, 'title', e.target.value)} placeholder="VP Operations" className={inputClass} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.contactRole')}</label>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {ACTOR_KEYS.map(a => {
+                      const on = c.actor_types.includes(a.value)
+                      return (
+                        <button
+                          key={a.value}
+                          type="button"
+                          onClick={() => toggleRole(i, a.value)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                            on ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                          }`}
+                        >
+                          {t(a.key as never)}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>

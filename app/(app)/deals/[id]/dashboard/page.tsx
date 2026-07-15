@@ -333,13 +333,6 @@ function PrimaryButton({ onClick, disabled, children }: { onClick: () => void; d
   )
 }
 
-function SecondaryButton({ onClick, disabled, children }: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) {
-  return (
-    <button onClick={onClick} disabled={disabled} className="px-5 py-2.5 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all">
-      {children}
-    </button>
-  )
-}
 
 // ── Page ─────────────────────────────────────────────────────
 
@@ -606,12 +599,9 @@ export default function DealDashboardPage() {
                 <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">{locale === 'fr' ? `Briefing du round ${deal.current_round} prêt` : `Round ${deal.current_round} briefing ready`}</span>
               </div>
               <p className="text-sm text-neutral-600 mb-3">
-                {locale === 'fr' ? 'Menez la conversation, puis capturez les réponses pour clôturer le round.' : 'Run the conversation, then capture the answers to close the round.'}
+                {locale === 'fr' ? 'Consultez le briefing, menez la conversation, puis capturez les réponses.' : 'Review the briefing, run the conversation, then capture the answers.'}
               </p>
-              <div className="flex gap-3">
-                <SecondaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>→ Briefing</SecondaryButton>
-                <PrimaryButton onClick={() => router.push(`/deals/${dealId}/capture`)}>→ {t('nav.capture')}</PrimaryButton>
-              </div>
+              <PrimaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>→ Briefing</PrimaryButton>
             </div>
           )}
           {!generatingBriefing && !round1Briefed && (
@@ -682,15 +672,12 @@ export default function DealDashboardPage() {
               <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">{locale === 'fr' ? 'Briefing prêt' : 'Briefing ready'}</span>
             </div>
             <p className="text-sm text-neutral-600">
-              {locale === 'fr' ? 'Allez en conversation, puis capturez les réponses.' : 'Go into the conversation, then capture the responses.'}
+              {locale === 'fr' ? 'Consultez le briefing, puis menez la conversation.' : 'Review the briefing, then run the conversation.'}
             </p>
           </div>
-          <div className="flex gap-3 flex-shrink-0 ml-6">
-            <SecondaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>
+          <div className="flex-shrink-0 ml-6">
+            <PrimaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>
               → Briefing
-            </SecondaryButton>
-            <PrimaryButton onClick={() => router.push(`/deals/${dealId}/capture`)}>
-              → {t('nav.capture')}
             </PrimaryButton>
           </div>
         </div>

@@ -27,17 +27,20 @@ export async function POST(req: NextRequest) {
     supabase.from('deal_rounds').select('*').eq('id', roundId).single(),
     supabase.from('vendors').select('*').eq('user_id', user.id).single(),
     supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
-    supabase.from('deal_stakeholders').select('name, role, actor_type').eq('deal_id', dealId),
+    supabase.from('deal_stakeholders').select('name, role, actor_type, actor_types').eq('deal_id', dealId),
   ])
 
   if (!deal || !round || !vendor) return NextResponse.json({ error: 'Data not found' }, { status: 404 })
 
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
 
-  // Map known stakeholders to canonical roles so the AI can attach the right voice.
+  // Map known stakeholders to canonical roles so the AI can attach the right
+  // voice. A person can wear several hats — list them all so the AI picks the
+  // one that fits each statement.
   const stakeholderList = (stakeholders ?? []).map(s => {
-    const role = ACTOR_TYPE_TO_ROLE[s.actor_type ?? 'unknown'] ?? 'unknown'
-    return `- ${s.name}${s.role ? ` (${s.role})` : ''} → role: ${role}`
+    const types = (s.actor_types && s.actor_types.length ? s.actor_types : [s.actor_type ?? 'unknown']) as string[]
+    const roles = [...new Set(types.map(t => ACTOR_TYPE_TO_ROLE[t] ?? 'unknown'))]
+    return `- ${s.name}${s.role ? ` (${s.role})` : ''} → roles: ${roles.join(', ')}`
   }).join('\n') || '(no stakeholders mapped yet — use role "unknown" when the speaker is unqualified)'
 
   const suggestionProperties: Record<string, unknown> = {}
@@ -92,7 +95,7 @@ SIGNAL S — the score you give is the raw SIGNAL (0-5): is what was said favora
   5 = explicit and precise · 4 = favorable and concrete · 3 = favorable but vague/partial · 2 = ambiguous/contradictory · 1 = unfavorable · 0 = nothing.
 
 VOICE ATTRIBUTION — for every criterion you score, list the DECLARATIONS: who said what.
-- Attribute each statement to a person and their canonical role from the stakeholder map below.
+- Attribute each statement to a person and their canonical role from the stakeholder map below. A person may have several roles — pick the ONE that fits the statement (e.g. use "gardien_du_budget" when they speak about budget, "utilisateur" when they speak about daily use).
 - Set "stance" from the deal's point of view: pour (favorable), contre (unfavorable), neutre. Use "contre" ONLY for explicit doubt/opposition/unfavorable facts — a positive alignment statement is "pour". A moderate score does not make a statement "contre".
 - Set "quantified": true only when the statement is backed by hard data (amounts, dates, volumes, contracts).
 - Set "owner": true only on self-referential criteria (personal_pain_linkage, credibility_perception) when the person speaks about their own pain or their own perception.

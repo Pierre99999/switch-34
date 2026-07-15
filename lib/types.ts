@@ -281,6 +281,7 @@ export type Stakeholder = {
   name: string
   role: string | null
   actor_type: 'champion' | 'decision_maker' | 'user' | 'reviewer' | 'budget_guardian' | 'blocker' | 'unknown'
+  actor_types: string[] | null
   notes: string | null
   first_seen_round: number | null
   created_at: string

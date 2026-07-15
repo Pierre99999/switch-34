@@ -111,7 +111,12 @@ export default function NavBar() {
           {dealId && (
             <>
               <div className="w-px h-5 bg-neutral-200 mx-2" />
-              {dealTab(prospectName ? `${t('nav.context')} ${prospectName}` : t('nav.context'), 'context', 'bg-cyan-600', 1)}
+              {prospectName && (
+                <span className="mr-2 px-2.5 py-1 rounded-lg bg-neutral-100 text-sm font-semibold text-neutral-800 max-w-[160px] truncate" title={prospectName}>
+                  {prospectName}
+                </span>
+              )}
+              {dealTab(t('nav.context'), 'context', 'bg-cyan-600', 1)}
               {dealTab(t('nav.dashboard'), 'dashboard', 'bg-neutral-800', 2)}
               {dealTab(t('nav.briefing'), 'briefing', 'bg-orange-500', 3)}
               {dealTab(t('nav.capture'), 'capture', 'bg-violet-500', 4)}
@@ -159,7 +164,10 @@ export default function NavBar() {
             {dealId && (
               <>
                 <div className="h-px bg-neutral-200 my-2" />
-                {mobileItem(`1 · ${prospectName ? `${t('nav.context')} ${prospectName}` : t('nav.context')}`, dealHref('context'), isActive('context'), 'bg-cyan-600')}
+                {prospectName && (
+                  <div className="px-4 py-1.5 text-sm font-semibold text-neutral-800">{prospectName}</div>
+                )}
+                {mobileItem(`1 · ${t('nav.context')}`, dealHref('context'), isActive('context'), 'bg-cyan-600')}
                 {mobileItem(`2 · ${t('nav.dashboard')}`, dealHref('dashboard'), isActive('dashboard'), 'bg-neutral-800')}
                 {mobileItem(`3 · ${t('nav.briefing')}`, dealHref('briefing'), isActive('briefing'), 'bg-orange-500')}
                 {mobileItem(`4 · ${t('nav.capture')}`, dealHref('capture'), isActive('capture'), 'bg-violet-500')}
