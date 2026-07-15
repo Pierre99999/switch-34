@@ -109,7 +109,7 @@ export function buildVoiceContext(round: DealRound): string {
   const prescriptions: string[] = []
   for (const [variable, decls] of Object.entries(declarations)) {
     const r = evidenceFromDeclarations(variable, decls as unknown as Parameters<typeof evidenceFromDeclarations>[1])
-    for (const a of r.alarms) alarms.push(a)
+    for (const a of r.alarms) alarms.push(`${a.role} voices doubt on ${VARIABLE_LABELS[a.variable] ?? a.variable}`)
     for (const p of r.prescriptions) prescriptions.push(p)
   }
   if (alarms.length === 0 && prescriptions.length === 0) return ''

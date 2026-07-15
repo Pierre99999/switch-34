@@ -44,13 +44,13 @@ test('C4: heavy contradiction forces declared + S<=2 + arbitration', () => {
   assert.equal(r.contradiction, true)
   assert.equal(r.level, 'declared')
   assert.equal(r.forceMaxSignal, 2)
-  assert.ok(r.prescriptions.some(p => p.startsWith('Contradiction sur')))
+  assert.ok(r.prescriptions.some(p => p.startsWith('Contradiction on')))
 })
 
 // C5 — an unfavorable champion raises an alarm.
 test('C5: unfavorable champion raises an alarm', () => {
   const r = evidenceFromDeclarations('impact', [d({ role: 'champion', stance: 'contre', contact: 'C' })])
-  assert.ok(r.alarms.some(a => a.startsWith("Signal d'alarme")))
+  assert.ok(r.alarms.some(a => a.role === 'champion' && a.variable === 'impact'))
 })
 
 // C6 — two declarations from the same person → only the most recent counts.
@@ -67,7 +67,7 @@ test('C6: same person twice counts once (most recent)', () => {
 test('C7: unknown role → 0.4 and qualification prescription', () => {
   const r = evidenceFromDeclarations('urgency', [d({ role: 'unknown', contact: 'X' })])
   assert.equal(r.breakdown[0].weight, 0.4)
-  assert.ok(r.prescriptions.some(p => p.includes('Qualifier le rôle de X')))
+  assert.ok(r.prescriptions.some(p => p.includes('Qualify the role of X')))
 })
 
 // C8 — any quantified declaration → CHIFFRÉ regardless of the credit.

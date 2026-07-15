@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
             properties: {
               contact: { type: 'string', description: 'Name of the person who said it (as it appears in the notes/stakeholders). Empty if truly unknown.' },
               role: { type: 'string', enum: ROLES, description: 'Canonical role of the speaker, taken from the stakeholder map. Use "unknown" if the speaker is not qualified.' },
-              stance: { type: 'string', enum: ['pour', 'contre', 'neutre'], description: 'Is the statement favorable (pour), unfavorable (contre) or neutral to the deal on THIS criterion?' },
+              stance: { type: 'string', enum: ['pour', 'contre', 'neutre'], description: 'Stance toward the deal on THIS criterion. "contre" ONLY if the person explicitly expresses doubt, opposition, or an unfavorable fact. A statement of alignment, fit, or a positive fact is "pour", never "contre". If purely factual/ambiguous, use "neutre". Do not mark "contre" just because the score is moderate.' },
               owner: { type: 'boolean', description: 'True only for self-referential criteria (personal pain, own perception) when the speaker talks about themselves.' },
               quantified: { type: 'boolean', description: 'True if backed by hard data: amounts, dates, volumes, contracts, metrics.' },
               text: { type: 'string', description: 'Short quote or paraphrase of what this person said.' },
@@ -93,7 +93,7 @@ SIGNAL S — the score you give is the raw SIGNAL (0-5): is what was said favora
 
 VOICE ATTRIBUTION — for every criterion you score, list the DECLARATIONS: who said what.
 - Attribute each statement to a person and their canonical role from the stakeholder map below.
-- Set "stance" from the deal's point of view: pour (favorable), contre (unfavorable), neutre.
+- Set "stance" from the deal's point of view: pour (favorable), contre (unfavorable), neutre. Use "contre" ONLY for explicit doubt/opposition/unfavorable facts — a positive alignment statement is "pour". A moderate score does not make a statement "contre".
 - Set "quantified": true only when the statement is backed by hard data (amounts, dates, volumes, contracts).
 - Set "owner": true only on self-referential criteria (personal_pain_linkage, credibility_perception) when the person speaks about their own pain or their own perception.
 - Do NOT compute the evidence level yourself — the engine derives it from the declarations. Just report who said what, honestly.
@@ -142,7 +142,7 @@ RULES:
     declarations: Declaration[]
     rationale: string
   }> = {}
-  const alarms: string[] = []
+  const alarms: { role: string; variable: string }[] = []
   const prescriptions: string[] = []
 
   for (const [variable, suggestion] of Object.entries(raw)) {

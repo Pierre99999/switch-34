@@ -216,7 +216,13 @@ function LayerCard({
 
   // Voice-credit alarms across this card's criteria (advocate voicing doubt).
   const allDeclarations = (round?.declarations ?? {}) as Record<string, Declaration[]>
-  const cardAlarms = vars.flatMap(v => evidenceFromDeclarations(v, allDeclarations[v]).alarms)
+  const cardAlarms = vars.flatMap(v => evidenceFromDeclarations(v, allDeclarations[v]).alarms).map(a => {
+    const roleLabel = t(`voiceRole.${a.role}` as never)
+    const varLabel = t(`var.${a.variable}` as never)
+    return locale === 'fr'
+      ? `Signal d'alarme — ${roleLabel} exprime un doute sur ${varLabel}.`
+      : `Alarm signal — ${roleLabel} voices doubt on ${varLabel}.`
+  })
 
   const score = isMomentum ? momentum?.score ?? null : gate?.score ?? null
   const status = round === null ? 'EMPTY' : isMomentum ? (momentum?.status ?? 'EN_OBSERVATION') : (gate?.status ?? 'EMPTY')
@@ -524,9 +530,11 @@ export default function DealDashboardPage() {
   const hasBriefing = !!(currentRoundData?.briefing_line)
   const hasCapture = currentRoundData !== null && (() => {
     const notes = currentRoundData.capture_notes as Record<string, string> | null
-    return notes && Object.keys(notes).some(k => k !== '__free__' && notes[k]?.trim())
+    // Any capture content counts, including the free note and transcript imports.
+    return !!notes && Object.values(notes).some(v => typeof v === 'string' && v.trim())
   })()
-  const roundState = !hasBriefing ? 'UNSTARTED' : !hasCapture ? 'BRIEFED' : 'SCORED'
+  // A round is SCORED once it has capture content OR any score written.
+  const roundState = !hasBriefing ? 'UNSTARTED' : (hasCapture || hasAnyScore) ? 'SCORED' : 'BRIEFED'
   const dealState = computeDealState(rounds, selectedRound)
 
   // On the Départ view: is round 1 already briefed but not yet captured?

@@ -37,19 +37,23 @@ export type VoiceResult = {
   credit: number
   contradiction: boolean
   forceMaxSignal: number | null // 2 when heavy voices contradict
-  alarms: string[]              // "Signal d'alarme — {role} exprime un doute sur {var}."
-  prescriptions: string[]       // arbitration, role qualification
+  alarms: VoiceAlarm[]          // an advocate voiced doubt — formatted by the UI in its locale
+  prescriptions: string[]       // arbitration, role qualification (English — feeds the AI)
   breakdown: VoiceBreakdown[]
 }
 
-const ROLE_LABELS_FR: Record<ActorRole, string> = {
-  decideur: 'Décideur',
+// Structured so the UI can render it in the viewer's language with a
+// translated criterion label (the engine stays locale-agnostic).
+export type VoiceAlarm = { role: ActorRole; variable: string }
+
+const ROLE_LABELS_EN: Record<ActorRole, string> = {
+  decideur: 'Decision maker',
   champion: 'Champion',
-  acheteur_technique: 'Décideur technique',
-  gardien_du_budget: 'Gardien du budget',
-  utilisateur: 'Utilisateur',
-  bloqueur: 'Bloqueur',
-  unknown: 'Rôle inconnu',
+  acheteur_technique: 'Technical decider',
+  gardien_du_budget: 'Budget guardian',
+  utilisateur: 'End user',
+  bloqueur: 'Blocker',
+  unknown: 'Unknown role',
 }
 
 // Keep the single most recent declaration per person (§2.3).
@@ -70,7 +74,7 @@ export function evidenceFromDeclarations(variable: string, rawDecls: Declaration
   if (!rawDecls || rawDecls.length === 0) return empty
 
   const decls = dedupeByPerson(rawDecls)
-  const alarms: string[] = []
+  const alarms: VoiceAlarm[] = []
   const prescriptions: string[] = []
   const breakdown: VoiceBreakdown[] = []
   const quantified = decls.some(d => d.quantified)
@@ -80,6 +84,11 @@ export function evidenceFromDeclarations(variable: string, rawDecls: Declaration
   let neutreCredit = 0
   let proHeavy = false
   let conHeavy = false
+
+  // Advocate-doubt alarms are collected then filtered: we only keep them if the
+  // doubt is real (not drowned by favorable evidence), to avoid false positives
+  // from a mis-classified "contre" on an otherwise positive criterion.
+  const alarmCandidates: VoiceAlarm[] = []
 
   for (const d of decls) {
     const base = voiceWeight(variable, d.role, d.owner)
@@ -91,12 +100,12 @@ export function evidenceFromDeclarations(variable: string, rawDecls: Declaration
       w = Math.min(base * 1.5, 1.5)
       amplified = true
     }
-    // §2.2 symmetric negative: an advocate voicing doubt is an alarm.
+    // §2.2 symmetric negative: an advocate voicing doubt is a candidate alarm.
     if (d.stance === 'contre' && ADVOCATE_ROLES.has(d.role)) {
-      alarms.push(`Signal d'alarme — ${ROLE_LABELS_FR[d.role]} exprime un doute sur ${variable}.`)
+      alarmCandidates.push({ role: d.role, variable })
     }
     if (d.role === 'unknown' && d.contact) {
-      prescriptions.push(`Qualifier le rôle de ${d.contact}.`)
+      prescriptions.push(`Qualify the role of ${d.contact}.`)
     }
     breakdown.push({ contact: d.contact, role: d.role, stance: d.stance, weight: Math.round(w * 100) / 100, amplified })
 
@@ -105,10 +114,14 @@ export function evidenceFromDeclarations(variable: string, rawDecls: Declaration
     else neutreCredit += w
   }
 
+  // Keep alarms only when the doubt is at least as strong as the support —
+  // otherwise a lone contre voice amid clearly favorable evidence is noise.
+  if (conCredit >= proCredit) alarms.push(...alarmCandidates)
+
   // §2.4 contradiction between heavy voices → ambiguous, capped at DÉCLARÉ.
   const contradiction = proHeavy && conHeavy
   if (contradiction) {
-    prescriptions.push(`Contradiction sur ${variable} — faire trancher par ${ROLE_LABELS_FR[ownerRole(variable) as ActorRole] ?? 'le propriétaire de la dimension'}.`)
+    prescriptions.push(`Contradiction on ${variable} — have ${ROLE_LABELS_EN[ownerRole(variable) as ActorRole] ?? 'the dimension owner'} arbitrate.`)
     return {
       level: quantified ? 'verified' : 'declared',
       credit: Math.max(proCredit, conCredit),
