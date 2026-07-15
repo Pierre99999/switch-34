@@ -84,11 +84,11 @@ The briefing should suggest at least one reformulation angle: a way to connect d
 
 Question generation rules:
 - Generate exactly 4 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
-- Generate exactly 2 OPPORTUNISTIC questions spread across higher layers (${opportunisticDesc}). Only if the conversation naturally opens there.
+- Generate exactly 2 OPPORTUNISTIC questions spread across higher layers (${opportunisticDesc}). They MUST target TWO DIFFERENT layers — never both on the same one. Only ask them if the conversation naturally opens there.
+- IMPORTANT — do not starve Layer 3 (Impact): whenever Layer 3 is one of the higher layers, ONE of the two opportunistic questions must target it (product capability, implementation feasibility, adoption reality, tangible impact, urgency resolution). Impact signals surface when the prospect volunteers them, and they must be captured — otherwise Gate 3 never gets scored.
 - Maximum 6 questions total. If you feel the urge to write more, cut the weakest ones.
 - Each question has ONE main question (open, natural) and 2–3 sub-questions (probes to go deeper on the same thread).
 - The intent explains what the main question is trying to establish — one sentence, for the seller's eyes only.
-- Opportunistic questions can target ANY higher layer — if you sense an opening for L4 signals (internal momentum, objections, process drag), go for it.
 - Questions must sound like a human conversation, never a form or an interrogation — the "invisible questionnaire" principle.
 - When urgency scores are weak, ALWAYS include a "cost of inaction" question: "What happens if nothing changes in 6 months?"
 - When Layer 1 is active, focus on discovering the GAP between symptoms and root causes (the five whys technique).
