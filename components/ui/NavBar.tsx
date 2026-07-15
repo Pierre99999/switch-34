@@ -11,7 +11,7 @@ import { useRole } from '@/lib/role-context'
 export default function NavBar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { t, locale, setLocale } = useI18n()
+  const { t } = useI18n()
   const { role } = useRole()
   const [prospectName, setProspectName] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -126,12 +126,6 @@ export default function NavBar() {
         </div>
         <div className="hidden md:flex items-center gap-3">
           <button
-            onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')}
-            className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-700 transition-colors uppercase tracking-wide"
-          >
-            {locale === 'fr' ? 'EN' : 'FR'}
-          </button>
-          <button
             onClick={handleSignOut}
             className="text-[11px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
           >
@@ -175,14 +169,6 @@ export default function NavBar() {
               </>
             )}
             <div className="h-px bg-neutral-200 my-2" />
-            <div className="flex items-center justify-end px-4 py-2">
-              <button
-                onClick={() => setLocale(locale === 'fr' ? 'en' : 'fr')}
-                className="text-xs font-semibold text-neutral-500 hover:text-neutral-800 uppercase tracking-wide"
-              >
-                {locale === 'fr' ? 'EN' : 'FR'}
-              </button>
-            </div>
             <button
               onClick={handleSignOut}
               className="w-full text-left px-4 py-3 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-lg"
