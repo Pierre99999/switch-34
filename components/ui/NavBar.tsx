@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n/context'
 import { useRole } from '@/lib/role-context'
+import { ADMIN_EMAIL } from '@/lib/admin-config'
 
 export default function NavBar() {
   const pathname = usePathname()
@@ -15,6 +16,14 @@ export default function NavBar() {
   const { role } = useRole()
   const [prospectName, setProspectName] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAdmin((user?.email ?? '').toLowerCase() === ADMIN_EMAIL)
+    })
+  }, [])
 
   const dealMatch = pathname.match(/\/deals\/([^/]+)/)
   const rawDealId = dealMatch?.[1]
@@ -108,6 +117,7 @@ export default function NavBar() {
           {tab(t('nav.pipeline'), '/pipeline', pathname === '/pipeline')}
           {tab(t('nav.profile'), '/profile', pathname === '/profile')}
           {role === 'director' && tab(t('nav.team'), '/team', pathname === '/team')}
+          {isAdmin && tab('Admin', '/admin', pathname === '/admin')}
           {dealId && (
             <>
               <div className="w-px h-5 bg-neutral-200 mx-2" />
@@ -155,6 +165,7 @@ export default function NavBar() {
             {mobileItem(t('nav.pipeline'), '/pipeline', pathname === '/pipeline')}
             {mobileItem(t('nav.profile'), '/profile', pathname === '/profile')}
             {role === 'director' && mobileItem(t('nav.team'), '/team', pathname === '/team')}
+            {isAdmin && mobileItem('Admin', '/admin', pathname === '/admin')}
             {dealId && (
               <>
                 <div className="h-px bg-neutral-200 my-2" />
