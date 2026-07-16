@@ -7,6 +7,7 @@ import { buildVendorContext, buildProspectContext, buildScoresContext, buildCapt
 import { type DealRound } from '@/lib/types'
 import { computeDealState } from '@/lib/scoring'
 import { localeInstruction } from '@/lib/ai-locale'
+import { recordUsage } from '@/lib/ai-usage'
 
 const client = new Anthropic()
 
@@ -72,7 +73,9 @@ export async function POST(req: NextRequest) {
       }],
     })
 
-    const toolUse = message.content.find(b => b.type === 'tool_use')
+    if (user) await recordUsage(supabase, { userId: user.id, route: 'ai/read', model: 'claude-sonnet-4-6', usage: message.usage, dealId: dealId })
+
+  const toolUse = message.content.find(b => b.type === 'tool_use')
     if (!toolUse || toolUse.type !== 'tool_use') {
       return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
     }

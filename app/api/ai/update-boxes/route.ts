@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
 import { localeInstruction } from '@/lib/ai-locale'
+import { recordUsage } from '@/lib/ai-usage'
 
 const client = new Anthropic()
 
@@ -127,6 +128,8 @@ Be concise: 1-3 sentences per entry. Return "" if nothing new to add. Do not hal
       content: `Update knowledge boxes for round ${round.round}.\n\n${context}`,
     }],
   })
+
+  if (user) await recordUsage(supabase, { userId: user.id, route: 'ai/update-boxes', model: 'claude-sonnet-4-6', usage: message.usage, dealId: dealId })
 
   const toolUse = message.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {

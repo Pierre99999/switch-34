@@ -12,15 +12,20 @@ type AdminUser = {
   role: string
   locale: string | null
   deals: number
+  tokens: number
+  costEur: number
   createdAt: string
   lastSignIn: string | null
 }
 
 type Stats = {
-  totals: { users: number; directors: number; sales: number; deals: number; rounds: number; briefedRounds: number; analyzedRounds: number }
+  totals: { users: number; directors: number; sales: number; deals: number; rounds: number; briefedRounds: number; analyzedRounds: number; inputTokens: number; outputTokens: number; costEur: number }
   dealsByStatus: Record<string, number>
   users: AdminUser[]
 }
+
+const fmtTokens = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : String(n)
+const fmtEur = (n: number) => `${n.toFixed(2)} €`
 
 function fmtDate(iso: string | null) {
   if (!iso) return '—'
@@ -81,16 +86,22 @@ export default function AdminPage() {
         {stat('Commerciaux', stats.totals.sales, 'text-violet-600')}
         {stat('Deals', stats.totals.deals, 'text-emerald-600')}
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
         {stat('Conversations analysées', stats.totals.analyzedRounds)}
         {stat('Briefings générés', stats.totals.briefedRounds)}
         {stat('Rounds totaux', stats.totals.rounds)}
         {stat('Deals gagnés', stats.dealsByStatus.won ?? 0, 'text-emerald-600')}
       </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        {stat('Tokens (entrée)', fmtTokens(stats.totals.inputTokens))}
+        {stat('Tokens (sortie)', fmtTokens(stats.totals.outputTokens))}
+        {stat('Coût IA total', fmtEur(stats.totals.costEur), 'text-rose-600')}
+        {stat('Coût / compte', fmtEur(stats.totals.users ? stats.totals.costEur / stats.totals.users : 0))}
+      </div>
 
       <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Comptes ({stats.users.length})</h2>
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[820px] text-sm">
+        <table className="w-full min-w-[1000px] text-sm">
           <thead>
             <tr className="border-b border-neutral-100 bg-neutral-50/50 text-left text-xs font-medium text-neutral-400 uppercase tracking-wide">
               <th className="px-4 py-3">Nom</th>
@@ -99,6 +110,8 @@ export default function AdminPage() {
               <th className="px-4 py-3">Rôle</th>
               <th className="px-4 py-3">Langue</th>
               <th className="px-4 py-3 text-right">Deals</th>
+              <th className="px-4 py-3 text-right">Tokens</th>
+              <th className="px-4 py-3 text-right">Coût IA</th>
               <th className="px-4 py-3">Créé le</th>
               <th className="px-4 py-3">Dernière connexion</th>
             </tr>
@@ -116,6 +129,8 @@ export default function AdminPage() {
                 </td>
                 <td className="px-4 py-3 text-neutral-500 uppercase">{u.locale ?? '—'}</td>
                 <td className="px-4 py-3 text-right font-semibold text-neutral-700">{u.deals}</td>
+                <td className="px-4 py-3 text-right text-neutral-600">{fmtTokens(u.tokens)}</td>
+                <td className="px-4 py-3 text-right font-medium text-rose-600">{fmtEur(u.costEur)}</td>
                 <td className="px-4 py-3 text-neutral-500">{fmtDate(u.createdAt)}</td>
                 <td className="px-4 py-3 text-neutral-500">{fmtDate(u.lastSignIn)}</td>
               </tr>

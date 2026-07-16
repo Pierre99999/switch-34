@@ -8,6 +8,7 @@ import { LAYER_VARIABLES, VARIABLE_LABELS, type EvidenceLevel } from '@/lib/type
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
 import { ACTOR_TYPE_TO_ROLE, type ActorRole } from '@/lib/voice-weights'
 import { localeInstruction } from '@/lib/ai-locale'
+import { recordUsage } from '@/lib/ai-usage'
 
 const client = new Anthropic()
 
@@ -130,6 +131,8 @@ RULES:
       content: `Review the capture notes from round ${round.round}, score the criteria, and attribute each statement.\n\nVariables:\n${variableList}\n\n${context}`,
     }],
   })
+
+  if (user) await recordUsage(supabase, { userId: user.id, route: 'ai/suggest-scores', model: 'claude-sonnet-4-6', usage: message.usage, dealId: dealId })
 
   const toolUse = message.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {

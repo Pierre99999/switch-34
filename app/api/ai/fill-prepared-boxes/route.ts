@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext } from '@/lib/ai-context'
 import { localeInstruction } from '@/lib/ai-locale'
+import { recordUsage } from '@/lib/ai-usage'
 
 const client = new Anthropic()
 
@@ -71,6 +72,8 @@ Ground every box in the prospect context below — tailor it to this company, no
       content: `Fill the three preparation boxes for this specific prospect, combining the seller's self-knowledge with the prospect context just captured during onboarding.\n\n${context}`,
     }],
   })
+
+  if (user) await recordUsage(supabase, { userId: user.id, route: 'ai/fill-prepared-boxes', model: 'claude-sonnet-4-6', usage: message.usage, dealId: dealId })
 
   const toolUse = message.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {
