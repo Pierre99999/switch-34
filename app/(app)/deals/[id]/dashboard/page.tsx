@@ -15,7 +15,6 @@ import {
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import AIProgress from '@/components/ui/AIProgress'
-import { useToast } from '@/components/ui/Toast'
 import { useI18n } from '@/lib/i18n/context'
 
 // Map raw API/AI errors to a human message; keep the technical detail separate.
@@ -352,7 +351,6 @@ export default function DealDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
-  const { toast } = useToast()
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
 
@@ -427,14 +425,11 @@ export default function DealDashboardPage() {
     setSaving(false)
   }
 
-  async function handleGenerateBriefing(roundId: string, opts?: { stay?: boolean }) {
+  async function handleGenerateBriefing(roundId: string) {
     setGeneratingBriefing(true)
     setError(null)
     try {
-      // "stay" = regenerate just the situational read (fast); otherwise
-      // generate the full pre-conversation briefing and go to it.
-      const endpoint = opts?.stay ? '/api/ai/read' : '/api/ai/briefing'
-      const res = await fetch(endpoint, {
+      const res = await fetch('/api/ai/briefing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealId, roundId, locale }),
@@ -443,13 +438,7 @@ export default function DealDashboardPage() {
       let data: { error?: string; briefing?: unknown }
       try { data = JSON.parse(text) } catch { throw new Error(`[${res.status}] ${text.slice(0, 300)}`) }
       if (data.error) throw new Error(data.error)
-      if (opts?.stay) {
-        await load()
-        setGeneratingBriefing(false)
-        toast(locale === 'fr' ? 'Lecture régénérée' : 'Read regenerated')
-      } else {
-        router.push(`/deals/${dealId}/briefing`)
-      }
+      router.push(`/deals/${dealId}/briefing`)
     } catch (e) {
       const raw = e instanceof Error ? e.message : 'Failed to generate briefing'
       const { message, detail } = humanizeError(raw, t as (k: never) => string)
@@ -617,21 +606,9 @@ export default function DealDashboardPage() {
       {/* ── The Read — only once the round is captured (post-conversation read) ── */}
       {selectedRound !== 0 && currentRoundData?.briefing_read && hasCapture && (
         <div className="mb-6 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-1 h-6 rounded-full bg-neutral-400" />
-              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('briefing.theRead')}</span>
-            </div>
-            {isLatestRound && (
-              <button
-                onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id, { stay: true })}
-                disabled={generatingBriefing}
-                className="text-xs font-medium text-blue-500 hover:text-blue-600 disabled:opacity-40 transition-colors"
-                title={locale === 'fr' ? 'Régénérer la lecture avec les scores actuels' : 'Regenerate the read with current scores'}
-              >
-                {generatingBriefing ? (locale === 'fr' ? 'Régénération…' : 'Regenerating…') : (locale === 'fr' ? '↻ Régénérer' : '↻ Regenerate')}
-              </button>
-            )}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-1 h-6 rounded-full bg-neutral-400" />
+            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{t('briefing.theRead')}</span>
           </div>
           <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{currentRoundData.briefing_read}</p>
         </div>
