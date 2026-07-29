@@ -24,9 +24,9 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // Public routes — the landing page and auth screens.
-  if (pathname === '/' || pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-    if (user && pathname !== '/') return NextResponse.redirect(new URL('/pipeline', request.url))
+  // Public routes
+  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
+    if (user) return NextResponse.redirect(new URL('/pipeline', request.url))
     return supabaseResponse
   }
 
