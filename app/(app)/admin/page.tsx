@@ -63,6 +63,7 @@ export default function AdminPage() {
   const [selfId, setSelfId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus | 'all'>('all')
 
   const loadStats = useCallback(async () => {
     const res = await fetch('/api/admin/stats')
@@ -122,6 +123,10 @@ export default function AdminPage() {
   )
   if (!stats) return null
 
+  const visibleFeedback = feedbackFilter === 'all'
+    ? stats.feedback
+    : stats.feedback.filter(f => f.status === feedbackFilter)
+
   const stat = (label: string, value: number | string, accent = 'text-neutral-900') => (
     <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
       <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide mb-1">{label}</div>
@@ -162,8 +167,31 @@ export default function AdminPage() {
       {stats.feedback.length > 0 && (
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Retours des testeurs ({stats.feedback.length})</h2>
+
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {([['all', 'Tout'], ...FEEDBACK_STATUSES.map(st => [st.value, st.label] as const)] as [FeedbackStatus | 'all', string][]).map(([value, label]) => {
+              const count = value === 'all' ? stats.feedback.length : stats.feedback.filter(f => f.status === value).length
+              const active = feedbackFilter === value
+              return (
+                <button
+                  key={value}
+                  onClick={() => setFeedbackFilter(value)}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
+                    active ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                  }`}
+                >
+                  {label} <span className={active ? 'opacity-70' : 'text-neutral-400'}>{count}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {visibleFeedback.length === 0 && (
+            <p className="text-sm text-neutral-400 mb-4">Aucun retour dans cette catégorie.</p>
+          )}
+
           <div className="space-y-3">
-            {stats.feedback.map((f, i) => (
+            {visibleFeedback.map((f, i) => (
               <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <span className="text-base">{f.sentiment === 'positive' ? '👍' : f.sentiment === 'negative' ? '👎' : '💬'}</span>
