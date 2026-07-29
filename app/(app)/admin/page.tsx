@@ -64,6 +64,7 @@ export default function AdminPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus | 'all'>('all')
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const loadStats = useCallback(async () => {
     const res = await fetch('/api/admin/stats')
@@ -99,15 +100,16 @@ export default function AdminPage() {
 
   async function handleDelete(userId: string) {
     setDeletingId(userId)
+    setActionError(null)
     const res = await fetch('/api/admin/delete-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId }),
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     setDeletingId(null)
     setConfirmId(null)
-    if (!res.ok) { setError(data.error ?? 'Suppression impossible'); return }
+    if (!res.ok) { setActionError(data.error ?? `Suppression impossible (${res.status})`); return }
     await loadStats()
   }
 
@@ -218,6 +220,11 @@ export default function AdminPage() {
       )}
 
       <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Comptes ({stats.users.length})</h2>
+      {actionError && (
+        <div className="mb-3 px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
+          {actionError}
+        </div>
+      )}
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
         <table className="w-full min-w-[1100px] text-sm">
           <thead>
