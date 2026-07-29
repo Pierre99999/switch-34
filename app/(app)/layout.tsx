@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NavBar from '@/components/ui/NavBar'
 import ToastProvider from '@/components/ui/Toast'
+import FeedbackWidget from '@/components/ui/FeedbackWidget'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -23,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen bg-neutral-50">
         <NavBar />
         <main>{children}</main>
+        <FeedbackWidget />
       </div>
     </ToastProvider>
   )

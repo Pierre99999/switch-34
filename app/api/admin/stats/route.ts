@@ -18,12 +18,13 @@ export async function GET() {
     return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY is not configured on the server.' }, { status: 500 })
   }
 
-  // All vendors (one per user), all deals, all rounds, all AI usage.
-  const [{ data: vendors }, { data: deals }, { data: rounds }, { data: usage }] = await Promise.all([
+  // All vendors (one per user), all deals, all rounds, all AI usage, feedback.
+  const [{ data: vendors }, { data: deals }, { data: rounds }, { data: usage }, { data: feedbackRows }] = await Promise.all([
     admin.from('vendors').select('user_id, full_name, company_name, role, locale, created_at'),
     admin.from('deals').select('id, user_id, prospect_name, status, current_round, created_at'),
     admin.from('deal_rounds').select('id, deal_id, briefing_line, capture_notes'),
     admin.from('ai_usage').select('user_id, model, input_tokens, output_tokens'),
+    admin.from('feedback').select('user_id, sentiment, message, page, created_at').order('created_at', { ascending: false }).limit(200),
   ])
 
   // Aggregate tokens and euro cost per user.
@@ -78,6 +79,16 @@ export async function GET() {
   const dealsByStatus: Record<string, number> = {}
   for (const d of deals ?? []) dealsByStatus[d.status ?? 'active'] = (dealsByStatus[d.status ?? 'active'] ?? 0) + 1
 
+  // Feedback, resolved to a readable author.
+  const nameById = new Map((vendors ?? []).map(v => [v.user_id, v.full_name as string | null]))
+  const feedback = (feedbackRows ?? []).map(f => ({
+    author: nameById.get(f.user_id) || emailById.get(f.user_id) || '—',
+    sentiment: f.sentiment ?? 'neutral',
+    message: f.message,
+    page: f.page ?? null,
+    createdAt: f.created_at,
+  }))
+
   return NextResponse.json({
     totals: {
       users: users.length,
@@ -90,8 +101,12 @@ export async function GET() {
       inputTokens: totalIn,
       outputTokens: totalOut,
       costEur: totalCost,
+      feedback: feedback.length,
+      feedbackPositive: feedback.filter(f => f.sentiment === 'positive').length,
+      feedbackNegative: feedback.filter(f => f.sentiment === 'negative').length,
     },
     dealsByStatus,
     users,
+    feedback,
   })
 }

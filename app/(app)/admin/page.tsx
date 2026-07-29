@@ -18,10 +18,19 @@ type AdminUser = {
   lastSignIn: string | null
 }
 
+type Feedback = {
+  author: string
+  sentiment: 'positive' | 'negative' | 'neutral'
+  message: string
+  page: string | null
+  createdAt: string
+}
+
 type Stats = {
-  totals: { users: number; directors: number; sales: number; deals: number; rounds: number; briefedRounds: number; analyzedRounds: number; inputTokens: number; outputTokens: number; costEur: number }
+  totals: { users: number; directors: number; sales: number; deals: number; rounds: number; briefedRounds: number; analyzedRounds: number; inputTokens: number; outputTokens: number; costEur: number; feedback: number; feedbackPositive: number; feedbackNegative: number }
   dealsByStatus: Record<string, number>
   users: AdminUser[]
+  feedback: Feedback[]
 }
 
 const fmtTokens = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : String(n)
@@ -98,6 +107,31 @@ export default function AdminPage() {
         {stat('Coût IA total', fmtEur(stats.totals.costEur), 'text-rose-600')}
         {stat('Coût / compte', fmtEur(stats.totals.users ? stats.totals.costEur / stats.totals.users : 0))}
       </div>
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
+        {stat('Retours', stats.totals.feedback)}
+        {stat('👍 Positifs', stats.totals.feedbackPositive, 'text-emerald-600')}
+        {stat('👎 Négatifs', stats.totals.feedbackNegative, 'text-rose-600')}
+      </div>
+
+      {/* Feedback */}
+      {stats.feedback.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Retours des testeurs ({stats.feedback.length})</h2>
+          <div className="space-y-3">
+            {stats.feedback.map((f, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="text-base">{f.sentiment === 'positive' ? '👍' : f.sentiment === 'negative' ? '👎' : '💬'}</span>
+                  <span className="text-sm font-semibold text-neutral-800">{f.author}</span>
+                  {f.page && <span className="text-[11px] text-neutral-400 bg-neutral-100 rounded px-1.5 py-0.5 font-mono">{f.page}</span>}
+                  <span className="text-xs text-neutral-400 ml-auto">{fmtDate(f.createdAt)}</span>
+                </div>
+                <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{f.message}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Comptes ({stats.users.length})</h2>
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">

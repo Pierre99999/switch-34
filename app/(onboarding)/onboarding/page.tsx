@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
+import { useRole } from '@/lib/role-context'
 
 const inputClass = "mt-1 w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 placeholder:text-neutral-300 transition-all"
 const btnPrimary = "w-full bg-blue-500 text-white py-3 text-sm font-semibold rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
@@ -12,6 +13,7 @@ const btnSecondary = "w-full bg-white border border-neutral-200 text-neutral-600
 export default function OnboardingPage() {
   const router = useRouter()
   const { t, locale, setLocale } = useI18n()
+  const { refresh: refreshRole } = useRole()
 
   // Step 0: role + name + language
   const [step, setStep] = useState(0)
@@ -68,6 +70,7 @@ export default function OnboardingPage() {
         onboarding_completed: true,
       })
       if (error) { setError(error.message); setLoading(false); return }
+      await refreshRole()
       router.push('/pipeline')
       router.refresh()
       return
@@ -161,6 +164,7 @@ export default function OnboardingPage() {
     if (user) {
       await supabase.from('vendors').update({ onboarding_completed: true }).eq('user_id', user.id)
     }
+    await refreshRole()
     router.push('/profile')
     router.refresh()
   }
