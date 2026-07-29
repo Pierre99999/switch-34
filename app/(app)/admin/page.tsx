@@ -123,7 +123,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   <span className="text-base">{f.sentiment === 'positive' ? '👍' : f.sentiment === 'negative' ? '👎' : '💬'}</span>
                   <span className="text-sm font-semibold text-neutral-800">{f.author}</span>
-                  {f.page && <span className="text-[11px] text-neutral-400 bg-neutral-100 rounded px-1.5 py-0.5 font-mono">{f.page}</span>}
+                  {f.page && <span className="text-[11px] font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{f.page}</span>}
                   <span className="text-xs text-neutral-400 ml-auto">{fmtDate(f.createdAt)}</span>
                 </div>
                 <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{f.message}</p>

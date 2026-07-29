@@ -79,13 +79,37 @@ export async function GET() {
   const dealsByStatus: Record<string, number> = {}
   for (const d of deals ?? []) dealsByStatus[d.status ?? 'active'] = (dealsByStatus[d.status ?? 'active'] ?? 0) + 1
 
-  // Feedback, resolved to a readable author.
+  // Feedback, resolved to a readable author and a human page label.
   const nameById = new Map((vendors ?? []).map(v => [v.user_id, v.full_name as string | null]))
+  const prospectById = new Map((deals ?? []).map(d => [d.id, d.prospect_name as string]))
+
+  const VIEW_LABELS: Record<string, string> = {
+    context: 'Contexte', dashboard: 'Tableau de bord', briefing: 'Briefing',
+    capture: 'Conversation', zones: 'Analyse',
+  }
+  const PAGE_LABELS: Record<string, string> = {
+    '/pipeline': 'Pipeline', '/profile': 'Mon profil', '/team': 'Équipe',
+    '/admin': 'Admin', '/onboarding': 'Onboarding', '/deals/new': 'Nouveau prospect',
+  }
+
+  function pageLabel(path: string | null): string | null {
+    if (!path) return null
+    if (PAGE_LABELS[path]) return PAGE_LABELS[path]
+    // /deals/<id>/<view> → "Tableau de bord · Acme"
+    const m = path.match(/^\/deals\/([^/]+)\/([^/]+)/)
+    if (m) {
+      const view = VIEW_LABELS[m[2]] ?? m[2]
+      const prospect = prospectById.get(m[1])
+      return prospect ? `${view} · ${prospect}` : view
+    }
+    return path
+  }
+
   const feedback = (feedbackRows ?? []).map(f => ({
     author: nameById.get(f.user_id) || emailById.get(f.user_id) || '—',
     sentiment: f.sentiment ?? 'neutral',
     message: f.message,
-    page: f.page ?? null,
+    page: pageLabel(f.page ?? null),
     createdAt: f.created_at,
   }))
 
