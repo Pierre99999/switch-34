@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ADMIN_EMAIL } from '@/lib/admin-config'
 
 type AdminUser = {
+  userId: string
   email: string
   name: string | null
   company: string | null
@@ -18,13 +19,24 @@ type AdminUser = {
   lastSignIn: string | null
 }
 
+type FeedbackStatus = 'new' | 'rejected' | 'in_progress' | 'done'
+
 type Feedback = {
+  id: string
   author: string
   sentiment: 'positive' | 'negative' | 'neutral'
   message: string
   page: string | null
+  status: FeedbackStatus
   createdAt: string
 }
+
+const FEEDBACK_STATUSES: { value: FeedbackStatus; label: string; on: string; off: string }[] = [
+  { value: 'new',         label: 'Nouveau',   on: 'bg-neutral-800 text-white border-neutral-800', off: 'text-neutral-500 border-neutral-200 hover:border-neutral-400' },
+  { value: 'in_progress', label: 'En cours',  on: 'bg-amber-500 text-white border-amber-500',     off: 'text-amber-600 border-amber-200 hover:border-amber-400' },
+  { value: 'done',        label: 'Appliqué',  on: 'bg-emerald-500 text-white border-emerald-500', off: 'text-emerald-600 border-emerald-200 hover:border-emerald-400' },
+  { value: 'rejected',    label: 'Refusé',    on: 'bg-rose-500 text-white border-rose-500',       off: 'text-rose-600 border-rose-200 hover:border-rose-400' },
+]
 
 type Stats = {
   totals: { users: number; directors: number; sales: number; deals: number; rounds: number; briefedRounds: number; analyzedRounds: number; inputTokens: number; outputTokens: number; costEur: number; feedback: number; feedbackPositive: number; feedbackNegative: number }
@@ -48,6 +60,17 @@ export default function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selfId, setSelfId] = useState<string | null>(null)
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const loadStats = useCallback(async () => {
+    const res = await fetch('/api/admin/stats')
+    const data = await res.json()
+    if (!res.ok) { setError(data.error ?? 'Erreur'); setLoading(false); return }
+    setStats(data)
+    setLoading(false)
+  }, [])
 
   useEffect(() => {
     (async () => {
@@ -57,13 +80,35 @@ export default function AdminPage() {
         router.replace('/pipeline')
         return
       }
-      const res = await fetch('/api/admin/stats')
-      const data = await res.json()
-      if (!res.ok) { setError(data.error ?? 'Erreur'); setLoading(false); return }
-      setStats(data)
-      setLoading(false)
+      setSelfId(user.id)
+      await loadStats()
     })()
-  }, [router])
+  }, [router, loadStats])
+
+  async function handleFeedbackStatus(id: string, status: FeedbackStatus) {
+    // Optimistic: reflect the new status immediately, revert on failure.
+    setStats(prev => prev ? { ...prev, feedback: prev.feedback.map(f => f.id === id ? { ...f, status } : f) } : prev)
+    const res = await fetch('/api/admin/feedback-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    })
+    if (!res.ok) await loadStats()
+  }
+
+  async function handleDelete(userId: string) {
+    setDeletingId(userId)
+    const res = await fetch('/api/admin/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+    const data = await res.json()
+    setDeletingId(null)
+    setConfirmId(null)
+    if (!res.ok) { setError(data.error ?? 'Suppression impossible'); return }
+    await loadStats()
+  }
 
   if (loading) return <div className="max-w-6xl mx-auto py-8 px-6 text-sm text-neutral-400">Chargement…</div>
   if (error) return (
@@ -127,6 +172,17 @@ export default function AdminPage() {
                   <span className="text-xs text-neutral-400 ml-auto">{fmtDate(f.createdAt)}</span>
                 </div>
                 <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{f.message}</p>
+                <div className="flex gap-1.5 mt-3 pt-3 border-t border-neutral-100 flex-wrap">
+                  {FEEDBACK_STATUSES.map(st => (
+                    <button
+                      key={st.value}
+                      onClick={() => handleFeedbackStatus(f.id, st.value)}
+                      className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${f.status === st.value ? st.on : `bg-white ${st.off}`}`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -135,7 +191,7 @@ export default function AdminPage() {
 
       <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Comptes ({stats.users.length})</h2>
       <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[1000px] text-sm">
+        <table className="w-full min-w-[1100px] text-sm">
           <thead>
             <tr className="border-b border-neutral-100 bg-neutral-50/50 text-left text-xs font-medium text-neutral-400 uppercase tracking-wide">
               <th className="px-4 py-3">Nom</th>
@@ -148,6 +204,7 @@ export default function AdminPage() {
               <th className="px-4 py-3 text-right">Coût IA</th>
               <th className="px-4 py-3">Créé le</th>
               <th className="px-4 py-3">Dernière connexion</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -167,6 +224,26 @@ export default function AdminPage() {
                 <td className="px-4 py-3 text-right font-medium text-rose-600">{fmtEur(u.costEur)}</td>
                 <td className="px-4 py-3 text-neutral-500">{fmtDate(u.createdAt)}</td>
                 <td className="px-4 py-3 text-neutral-500">{fmtDate(u.lastSignIn)}</td>
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  {u.userId === selfId ? (
+                    <span className="text-xs text-neutral-300">—</span>
+                  ) : confirmId === u.userId ? (
+                    <span className="inline-flex items-center gap-2">
+                      <button
+                        onClick={() => handleDelete(u.userId)}
+                        disabled={deletingId === u.userId}
+                        className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg px-2.5 py-1 disabled:opacity-40 transition-all"
+                      >
+                        {deletingId === u.userId ? 'Suppression…' : 'Confirmer'}
+                      </button>
+                      <button onClick={() => setConfirmId(null)} className="text-xs text-neutral-400 hover:text-neutral-600">Annuler</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setConfirmId(u.userId)} className="text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
+                      Supprimer
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

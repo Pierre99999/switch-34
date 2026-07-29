@@ -24,7 +24,7 @@ export async function GET() {
     admin.from('deals').select('id, user_id, prospect_name, status, current_round, created_at'),
     admin.from('deal_rounds').select('id, deal_id, briefing_line, capture_notes'),
     admin.from('ai_usage').select('user_id, model, input_tokens, output_tokens'),
-    admin.from('feedback').select('user_id, sentiment, message, page, created_at').order('created_at', { ascending: false }).limit(200),
+    admin.from('feedback').select('id, user_id, sentiment, message, page, status, created_at').order('created_at', { ascending: false }).limit(200),
   ])
 
   // Aggregate tokens and euro cost per user.
@@ -63,6 +63,7 @@ export async function GET() {
   const users = (vendors ?? []).map(v => {
     const u = usageByUser.get(v.user_id)
     return {
+      userId: v.user_id,
       email: emailById.get(v.user_id) ?? '—',
       name: v.full_name ?? null,
       company: v.company_name ?? null,
@@ -106,10 +107,12 @@ export async function GET() {
   }
 
   const feedback = (feedbackRows ?? []).map(f => ({
+    id: f.id,
     author: nameById.get(f.user_id) || emailById.get(f.user_id) || '—',
     sentiment: f.sentiment ?? 'neutral',
     message: f.message,
     page: pageLabel(f.page ?? null),
+    status: f.status ?? 'new',
     createdAt: f.created_at,
   }))
 
