@@ -3,18 +3,9 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { localeInstruction } from '@/lib/ai-locale'
+import { fetchPageText } from '@/lib/scrape'
 
 const client = new Anthropic()
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 16000)
-}
 
 const SYSTEM_PROMPT = `You are extracting structured vendor intelligence from company website content for a sales methodology tool. Extract information across 9 dimensions. Return ONLY a valid JSON object. Use empty string "" for any field where information is not available. Be concise but specific — 2-4 sentences per field.`
 
@@ -94,17 +85,9 @@ export async function POST(req: NextRequest) {
   if (!url) return NextResponse.json({ error: 'No URL provided' }, { status: 400 })
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 })
 
-  let rawText = ''
-  try {
-    const normalized = url.startsWith('http') ? url : `https://${url}`
-    const res = await fetch(normalized, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Switch/1.0)' },
-      signal: AbortSignal.timeout(10000),
-    })
-    const html = await res.text()
-    rawText = stripHtml(html)
-  } catch {
-    return NextResponse.json({ error: 'Could not fetch the URL. Check it is publicly accessible.' }, { status: 422 })
+  const rawText = await fetchPageText(url)
+  if (rawText.length < 100) {
+    return NextResponse.json({ error: 'Could not extract readable content from this site. Check the URL, or import a document instead.' }, { status: 422 })
   }
 
   const message = await client.messages.create({
