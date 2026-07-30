@@ -25,12 +25,22 @@ export default function SignupPage() {
     setAlreadyTaken(false)
     const supabase = createClient()
     const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
 
-    // Supabase does not error on a duplicate email (it refuses to leak which
-    // addresses exist). It returns a user with an empty identities array
-    // instead. Without this check the signup looks like it worked, no email
-    // ever arrives, and the person can never sign in.
+    // A duplicate email surfaces two different ways depending on the project's
+    // "Confirm email" setting: with confirmation ON, Supabase refuses to leak
+    // which addresses exist and returns a user with an empty identities array;
+    // with it OFF, it returns a plain "User already registered" error. Both
+    // land on the same message.
+    if (error) {
+      if (/already registered|already exists/i.test(error.message)) {
+        setAlreadyTaken(true)
+      } else {
+        setError(error.message)
+      }
+      setLoading(false)
+      return
+    }
+
     if (data.user && (data.user.identities?.length ?? 0) === 0) {
       setAlreadyTaken(true)
       setLoading(false)
