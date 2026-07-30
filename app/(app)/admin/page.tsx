@@ -42,7 +42,17 @@ type Stats = {
   totals: { users: number; directors: number; sales: number; deals: number; rounds: number; briefedRounds: number; analyzedRounds: number; inputTokens: number; outputTokens: number; costEur: number; feedback: number; feedbackPositive: number; feedbackNegative: number }
   dealsByStatus: Record<string, number>
   users: AdminUser[]
+  orphans?: OrphanUser[]
   feedback: Feedback[]
+}
+
+// An auth identity with no vendor row behind it.
+type OrphanUser = {
+  userId: string
+  email: string
+  confirmed: boolean
+  createdAt: string
+  lastSignIn: string | null
 }
 
 const fmtTokens = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}k` : String(n)
@@ -284,6 +294,66 @@ export default function AdminPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Auth identities with no account behind them. These hold the email
+          address hostage: signup silently "succeeds" but nothing is created. */}
+      {stats.orphans && stats.orphans.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-sm font-semibold text-neutral-700 mb-1">
+            Inscriptions incomplètes ({stats.orphans.length})
+          </h2>
+          <p className="text-xs text-neutral-500 mb-4 max-w-2xl">
+            Comptes créés dans l&apos;authentification mais sans profil : onboarding jamais terminé, ou reliquat
+            d&apos;une suppression partielle. Ils bloquent l&apos;adresse email — impossible de se réinscrire avec.
+            Supprimez-les pour libérer l&apos;adresse.
+          </p>
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50/50 text-left text-xs font-medium text-neutral-400 uppercase tracking-wide">
+                  <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Email vérifié</th>
+                  <th className="px-4 py-3">Créé le</th>
+                  <th className="px-4 py-3">Dernière connexion</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.orphans.map(o => (
+                  <tr key={o.userId} className="border-b border-neutral-100 last:border-0">
+                    <td className="px-4 py-3 font-medium text-neutral-800">{o.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${o.confirmed ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                        {o.confirmed ? 'Vérifié' : 'Non vérifié'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-neutral-500">{fmtDate(o.createdAt)}</td>
+                    <td className="px-4 py-3 text-neutral-500">{fmtDate(o.lastSignIn)}</td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {confirmId === o.userId ? (
+                        <span className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => handleDelete(o.userId)}
+                            disabled={deletingId === o.userId}
+                            className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg px-2.5 py-1 disabled:opacity-40 transition-all"
+                          >
+                            {deletingId === o.userId ? 'Suppression…' : 'Confirmer'}
+                          </button>
+                          <button onClick={() => setConfirmId(null)} className="text-xs text-neutral-400 hover:text-neutral-600">Annuler</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmId(o.userId)} className="text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
+                          Supprimer
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

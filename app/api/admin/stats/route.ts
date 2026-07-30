@@ -50,6 +50,21 @@ export async function GET() {
     lastSignInById.set(u.id, u.last_sign_in_at ?? null)
   }
 
+  // Auth identities with no vendor row: signups that never finished onboarding,
+  // or leftovers from a partial deletion. They still hold the email address, so
+  // the person cannot sign up again — but they show up nowhere else.
+  const vendorUserIds = new Set((vendors ?? []).map(v => v.user_id))
+  const orphans = (authList?.users ?? [])
+    .filter(u => !vendorUserIds.has(u.id))
+    .map(u => ({
+      userId: u.id,
+      email: u.email ?? '—',
+      confirmed: !!u.email_confirmed_at,
+      createdAt: u.created_at,
+      lastSignIn: u.last_sign_in_at ?? null,
+    }))
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+
   const dealsByUser = new Map<string, number>()
   for (const d of deals ?? []) dealsByUser.set(d.user_id, (dealsByUser.get(d.user_id) ?? 0) + 1)
 
@@ -134,6 +149,7 @@ export async function GET() {
     },
     dealsByStatus,
     users,
+    orphans,
     feedback,
   })
 }
