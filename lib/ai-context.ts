@@ -6,10 +6,17 @@ import { evidenceFromDeclarations } from './voice-credit'
 import type { VoiceDeclaration } from './types'
 
 export function buildVendorContext(vendor: Vendor): string {
+  // The problem they named at onboarding. Everything the AI produces should
+  // visibly serve it — that is what makes the output feel worth the input.
+  const challenge = [vendor.sales_challenge, vendor.sales_challenge_note]
+    .filter(Boolean).join(' — ')
+  const challengeLine = challenge ? `\nTHIS SELLER'S STATED CHALLENGE: ${challenge}` : ''
+
   const d = vendor.dimensions
-  if (!d) return `Vendor: ${vendor.company_name}\nProduct: ${vendor.product_description ?? ''}\nValue prop: ${vendor.value_proposition ?? ''}`
+  if (!d) return `Vendor: ${vendor.company_name}\nProduct: ${vendor.product_description ?? ''}\nValue prop: ${vendor.value_proposition ?? ''}${challengeLine}`
 
   const sections: string[] = [`VENDOR: ${vendor.company_name}`]
+  if (challenge) sections.push(`Stated challenge: ${challenge}`)
   if (d.value?.problem) sections.push(`Problem solved: ${d.value.problem}`)
   if (d.value?.point_of_view) sections.push(`Point of view: ${d.value.point_of_view}`)
   if (d.value?.value_delivered) sections.push(`Value delivered: ${d.value.value_delivered}`)

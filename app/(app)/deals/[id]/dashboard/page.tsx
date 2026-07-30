@@ -7,6 +7,7 @@ import {
   type Deal, type DealRound, type EvidenceLevel, type SourceAuthority,
   LAYER_VARIABLES,
   EVIDENCE_CAP, EVIDENCE_DESCRIPTIONS,
+  isLegacyDimensions,
 } from '@/lib/types'
 import {
   criterionScore, computeDealState, DECISIVE_VARS,
@@ -524,6 +525,35 @@ export default function DealDashboardPage() {
   const inProgressRound = rounds.find(r => r.round === deal.current_round) ?? null
   const round1Briefed = deal.current_round >= 1 && !!inProgressRound?.briefing_line
 
+  // Guard: a briefing built on an empty prospect context is hollow and still
+  // burns tokens. Round 1 has no gate scores by design — those come from the
+  // first conversation — so the prerequisite is the context, not the scores.
+  const MIN_CONTEXT_FIELDS = 5
+  const contextFieldsFilled = (() => {
+    const d = deal.prospect_dimensions
+    if (!d) return 0
+    // Legacy deals have a different shape — never block those.
+    if (isLegacyDimensions(d)) return MIN_CONTEXT_FIELDS
+    return (d.dimensions ?? []).reduce((acc, dim) => acc + dim.fields.filter(f => (f.value ?? '').trim()).length, 0)
+  })()
+  const contextTooThin = contextFieldsFilled < MIN_CONTEXT_FIELDS
+
+  const contextGuard = contextTooThin ? (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-left">
+      <div className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">
+        {locale === 'fr' ? 'Contexte prospect insuffisant' : 'Prospect context too thin'}
+      </div>
+      <p className="text-sm text-amber-800 mb-3">
+        {locale === 'fr'
+          ? `Seulement ${contextFieldsFilled} champ${contextFieldsFilled > 1 ? 's' : ''} renseigné${contextFieldsFilled > 1 ? 's' : ''}. Un briefing généré sur un contexte vide ne vous apprendra rien. Complétez au moins ${MIN_CONTEXT_FIELDS} champs.`
+          : `Only ${contextFieldsFilled} field${contextFieldsFilled > 1 ? 's' : ''} filled in. A briefing built on an empty context will tell you nothing. Fill in at least ${MIN_CONTEXT_FIELDS} fields.`}
+      </p>
+      <PrimaryButton onClick={() => router.push(`/deals/${dealId}/context`)}>
+        {locale === 'fr' ? '→ Compléter le contexte' : '→ Complete the context'}
+      </PrimaryButton>
+    </div>
+  ) : null
+
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
       {/* Header */}
@@ -593,11 +623,18 @@ export default function DealDashboardPage() {
               <PrimaryButton onClick={() => router.push(`/deals/${dealId}/briefing`)}>→ Briefing</PrimaryButton>
             </div>
           )}
-          {!generatingBriefing && !round1Briefed && (
-            <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
-              {locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`}
-            </PrimaryButton>
-          )}
+          {!generatingBriefing && !round1Briefed && (contextGuard ?? (
+            <>
+              <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
+                {locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`}
+              </PrimaryButton>
+              <p className="text-xs text-neutral-500 mt-3">
+                {locale === 'fr'
+                  ? 'Les portes sont vides pour l’instant, c’est normal : elles se remplissent à partir de votre première conversation. Ce briefing est construit sur votre profil et le contexte prospect.'
+                  : 'The gates are empty for now — that is expected. They fill in from your first conversation. This briefing is built from your profile and the prospect context.'}
+              </p>
+            </>
+          ))}
           {generatingBriefing && <AIProgress steps={briefingSteps} />}
           {errorBlock}
         </div>
@@ -628,14 +665,14 @@ export default function DealDashboardPage() {
           <p className="text-sm text-neutral-500 mb-6 max-w-md mx-auto">
             {locale === 'fr' ? 'Le moteur analysera votre profil vendeur et le contexte prospect pour générer un plan de conversation.' : 'The engine will analyze your vendor profile and prospect context to generate a conversation plan.'}
           </p>
-          {!generatingBriefing && (
+          {!generatingBriefing && (contextGuard ?? (
             <PrimaryButton
               onClick={() => currentRoundData && handleGenerateBriefing(currentRoundData.id)}
               disabled={!currentRoundData}
             >
               {locale === 'fr' ? '✦ Générer le briefing' : '✦ Generate briefing'}
             </PrimaryButton>
-          )}
+          ))}
           {generatingBriefing && <AIProgress steps={briefingSteps} />}
           {errorBlock}
         </div>

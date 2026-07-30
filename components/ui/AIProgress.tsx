@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 
 // Progressive AI wait indicator. Steps advance on a timer tuned to the
-// real ~60-90s generation time so the user always sees movement.
-export default function AIProgress({ steps }: { steps: string[] }) {
+// real generation time (default ~75s, briefing) so the user always sees
+// movement. Shorter jobs (profile import ~45s) pass their own durationSec.
+export default function AIProgress({ steps, durationSec = 75 }: { steps: string[]; durationSec?: number }) {
   const [current, setCurrent] = useState(0)
   const [elapsed, setElapsed] = useState(0)
 
@@ -14,13 +15,13 @@ export default function AIProgress({ steps }: { steps: string[] }) {
   }, [])
 
   useEffect(() => {
-    // Spread the steps over ~75s, but never mark the last one done.
-    const stepDuration = 75 / steps.length
+    // Spread the steps over the expected duration, but never mark the last one done.
+    const stepDuration = durationSec / steps.length
     const idx = Math.min(Math.floor(elapsed / stepDuration), steps.length - 1)
     setCurrent(idx)
-  }, [elapsed, steps.length])
+  }, [elapsed, steps.length, durationSec])
 
-  const pct = Math.min((elapsed / 90) * 100, 96)
+  const pct = Math.min((elapsed / (durationSec * 1.2)) * 100, 96)
 
   return (
     <div className="max-w-md mx-auto text-left">

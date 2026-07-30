@@ -6,6 +6,8 @@ import { type Vendor, type VendorDimensions, EMPTY_VENDOR_DIMENSIONS } from '@/l
 import { useI18n } from '@/lib/i18n/context'
 import { useRole } from '@/lib/role-context'
 import { getDimensions, type DimensionDef } from '@/lib/i18n/profile-dimensions'
+import { challengeLabel } from '@/lib/sales-challenges'
+import AIProgress from '@/components/ui/AIProgress'
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -133,6 +135,8 @@ export default function ProfilePage() {
 
     if (vendorData) {
       setVendor(vendorData)
+      // Show back the URL they already gave at onboarding rather than asking again.
+      if (vendorData.company_url) setImportUrl(u => u || vendorData.company_url)
       const merged = deepMerge(EMPTY_VENDOR_DIMENSIONS, vendorData.dimensions ?? {})
       setDims(merged)
       setSavedDims(merged)
@@ -188,6 +192,9 @@ export default function ProfilePage() {
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
       await applyExtracted(data.dimensions)
+      if (vendor) {
+        await createClient().from('vendors').update({ company_url: importUrl.trim() }).eq('id', vendor.id)
+      }
     } catch {
       setImportError('Network error — try again')
     } finally {
@@ -219,6 +226,13 @@ export default function ProfilePage() {
 
   const totalFilled = DIMENSIONS.reduce((acc, d) => acc + filledCount(dims[d.key] as Record<string, string>), 0)
   const totalQuestions = DIMENSIONS.reduce((acc, d) => acc + d.questions.length, 0)
+  const dimensionsStarted = DIMENSIONS.filter(d => filledCount(dims[d.key] as Record<string, string>) > 0).length
+
+  const fr = locale === 'fr'
+  const myChallenge = challengeLabel(vendor?.sales_challenge ?? null, locale)
+  const importSteps = fr
+    ? ['Lecture de votre site', 'Extraction des 9 dimensions', 'Rédaction du profil', 'Enregistrement']
+    : ['Reading your website', 'Extracting the 9 dimensions', 'Writing the profile', 'Saving']
 
   return (
     <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
@@ -228,11 +242,15 @@ export default function ProfilePage() {
           <p className="text-sm text-neutral-400 mb-1">Switch</p>
           <h1 className="text-2xl font-bold text-neutral-900">{t('profile.title')}</h1>
         </div>
+        {/* Lead with what is already done — a raw score reads as a backlog. */}
         <div className="text-right">
           <div className="text-xs font-medium text-neutral-400 mb-1">{t('profile.completion')}</div>
-          <div className={`text-lg font-bold ${totalFilled === totalQuestions ? 'text-emerald-600' : totalFilled > 0 ? 'text-amber-600' : 'text-neutral-300'}`}>
-            {totalFilled}/{totalQuestions}
+          <div className={`text-lg font-bold ${dimensionsStarted === DIMENSIONS.length ? 'text-emerald-600' : dimensionsStarted > 0 ? 'text-blue-600' : 'text-neutral-300'}`}>
+            {fr
+              ? `${dimensionsStarted} dimension${dimensionsStarted > 1 ? 's' : ''} sur ${DIMENSIONS.length}`
+              : `${dimensionsStarted} of ${DIMENSIONS.length} dimensions`}
           </div>
+          <div className="text-xs text-neutral-400 mt-0.5">{totalFilled}/{totalQuestions} {fr ? 'champs' : 'fields'}</div>
         </div>
       </div>
 
@@ -244,10 +262,34 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* What this profile is for — the challenge they named at onboarding */}
+      {!isReadOnly && myChallenge && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl px-5 py-4 mb-8">
+          <div className="text-[11px] font-semibold text-blue-500 uppercase tracking-wide mb-1">
+            {fr ? 'Votre enjeu' : 'Your challenge'}
+          </div>
+          <p className="text-sm text-blue-800">{myChallenge}</p>
+          <p className="text-xs text-blue-600 mt-2 leading-relaxed">
+            {fr
+              ? "Plus votre profil est complet, plus Switch peut confronter ce que dit un prospect à ce que vous vendez réellement — c'est ce qui fait la différence entre un score honnête et un score de complaisance."
+              : 'The more complete your profile, the more Switch can hold what a prospect says against what you actually sell — the difference between an honest score and a flattering one.'}
+          </p>
+        </div>
+      )}
+
       {/* Import panel */}
       {!isReadOnly && <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8 shadow-sm">
-        <h2 className="text-sm font-semibold text-neutral-700 mb-4">{t('profile.importFrom')}</h2>
-        <div className="flex flex-col gap-4">
+        <h2 className="text-sm font-semibold text-neutral-700 mb-1">{t('profile.importFrom')}</h2>
+        <p className="text-xs text-neutral-400 mb-4">
+          {vendor?.company_url
+            ? (fr
+              ? `Profil déjà importé depuis ${vendor.company_url}. Relancez pour le mettre à jour, ou éditez les blocs ci-dessous.`
+              : `Profile already imported from ${vendor.company_url}. Run it again to refresh, or edit the blocks below.`)
+            : (fr
+              ? 'Switch lit votre site ou un document et pré-remplit les 9 dimensions.'
+              : 'Switch reads your website or a document and pre-fills the 9 dimensions.')}
+        </p>
+        <div className={`flex flex-col gap-4 ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
           {/* URL */}
           <div>
             <div className="text-xs font-medium text-neutral-500 mb-1.5">{t('profile.websiteUrl')}</div>
@@ -288,6 +330,15 @@ export default function ProfilePage() {
             </label>
           </div>
         </div>
+
+        {importing && (
+          <div className="mt-5 pt-5 border-t border-neutral-100">
+            <AIProgress steps={importSteps} durationSec={45} />
+            <p className="text-xs text-neutral-400 mt-4 text-center">
+              {fr ? 'Environ 45 secondes. Ne quittez pas la page.' : 'About 45 seconds. Stay on this page.'}
+            </p>
+          </div>
+        )}
 
         {importError && <p className="mt-3 text-sm text-rose-600">{importError}</p>}
         {importSuccess && <p className="mt-3 text-sm text-emerald-600">{importSuccess}</p>}

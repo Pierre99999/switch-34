@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
 import { useRole } from '@/lib/role-context'
+import { SALES_CHALLENGES } from '@/lib/sales-challenges'
+import AIProgress from '@/components/ui/AIProgress'
 
 const inputClass = "mt-1 w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 placeholder:text-neutral-300 transition-all"
 const btnPrimary = "w-full bg-blue-500 text-white py-3 text-sm font-semibold rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
@@ -15,13 +17,14 @@ export default function OnboardingPage() {
   const { t, locale, setLocale } = useI18n()
   const { refresh: refreshRole } = useRole()
 
-  // Step 0: role + name + language
+  // Step 0: the challenge. Step 1: role + name + language.
   const [step, setStep] = useState(0)
+  const [challenge, setChallenge] = useState<string | null>(null)
+  const [challengeNote, setChallengeNote] = useState('')
   const [role, setRole] = useState<'sales' | 'director'>('director')
   const [selectedLocale, setSelectedLocale] = useState<'fr' | 'en'>(locale as 'fr' | 'en')
   const [fullName, setFullName] = useState('')
   const [companyName, setCompanyName] = useState('')
-  const [companyUrl, setCompanyUrl] = useState('')
 
   // Sales: invite code
   const [inviteCode, setInviteCode] = useState('')
@@ -40,8 +43,8 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // ── Step 0: Create account (both roles) ──
-  async function handleStep0() {
+  // ── Step 1: Create account (both roles) ──
+  async function handleAccountStep() {
     setLoading(true)
     setError(null)
     const supabase = createClient()
@@ -68,6 +71,8 @@ export default function OnboardingPage() {
         role: 'sales',
         organization_id: org.id,
         onboarding_completed: true,
+        sales_challenge: challenge,
+        sales_challenge_note: challengeNote.trim() || null,
       })
       if (error) { setError(error.message); setLoading(false); return }
       await refreshRole()
@@ -93,15 +98,17 @@ export default function OnboardingPage() {
       role: 'director',
       organization_id: org.id,
       onboarding_completed: false,
+      sales_challenge: challenge,
+      sales_challenge_note: challengeNote.trim() || null,
     })
     if (vendorErr) { setError(vendorErr.message); setLoading(false); return }
 
     setOrgInviteCode(org.invite_code)
     setLoading(false)
-    setStep(1)
+    setStep(2)
   }
 
-  // ── Step 1: Import profile from URL ──
+  // ── Step 2: Import profile from URL ──
   async function handleImportUrl() {
     if (!importUrl.trim()) return
     setImporting(true)
@@ -116,11 +123,12 @@ export default function OnboardingPage() {
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); setImporting(false); return }
 
-      // Save dimensions to vendor
+      // Save dimensions to vendor. The URL is stored too so the profile page
+      // can show it back instead of asking for it a second time.
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('vendors').update({ dimensions: data.dimensions }).eq('user_id', user.id)
+        await supabase.from('vendors').update({ dimensions: data.dimensions, company_url: importUrl.trim() }).eq('user_id', user.id)
       }
       setImportSuccess(t('onboarding.profileImported'))
     } catch {
@@ -176,24 +184,31 @@ export default function OnboardingPage() {
   }
 
   // ── Render ──
-  const totalSteps = role === 'director' ? 3 : 1
+  const fr = selectedLocale === 'fr'
+  const importSteps = fr
+    ? ['Lecture de votre site', 'Extraction des 9 dimensions', 'Rédaction du profil', 'Enregistrement']
+    : ['Reading your website', 'Extracting the 9 dimensions', 'Writing the profile', 'Saving']
+  const totalSteps = role === 'director' ? 4 : 2
+  const selectedChallenge = SALES_CHALLENGES.find(c => c.key === challenge) ?? null
 
   return (
     <div className="min-h-screen bg-neutral-50">
       <div className="max-w-md mx-auto py-14 sm:py-20 px-4 sm:px-6">
         <div className="mb-10">
           <div className="text-2xl font-bold text-blue-500 tracking-tight mb-3">Switch</div>
-          <h1 className="text-2xl font-bold text-neutral-900">{t('onboarding.title')}</h1>
-          {step > 0 && (
-            <div className="flex gap-1 mt-4">
-              {Array.from({ length: totalSteps }).map((_, i) => (
-                <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-blue-500' : 'bg-neutral-200'}`} />
-              ))}
-            </div>
-          )}
+          <h1 className="text-2xl font-bold text-neutral-900">
+            {step === 0
+              ? (fr ? 'Commençons par vous.' : 'Let us start with you.')
+              : t('onboarding.title')}
+          </h1>
+          <div className="flex gap-1 mt-4">
+            {Array.from({ length: totalSteps }).map((_, i) => (
+              <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-blue-500' : 'bg-neutral-200'}`} />
+            ))}
+          </div>
         </div>
 
-        {/* ── Step 0: Role + Name ── */}
+        {/* ── Step 0: What hurts right now ── */}
         {step === 0 && (
           <div className="space-y-5">
             <div>
@@ -215,6 +230,76 @@ export default function OnboardingPage() {
                 </button>
               </div>
             </div>
+
+            <div>
+              <h2 className="text-lg font-semibold text-neutral-900">
+                {fr
+                  ? 'Quelle est votre principale difficulté en ce moment sur la conversion ?'
+                  : 'What is your main conversion problem right now?'}
+              </h2>
+              <p className="text-sm text-neutral-500 mt-1">
+                {fr
+                  ? "Switch part de là. Tout ce que vous renseignerez ensuite sert à résoudre ce point précis."
+                  : 'Switch starts from here. Everything you fill in afterwards serves this one problem.'}
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              {SALES_CHALLENGES.map(c => {
+                const active = challenge === c.key
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setChallenge(active ? null : c.key)}
+                    className={`w-full border rounded-xl px-4 py-3.5 text-left transition-all ${active ? 'border-blue-500 bg-blue-50' : 'border-neutral-200 bg-white hover:border-neutral-400'}`}
+                  >
+                    <div className="text-sm font-medium text-neutral-800">{c.label[fr ? 'fr' : 'en']}</div>
+                    {active && (
+                      <div className="text-xs text-blue-700 mt-1.5 leading-relaxed">
+                        {fr ? '→ ' : '→ '}{c.answer[fr ? 'fr' : 'en']}
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                {fr ? 'Autre chose ? (facultatif)' : 'Anything else? (optional)'}
+              </label>
+              <textarea
+                value={challengeNote}
+                onChange={e => setChallengeNote(e.target.value)}
+                rows={3}
+                placeholder={fr
+                  ? 'Ex. : on ne distingue pas un prospect preneur d’infos d’un prospect qui va vraiment acheter.'
+                  : 'E.g. we cannot tell an info-gatherer from a prospect who will actually buy.'}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+
+            <button onClick={() => setStep(1)} disabled={!challenge && !challengeNote.trim()} className={btnPrimary}>
+              {fr ? 'Continuer' : 'Continue'}
+            </button>
+            <button onClick={() => setStep(1)} className="w-full text-sm text-neutral-400 hover:text-neutral-600 transition-colors">
+              {fr ? 'Passer' : 'Skip'}
+            </button>
+          </div>
+        )}
+
+        {/* ── Step 1: Role + Name ── */}
+        {step === 1 && (
+          <div className="space-y-5">
+            {selectedChallenge && (
+              <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                <div className="text-[11px] font-semibold text-blue-500 uppercase tracking-wide mb-0.5">
+                  {fr ? 'Votre enjeu' : 'Your challenge'}
+                </div>
+                <div className="text-sm text-blue-800">{selectedChallenge.label[fr ? 'fr' : 'en']}</div>
+              </div>
+            )}
 
             <div>
               <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2 block">{t('onboarding.yourRole')}</label>
@@ -262,24 +347,27 @@ export default function OnboardingPage() {
             {error && <p className="text-sm text-rose-600">{error}</p>}
 
             <button
-              onClick={handleStep0}
+              onClick={handleAccountStep}
               disabled={loading || (role === 'director' && !companyName.trim()) || (role === 'sales' && !inviteCode.trim())}
               className={btnPrimary}
             >
               {loading ? t('onboarding.saving') : role === 'director' ? t('onboarding.next') : t('onboarding.submit')}
             </button>
+            <button onClick={() => setStep(0)} className="w-full text-sm text-neutral-400 hover:text-neutral-600 transition-colors">
+              {t('onboarding.back')}
+            </button>
           </div>
         )}
 
-        {/* ── Step 1 (Director): Import company profile ── */}
-        {step === 1 && (
+        {/* ── Step 2 (Director): Import company profile ── */}
+        {step === 2 && (
           <div className="space-y-5">
             <div>
               <h2 className="text-lg font-semibold text-neutral-900">{t('onboarding.profileStep')}</h2>
               <p className="text-sm text-neutral-500 mt-1">{t('onboarding.profileStepDesc')}</p>
             </div>
 
-            <div>
+            <div className={importing ? 'opacity-40 pointer-events-none' : ''}>
               <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('onboarding.website')}</label>
               <div className="flex gap-2 mt-1">
                 <input
@@ -309,19 +397,28 @@ export default function OnboardingPage() {
               </label>
             </div>
 
+            {importing && (
+              <div className="bg-white border border-neutral-200 rounded-2xl p-5">
+                <AIProgress steps={importSteps} durationSec={45} />
+                <p className="text-xs text-neutral-400 mt-4 text-center">
+                  {fr ? 'Environ 45 secondes. Vous pouvez laisser cet écran ouvert.' : 'About 45 seconds. You can leave this screen open.'}
+                </p>
+              </div>
+            )}
+
             {importError && <p className="text-sm text-rose-600">{importError}</p>}
             {importSuccess && <p className="text-sm text-emerald-600">{importSuccess}</p>}
 
             <div className="flex gap-3 pt-4">
-              <button onClick={() => setStep(2)} className={btnSecondary}>
+              <button onClick={() => setStep(3)} disabled={importing} className={btnSecondary}>
                 {importSuccess ? t('onboarding.next') : t('onboarding.skipForNow')}
               </button>
             </div>
           </div>
         )}
 
-        {/* ── Step 2 (Director): Team invite code ── */}
-        {step === 2 && (
+        {/* ── Step 3 (Director): Team invite code ── */}
+        {step === 3 && (
           <div className="space-y-5">
             <div>
               <h2 className="text-lg font-semibold text-neutral-900">{t('onboarding.teamStep')}</h2>
@@ -338,7 +435,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <button onClick={() => setStep(1)} className={btnSecondary}>{t('onboarding.back')}</button>
+              <button onClick={() => setStep(2)} className={btnSecondary}>{t('onboarding.back')}</button>
               <button onClick={handleFinish} disabled={loading} className={btnPrimary}>
                 {loading ? '…' : t('onboarding.finish')}
               </button>
