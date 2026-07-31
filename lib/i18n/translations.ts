@@ -138,7 +138,7 @@ export const translations = {
   'newDeal.potentialRevenue': { en: 'Potential revenue (€)', fr: 'CA potentiel (€)' },
   'deal.potentialRevenue': { en: 'Potential revenue (€)', fr: 'CA potentiel (€)' },
   'deal.revenueSaved': { en: 'Saved', fr: 'Enregistré' },
-  'newDeal.create': { en: 'Start diagnostic →', fr: 'Démarrer le diagnostic →' },
+  'newDeal.create': { en: 'Show the diagnostic →', fr: 'Afficher le diagnostic →' },
   'newDeal.creating': { en: 'Creating…', fr: 'Création…' },
 
   // ── Dashboard ──
