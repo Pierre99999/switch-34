@@ -13,8 +13,12 @@ import AIProgress from '@/components/ui/AIProgress'
 
 const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
 
-function filledCount(dim: Record<string, string>): number {
-  return Object.values(dim).filter(v => v.trim().length > 0).length
+// Count only the fields this dimension actually asks for. An import can write
+// extra keys that no longer match the schema; counting those produced totals
+// like "7/6".
+function filledCount(dim: Record<string, string>, def?: DimensionDef): number {
+  const keys = def ? def.questions.map(q => q.key) : Object.keys(dim)
+  return keys.filter(k => (dim[k] ?? '').trim().length > 0).length
 }
 
 function deepMerge(base: VendorDimensions, saved: Partial<VendorDimensions>): VendorDimensions {
@@ -47,7 +51,7 @@ function DimensionSection({
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const total = def.questions.length
-  const filled = filledCount(values)
+  const filled = filledCount(values, def)
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
@@ -224,9 +228,9 @@ export default function ProfilePage() {
     }
   }
 
-  const totalFilled = DIMENSIONS.reduce((acc, d) => acc + filledCount(dims[d.key] as Record<string, string>), 0)
+  const totalFilled = DIMENSIONS.reduce((acc, d) => acc + filledCount(dims[d.key] as Record<string, string>, d), 0)
   const totalQuestions = DIMENSIONS.reduce((acc, d) => acc + d.questions.length, 0)
-  const dimensionsStarted = DIMENSIONS.filter(d => filledCount(dims[d.key] as Record<string, string>) > 0).length
+  const dimensionsStarted = DIMENSIONS.filter(d => filledCount(dims[d.key] as Record<string, string>, d) > 0).length
 
   const fr = locale === 'fr'
   const myChallenge = challengeLabel(vendor?.sales_challenge ?? null, locale)
