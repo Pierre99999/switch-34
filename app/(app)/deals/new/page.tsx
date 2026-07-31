@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
+import AIProgress from '@/components/ui/AIProgress'
 
 const inputClass = "mt-1 w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 placeholder:text-neutral-300 transition-all"
 const btnPrimary = "flex-1 bg-blue-500 text-white py-2.5 text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
@@ -73,6 +74,10 @@ export default function NewDealPage() {
   const [prospectUrl, setProspectUrl] = useState('')
   const [fetching, setFetching] = useState(false)
   const [fetchSuccess, setFetchSuccess] = useState(false)
+
+  const analyzeSteps = locale === 'fr'
+    ? ['Lecture du site du prospect', 'Identification des dimensions', 'Extraction des informations', 'Construction du profil']
+    : ['Reading the prospect site', 'Identifying the dimensions', 'Extracting the information', 'Building the profile']
   const [fetchedDimensions, setFetchedDimensions] = useState<Record<string, unknown> | null>(null)
 
   // Step 2: Contacts
@@ -258,12 +263,17 @@ export default function NewDealPage() {
                 disabled={fetching || !prospectUrl.trim()}
                 className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
               >
-                {fetching ? '…' : t('newDeal.analyze')}
+                {fetching ? (locale === 'fr' ? 'Analyse…' : 'Analyzing…') : t('newDeal.analyze')}
               </button>
             </div>
           </div>
           {fetching && (
-            <p className="text-sm text-neutral-500">{locale === 'fr' ? 'Analyse du site en cours… (jusqu\'à ~30 s)' : 'Analyzing the site… (up to ~30s)'}</p>
+            <div className="bg-white border border-neutral-200 rounded-2xl p-5">
+              <AIProgress steps={analyzeSteps} durationSec={30} />
+              <p className="text-xs text-neutral-400 mt-4 text-center">
+                {locale === 'fr' ? 'Environ 30 secondes. Restez sur cette page.' : 'About 30 seconds. Stay on this page.'}
+              </p>
+            </div>
           )}
           {fetchSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-xl">
@@ -272,12 +282,16 @@ export default function NewDealPage() {
             </div>
           )}
           {error && <p className="text-sm text-rose-600">{error}</p>}
-          <div className="flex gap-3">
-            <button onClick={() => setStep(0)} className={btnSecondary}>{t('onboarding.back')}</button>
-            <button onClick={() => setStep(2)} className={btnPrimary}>
-              {fetchSuccess ? t('onboarding.next') : t('onboarding.skipForNow')}
-            </button>
-          </div>
+          {/* Navigation is withheld while the analysis runs: leaving mid-way
+              would drop the result the user is waiting for. */}
+          {!fetching && (
+            <div className="flex gap-3">
+              <button onClick={() => setStep(0)} className={btnSecondary}>{t('onboarding.back')}</button>
+              <button onClick={() => setStep(2)} className={btnPrimary}>
+                {fetchSuccess ? t('onboarding.next') : t('onboarding.skipForNow')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
