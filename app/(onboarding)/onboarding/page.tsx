@@ -35,6 +35,8 @@ export default function OnboardingPage() {
   const [importing, setImporting] = useState(false)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  // Which import produced the notice — the first line names the source.
+  const [showImportNotice, setShowImportNotice] = useState<'url' | 'doc' | null>(null)
 
   // Director step 2: invite code display
   const [orgInviteCode, setOrgInviteCode] = useState('')
@@ -131,6 +133,7 @@ export default function OnboardingPage() {
         await supabase.from('vendors').update({ dimensions: data.dimensions, company_url: importUrl.trim() }).eq('user_id', user.id)
       }
       setImportSuccess(t('onboarding.profileImported'))
+      setShowImportNotice('url')
     } catch {
       setImportError('Network error')
     }
@@ -157,6 +160,7 @@ export default function OnboardingPage() {
         await supabase.from('vendors').update({ dimensions: data.dimensions }).eq('user_id', user.id)
       }
       setImportSuccess(t('onboarding.profileImported'))
+      setShowImportNotice('doc')
     } catch {
       setImportError('Network error')
     }
@@ -193,6 +197,46 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50">
+      {/* Shown once the site analysis lands: sets expectations about the gaps
+          before the user sees them and reads them as a failed import. */}
+      {showImportNotice && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 backdrop-blur-sm px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="import-notice-title"
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 sm:p-7">
+            <div className="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center mb-4">
+              <span className="text-xl">✓</span>
+            </div>
+            <h2 id="import-notice-title" className="text-lg font-semibold text-neutral-900 mb-3">
+              {fr ? 'Profil analysé' : 'Profile analyzed'}
+            </h2>
+            <div className="space-y-3 text-sm text-neutral-600 leading-relaxed">
+              <p>
+                {fr
+                  ? `Nous avons analysé ${showImportNotice === 'doc' ? 'votre document' : 'votre site web'}. Certaines dimensions peuvent être incomplètes, car elles ne sont pas toujours visibles publiquement.`
+                  : `We analyzed ${showImportNotice === 'doc' ? 'your document' : 'your website'}. Some dimensions may be incomplete, as they are not always publicly visible.`}
+              </p>
+              <p>
+                {fr
+                  ? 'Ce n’est pas bloquant. Plus votre contexte est complet, plus nos analyses et nos recommandations seront pertinentes.'
+                  : 'This is not blocking. The more complete your context, the more relevant our analyses and recommendations will be.'}
+              </p>
+              <p>
+                {fr
+                  ? 'Vous pourrez compléter votre profil à tout moment.'
+                  : 'You can complete your profile at any time.'}
+              </p>
+            </div>
+            <button onClick={() => setShowImportNotice(null)} className={`${btnPrimary} mt-6`} autoFocus>
+              {fr ? 'Continuer' : 'Continue'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-md mx-auto py-14 sm:py-20 px-4 sm:px-6">
         <div className="mb-10">
           <div className="text-2xl font-bold text-blue-500 tracking-tight mb-3">Switch</div>
