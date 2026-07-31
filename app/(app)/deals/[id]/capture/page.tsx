@@ -205,6 +205,9 @@ export default function CapturePage() {
   }
 
   const hasBriefing = !!(currentRoundData?.briefing_line)
+  // What is on screen right now, saved or not — the analyze action saves first.
+  const hasSomethingCaptured = freeNote.trim().length > 0
+    || Object.values(notes).some(v => typeof v === 'string' && v.trim().length > 0)
   const nodes = rounds.map(r => ({ round: r.round, created_at: r.created_at, roundData: r }))
 
   const inputClass = "w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
@@ -452,22 +455,33 @@ export default function CapturePage() {
       {/* Save + next action — sticky on mobile */}
       {isLatestRound && hasBriefing && !suggestingScores && (
         <div className="sticky bottom-0 -mx-4 sm:mx-0 mt-4 px-4 sm:px-0 py-3 sm:py-0 sm:pt-4 bg-neutral-50/95 backdrop-blur-sm sm:bg-transparent border-t border-neutral-200 sm:border-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
-            >
-              {saving ? t('capture.saving') : t('capture.save')}
-            </button>
-            <button
-              onClick={handleAnalyze}
-              disabled={saving}
-              className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
-            >
-              {t('capture.analyze')}
-            </button>
-          </div>
+          {/* Nothing captured means nothing to save and nothing to score —
+              offering either invites an analysis of a conversation that
+              never happened. */}
+          {hasSomethingCaptured ? (
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm disabled:opacity-40 transition-all"
+              >
+                {saving ? t('capture.saving') : t('capture.save')}
+              </button>
+              <button
+                onClick={handleAnalyze}
+                disabled={saving}
+                className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
+              >
+                {t('capture.analyze')}
+              </button>
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500 py-1">
+              {locale === 'fr'
+                ? 'Renseignez au moins une réponse pour pouvoir enregistrer et analyser cette conversation.'
+                : 'Fill in at least one answer to save and analyze this conversation.'}
+            </p>
+          )}
           {error && (
             <p className="text-sm text-rose-600 mt-2">
               {error.toLowerCase().includes('credit') || error.includes('"type":"error"') || error.toLowerCase().includes('timed out')

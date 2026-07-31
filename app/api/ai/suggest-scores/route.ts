@@ -3,7 +3,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext } from '@/lib/ai-context'
+import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, hasCaptureContent } from '@/lib/ai-context'
 import { LAYER_VARIABLES, VARIABLE_LABELS, type EvidenceLevel } from '@/lib/types'
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
 import { ACTOR_TYPE_TO_ROLE, type ActorRole } from '@/lib/voice-weights'
@@ -32,6 +32,17 @@ export async function POST(req: NextRequest) {
   ])
 
   if (!deal || !round || !vendor) return NextResponse.json({ error: 'Data not found' }, { status: 404 })
+
+  // Hard stop: with no captured conversation there is nothing to score. The
+  // prompt asks the model to leave criteria unscored, but it still had the
+  // vendor profile and the prospect's website in context and scored from
+  // those — producing a full dashboard for a conversation that never
+  // happened. The refusal has to be deterministic, not a prompt instruction.
+  if (!hasCaptureContent(round)) {
+    return NextResponse.json({
+      error: 'No captured conversation to score. Record what was said in this round first.',
+    }, { status: 400 })
+  }
 
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
 

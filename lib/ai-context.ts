@@ -72,6 +72,15 @@ export function buildScoresContext(round: DealRound): string {
   return lines.join('\n')
 }
 
+// Does this round hold anything a human actually captured? Scoring a round
+// with no captured conversation is meaningless — the model would score the
+// prospect's website instead of what was said — so the AI routes refuse it.
+export function hasCaptureContent(round: { capture_notes?: unknown } | null): boolean {
+  const notes = (round?.capture_notes ?? null) as Record<string, string> | null
+  if (!notes) return false
+  return Object.values(notes).some(v => typeof v === 'string' && v.trim().length > 0)
+}
+
 export function buildCaptureContext(rounds: DealRound[]): string {
   const lines: string[] = []
   for (const r of rounds) {
