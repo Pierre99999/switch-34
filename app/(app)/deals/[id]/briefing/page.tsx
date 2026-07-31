@@ -84,20 +84,34 @@ export default function BriefingPage() {
   const [doNot, setDoNot] = useState<string[]>([])
   const [mirror, setMirror] = useState<string[]>([])
   const [objections, setObjections] = useState<BriefingObjection[]>([])
+  // Snapshot of what is in the database, to tell edited from untouched.
+  const [savedSnapshot, setSavedSnapshot] = useState('')
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
   const isLatestRound = deal ? selectedRound === deal.current_round : false
 
-  function populateFromRound(r: DealRound | null) {
-    setLine(r?.briefing_line ?? '')
-    setRead(r?.briefing_read ?? '')
-    setAngle(r?.briefing_angle ?? '')
-    setWinCondition(r?.briefing_win_condition ?? '')
-    setQuestions(r?.briefing_questions ?? [])
-    setDoNot(r?.briefing_do_not ?? [])
-    setMirror(r?.briefing_mirror ?? [])
-    setObjections(r?.briefing_objections ?? [])
+  function briefingSnapshot(
+    l: string, rd: string, a: string, w: string,
+    q: BriefingQuestion[], dn: string[], m: string[], o: BriefingObjection[],
+  ) {
+    return JSON.stringify([l, rd, a, w, q, dn, m, o])
   }
+
+  function populateFromRound(r: DealRound | null) {
+    const l = r?.briefing_line ?? ''
+    const rd = r?.briefing_read ?? ''
+    const a = r?.briefing_angle ?? ''
+    const w = r?.briefing_win_condition ?? ''
+    const q = r?.briefing_questions ?? []
+    const dn = r?.briefing_do_not ?? []
+    const m = r?.briefing_mirror ?? []
+    const o = r?.briefing_objections ?? []
+    setLine(l); setRead(rd); setAngle(a); setWinCondition(w)
+    setQuestions(q); setDoNot(dn); setMirror(m); setObjections(o)
+    setSavedSnapshot(briefingSnapshot(l, rd, a, w, q, dn, m, o))
+  }
+
+  const isDirty = savedSnapshot !== briefingSnapshot(line, read, angle, winCondition, questions, doNot, mirror, objections)
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -454,22 +468,31 @@ export default function BriefingPage() {
         )}
       </Section>
 
-      {/* Save */}
+      {/* One action at a time: unsaved edits are lost on navigation, so while
+          the briefing is edited the only way forward is to save it. */}
       {isLatestRound && (
         <div className="flex items-center gap-3 pt-4">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
-          >
-            {saving ? t('capture.saving') : t('capture.save')}
-          </button>
-          <button
-            onClick={() => router.push(`/deals/${dealId}/capture`)}
-            className="px-6 py-3 bg-white text-neutral-700 text-sm font-medium rounded-xl border border-neutral-200 hover:border-neutral-400 hover:shadow-sm transition-all"
-          >
-            {t('briefing.goCapture')}
-          </button>
+          {isDirty ? (
+            <>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
+              >
+                {saving ? t('capture.saving') : t('capture.save')}
+              </button>
+              <span className="text-sm text-amber-600 font-medium">
+                {locale === 'fr' ? 'Modifications non enregistrées' : 'Unsaved changes'}
+              </span>
+            </>
+          ) : (
+            <button
+              onClick={() => router.push(`/deals/${dealId}/capture`)}
+              className="px-6 py-3 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
+            >
+              {t('briefing.goCapture')}
+            </button>
+          )}
           {error && <span className="text-sm text-rose-600">{error}</span>}
         </div>
       )}
