@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 import {
   type Deal, type DealRound, type EvidenceLevel, type SourceAuthority,
   LAYER_VARIABLES,
-  EVIDENCE_CAP, EVIDENCE_DESCRIPTIONS,
   isLegacyDimensions,
 } from '@/lib/types'
 import {
@@ -19,7 +18,7 @@ import RoundTimeline from '@/components/deal/RoundTimeline'
 import { normalizePlaybook, type Playbook } from '@/lib/playbook'
 import {
   actorCoverage, normalizeFit, AXIS_CRITERION, ACTORS_CRITERION, FIT_AXIS_LABELS,
-  type DealContact, type PlaybookFit, type FitVerdict, type ActorCoverage,
+  type DealContact, type PlaybookFit, type FitVerdict,
 } from '@/lib/playbook-fit'
 import PlaybookFitCard from '@/components/deal/PlaybookFitCard'
 import PastConversationImport from '@/components/deal/PastConversationImport'
@@ -77,12 +76,6 @@ function VariableRow({ label, rationale, fitMarker, children }: { label: string;
   )
 }
 
-const AUTHORITY_PILL: Record<SourceAuthority, string> = {
-  decision_maker: 'text-purple-700 bg-purple-100',
-  influencer: 'text-indigo-700 bg-indigo-100',
-  end_user: 'text-neutral-600 bg-neutral-100',
-}
-
 const ROLE_LABEL: Record<string, string> = {
   decideur: 'Décideur', champion: 'Champion', acheteur_technique: 'Décideur technique',
   gardien_du_budget: 'Gardien du budget', utilisateur: 'Utilisateur', bloqueur: 'Bloqueur', unknown: 'Rôle inconnu',
@@ -118,82 +111,6 @@ function ScoreBar({ variable, score, evidence, authority, declarations }: { vari
   )
 }
 
-// ── Clickable score selector ────────────────────────────────
-
-function ScorePicker({
-  value,
-  evidence,
-  onChange,
-  onEvidenceChange,
-  disabled,
-}: {
-  value: number | null
-  evidence: EvidenceLevel
-  onChange: (v: number | null) => void
-  onEvidenceChange: (v: EvidenceLevel) => void
-  disabled: boolean
-}) {
-  const { t } = useI18n()
-  const cap = EVIDENCE_CAP[evidence]
-  return (
-    <div className="mt-1.5 space-y-2">
-      <div className="flex gap-1.5 items-center">
-        {[1, 2, 3, 4, 5].map(i => (
-          <button
-            key={i}
-            disabled={disabled || i > cap}
-            onClick={() => onChange(value === i ? null : i)}
-            title={i > cap ? `Capped by ${evidence} evidence (max ${cap})` : `Score ${i}`}
-            className={`w-7 h-7 rounded-lg text-xs font-semibold transition-all ${
-              i > cap
-                ? 'bg-neutral-50 text-neutral-200 cursor-not-allowed border border-neutral-100'
-                : value !== null && i <= value
-                  ? i <= 2
-                    ? 'bg-rose-500 text-white shadow-sm'
-                    : i === 3
-                      ? 'bg-amber-400 text-white shadow-sm'
-                      : 'bg-emerald-500 text-white shadow-sm'
-                  : 'bg-white border border-neutral-200 text-neutral-400 hover:border-neutral-400 hover:text-neutral-700'
-            } disabled:opacity-40`}
-          >
-            {i}
-          </button>
-        ))}
-        {value !== null && (
-          <button
-            disabled={disabled}
-            onClick={() => onChange(null)}
-            className="ml-1 text-xs text-neutral-300 hover:text-neutral-600 disabled:opacity-40"
-            title="Clear"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-      <div className="flex gap-1.5">
-        {(['declared', 'corroborated', 'verified'] as EvidenceLevel[]).map(ev => (
-          <button
-            key={ev}
-            disabled={disabled}
-            onClick={() => {
-              onEvidenceChange(ev)
-              if (value !== null && value > EVIDENCE_CAP[ev]) onChange(Math.floor(EVIDENCE_CAP[ev]))
-            }}
-            title={EVIDENCE_DESCRIPTIONS[ev]}
-            className={`text-[10px] font-medium px-2.5 py-1 rounded-full transition-all ${
-              evidence === ev
-                ? EVIDENCE_PILL[ev]
-                : 'bg-neutral-50 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600'
-            } disabled:opacity-40`}
-          >
-            {t(`evidence.${ev}` as never)} ≤{EVIDENCE_CAP[ev]}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ── Layer card ───────────────────────────────────────────────
 
 
@@ -212,22 +129,12 @@ const STATUS_STYLE: Record<string, string> = {
 function LayerCard({
   layer,
   round,
-  isEditing,
-  pending,
-  pendingEvidence,
-  onScore,
-  onEvidence,
   gate,
   momentum,
   fitMarkerFor,
 }: {
   layer: number
   round: DealRound | null
-  isEditing: boolean
-  pending: Partial<DealRound>
-  pendingEvidence: Record<string, EvidenceLevel>
-  onScore: (field: string, value: number | null) => void
-  onEvidence: (field: string, value: EvidenceLevel) => void
   gate: GateInfo | null
   momentum: MomentumInfo | null
   fitMarkerFor: (variable: string) => React.ReactNode
@@ -310,27 +217,17 @@ function LayerCard({
       <div className="px-5 py-4 space-y-4">
         {vars.map(v => {
           const field = v as keyof DealRound
-          const currentValue = (pending[field] !== undefined ? pending[field] : round?.[field]) as number | null
+          const currentValue = round?.[field] as number | null
           const evidenceLevels = round?.evidence_levels ?? {}
           const authorityLevels = (round?.authority_levels ?? {}) as Record<string, SourceAuthority>
-          const currentEvidence: EvidenceLevel = pendingEvidence[v] ?? evidenceLevels[v] ?? 'declared'
+          const currentEvidence: EvidenceLevel = evidenceLevels[v] ?? 'declared'
           const currentAuthority: SourceAuthority = authorityLevels[v] ?? 'end_user'
           const rationale = (round?.rationales ?? {})[v] as string | undefined
           const label = DECISIVE_VARS[layer]?.includes(v) ? `⚡ ${t(`var.${v}` as any)}` : t(`var.${v}` as any)
           const hasEvidence = currentValue !== null && evidenceLevels[v] !== undefined
           return (
             <VariableRow key={v} label={label} rationale={rationale} fitMarker={fitMarkerFor(v)}>
-              {isEditing ? (
-                <ScorePicker
-                  value={currentValue}
-                  evidence={currentEvidence}
-                  onChange={val => onScore(v, val)}
-                  onEvidenceChange={val => onEvidence(v, val)}
-                  disabled={false}
-                />
-              ) : (
-                <ScoreBar variable={v} score={currentValue} evidence={hasEvidence || currentValue !== null ? currentEvidence : undefined} authority={currentAuthority} declarations={allDeclarations[v]} />
-              )}
+              <ScoreBar variable={v} score={currentValue} evidence={hasEvidence || currentValue !== null ? currentEvidence : undefined} authority={currentAuthority} declarations={allDeclarations[v]} />
             </VariableRow>
           )
         })}
@@ -368,10 +265,6 @@ export default function DealDashboardPage() {
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
   const [selectedRound, setSelectedRound] = useState<number>(0)
-  const isEditing = false
-  const [pending, setPending] = useState<Partial<DealRound>>({})
-  const [pendingEvidence, setPendingEvidence] = useState<Record<string, EvidenceLevel>>({})
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
@@ -440,31 +333,6 @@ export default function DealDashboardPage() {
   }, [dealId, locale])
 
   useEffect(() => { load() }, [load])
-
-  function handleScore(field: string, value: number | null) {
-    setPending(p => ({ ...p, [field]: value }))
-  }
-
-  function handleEvidence(field: string, value: EvidenceLevel) {
-    setPendingEvidence(p => ({ ...p, [field]: value }))
-  }
-
-  async function handleSave() {
-    if (!currentRoundData) return
-    setSaving(true)
-    setError(null)
-    const supabase = createClient()
-    const mergedEvidence = { ...(currentRoundData.evidence_levels ?? {}), ...pendingEvidence }
-    const { error } = await supabase
-      .from('deal_rounds')
-      .update({ ...pending, evidence_levels: mergedEvidence })
-      .eq('id', currentRoundData.id)
-    if (error) { setError(error.message); setSaving(false); return }
-    await load()
-    setPending({})
-    setPendingEvidence({})
-    setSaving(false)
-  }
 
   async function handleAnalyzeFit() {
     setFitLoading(true)
@@ -632,7 +500,6 @@ export default function DealDashboardPage() {
   ]
 
   const isLatestRound = selectedRound === deal.current_round
-  const hasPending = Object.keys(pending).length > 0 || Object.keys(pendingEvidence).length > 0
   const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
   const hasAnyScore = currentRoundData !== null && allVars.some(v => currentRoundData[v as keyof typeof currentRoundData] !== null)
   const hasBriefing = !!(currentRoundData?.briefing_line)
@@ -731,7 +598,7 @@ export default function DealDashboardPage() {
       <RoundTimeline
         nodes={nodes}
         currentRound={selectedRound}
-        onSelect={r => { setSelectedRound(r); setPending({}); setPendingEvidence({}) }}
+        onSelect={r => setSelectedRound(r)}
       />
 
       {/* Historical notice — hide on Initial (R0) since it's not historical */}
@@ -901,11 +768,6 @@ export default function DealDashboardPage() {
             key={layer}
             layer={layer}
             round={currentRoundData}
-            isEditing={false}
-            pending={pending}
-            pendingEvidence={pendingEvidence}
-            onScore={handleScore}
-            onEvidence={handleEvidence}
             gate={layer === 4 ? null : dealState.gates[layer]}
             momentum={layer === 4 ? dealState.momentum : null}
             fitMarkerFor={fitMarkerFor}

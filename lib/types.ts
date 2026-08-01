@@ -353,12 +353,6 @@ export const EVIDENCE_LABELS: Record<EvidenceLevel, string> = {
   verified: 'Quantified',
 }
 
-export const EVIDENCE_DESCRIPTIONS: Record<EvidenceLevel, string> = {
-  declared: 'One person said it, no proof (caps the score at 2.5)',
-  corroborated: 'Multiple independent sources (caps at 4.0)',
-  verified: 'Validated by data: amounts, dates, volumes, contracts (up to 5)',
-}
-
 export const AUTHORITY_LABELS: Record<SourceAuthority, string> = {
   decision_maker: 'Decision Maker',
   influencer: 'Influencer',
