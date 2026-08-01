@@ -216,11 +216,6 @@ export default function AccountContextPage() {
       setProfile(newProfile)
       await saveAllProfile(newProfile)
       setCompanyImportSuccess(t('context.companyImported'))
-      fetch('/api/ai/fill-prepared-boxes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, locale }),
-      }).catch(() => {})
     } catch {
       setCompanyImportError(t('context.networkError'))
     } finally {
@@ -246,11 +241,6 @@ export default function AccountContextPage() {
       setProfile(newProfile)
       await saveAllProfile(newProfile)
       setCompanyImportSuccess(t('context.companyImported'))
-      fetch('/api/ai/fill-prepared-boxes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, locale }),
-      }).catch(() => {})
     } catch {
       setCompanyImportError(t('context.networkError'))
     } finally {

@@ -12,7 +12,10 @@ type ZoneDef = {
   id: string
   nameKey: string
   descKey: string
-  type: 'collected' | 'prepared' | 'built'
+  // "prepared" zones (product & positioning, terrain, necessary actor) were
+  // removed: the Sales Playbook holds them once for the whole company, in A1,
+  // A2, A3 and A5 — restating them per deal duplicated the socle.
+  type: 'collected' | 'built'
 }
 
 const ZONES: ZoneDef[] = [
@@ -21,9 +24,6 @@ const ZONES: ZoneDef[] = [
   { id: 'stakeholders',     nameKey: 'zones.stakeholders',     descKey: 'zones.stakeholdersDesc',     type: 'collected' },
   { id: 'human-pain',       nameKey: 'zones.humanPain',        descKey: 'zones.humanPainDesc',        type: 'collected' },
   { id: 'budget',           nameKey: 'zones.budget',           descKey: 'zones.budgetDesc',           type: 'collected' },
-  { id: 'product',          nameKey: 'zones.product',          descKey: 'zones.productDesc',          type: 'prepared' },
-  { id: 'fit',              nameKey: 'zones.fit',              descKey: 'zones.fitDesc',              type: 'prepared' },
-  { id: 'necessary-actor',  nameKey: 'zones.necessaryActor',   descKey: 'zones.necessaryActorDesc',   type: 'prepared' },
   { id: 'buy-reason',       nameKey: 'zones.buyReason',        descKey: 'zones.buyReasonDesc',        type: 'built' },
   { id: 'implementation',   nameKey: 'zones.implementation',   descKey: 'zones.implementationDesc',   type: 'built' },
   { id: 'urgency',          nameKey: 'zones.urgency',          descKey: 'zones.urgencyDesc',          type: 'built' },
@@ -34,25 +34,21 @@ const ZONES: ZoneDef[] = [
 
 const TYPE_LABEL_KEY: Record<string, string> = {
   collected: 'zones.collected',
-  prepared: 'zones.prepared',
   built: 'zones.built',
 }
 
 const TYPE_STYLE = {
   collected: { badge: 'bg-sky-50 text-sky-600 border-sky-200',        bar: 'border-l-sky-400' },
-  prepared:  { badge: 'bg-violet-50 text-violet-600 border-violet-200', bar: 'border-l-violet-400' },
   built:     { badge: 'bg-orange-50 text-orange-600 border-orange-200', bar: 'border-l-orange-400' },
 }
 
 const GROUP_LABEL_KEY: Record<string, string> = {
   collected: 'zones.groupCollected',
-  prepared: 'zones.groupPrepared',
   built: 'zones.groupBuilt',
 }
 
 const GROUPS = [
   { key: 'collected', types: ['collected'] as const },
-  { key: 'prepared',  types: ['prepared']  as const },
   { key: 'built',     types: ['built']     as const },
 ]
 
