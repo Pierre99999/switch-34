@@ -9,7 +9,13 @@
 
 export type PlaybookRow = Record<string, string>
 
+// What was last analysed to pre-fill the socle. Kept inside the playbook JSON
+// so the page can say where the content came from — without it, an import
+// leaves no trace and the user cannot tell whether it ran.
+export type PlaybookSource = { kind: 'url' | 'doc'; name: string; at: string }
+
 export type Playbook = {
+  source?: PlaybookSource
   a1_value_proposition: PlaybookRow[]
   a2_ideal_targets: PlaybookRow[]
   a2_avoid_targets: PlaybookRow[]
@@ -21,7 +27,7 @@ export type Playbook = {
   a7_postmortem: PlaybookRow[]
 }
 
-export type PlaybookTableKey = Exclude<keyof Playbook, 'a6_hypotheses'>
+export type PlaybookTableKey = Exclude<keyof Playbook, 'a6_hypotheses' | 'source'>
 
 export const PLAYBOOK_TABLES: PlaybookTableKey[] = [
   'a1_value_proposition', 'a2_ideal_targets', 'a2_avoid_targets', 'a3_positioning',
@@ -71,15 +77,22 @@ export function normalizePlaybook(raw: unknown, locale = 'fr'): Playbook {
     if (got.length) out[k] = got
   }
   if (typeof r.a6_hypotheses === 'string') out.a6_hypotheses = r.a6_hypotheses
+  const src = r.source
+  if (src && typeof src === 'object' && typeof src.name === 'string') out.source = src
   return out
 }
 
-export function rowHasContent(row: PlaybookRow): boolean {
-  return Object.values(row).some(v => typeof v === 'string' && v.trim().length > 0)
+// `ignore` lists columns that arrive pre-filled (A3's alternative names, A6's
+// families). A row holding only those is still an empty row — counting it as
+// content made A6 read "4 rows" when nothing had been written.
+export function rowHasContent(row: PlaybookRow, ignore: string[] = []): boolean {
+  return Object.entries(row)
+    .filter(([k]) => !ignore.includes(k))
+    .some(([, v]) => typeof v === 'string' && v.trim().length > 0)
 }
 
-export function filledRowCount(rows: PlaybookRow[]): number {
-  return rows.filter(rowHasContent).length
+export function filledRowCount(rows: PlaybookRow[], ignore: string[] = []): number {
+  return rows.filter(r => rowHasContent(r, ignore)).length
 }
 
 // ── Section definitions ──────────────────────────────────────
@@ -94,6 +107,8 @@ export type PlaybookSection = {
   intro: string         // the paragraph of method
   columns: PlaybookColumn[]
   addLabel: string
+  // Columns that ship pre-filled, so they do not count as written content.
+  seedColumns?: string[]
   // A2 renders two tables side by side; the second one names its partner.
   pairedWith?: PlaybookTableKey
   // A6 carries a free-text field under the table.
@@ -133,6 +148,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'proof', label: 'Preuve' },
     ],
     addLabel: '+ Ajouter une alternative',
+    seedColumns: ['alternative'],
   },
   {
     key: 'a4_perception', code: 'A4', label: 'La perception — comment le marché nous voit',
@@ -165,6 +181,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'questions', label: 'Vos questions clés', wide: true },
     ],
     addLabel: '+ Ajouter une famille',
+    seedColumns: ['family'],
     extraTextKey: 'a6_hypotheses',
     extraTextLabel: 'Hypothèses à vérifier en priorité',
   },
@@ -214,6 +231,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'proof', label: 'Proof' },
     ],
     addLabel: '+ Add an alternative',
+    seedColumns: ['alternative'],
   },
   {
     key: 'a4_perception', code: 'A4', label: 'Perception — how the market sees us',
@@ -246,6 +264,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'questions', label: 'Your key questions', wide: true },
     ],
     addLabel: '+ Add a family',
+    seedColumns: ['family'],
     extraTextKey: 'a6_hypotheses',
     extraTextLabel: 'Assumptions to verify first',
   },
@@ -279,16 +298,18 @@ export function avoidTargetsColumn(locale: string): PlaybookColumn {
 // A section counts as started as soon as one row holds something.
 export function playbookProgress(pb: Playbook, locale: string): { started: number; total: number } {
   const sections = getPlaybookSections(locale)
-  const started = sections.filter(s => {
-    if (s.key === 'a2_ideal_targets') {
-      return filledRowCount(pb.a2_ideal_targets) > 0 || filledRowCount(pb.a2_avoid_targets) > 0
-    }
-    if (s.key === 'a6_questions') {
-      return filledRowCount(pb.a6_questions) > 0 || pb.a6_hypotheses.trim().length > 0
-    }
-    return filledRowCount(pb[s.key]) > 0
-  }).length
+  const started = sections.filter(s => sectionFilledCount(pb, s) > 0).length
   return { started, total: sections.length }
+}
+
+// How many written rows a section holds, ignoring its seeded columns.
+export function sectionFilledCount(pb: Playbook, s: PlaybookSection): number {
+  if (s.key === 'a2_ideal_targets') {
+    return filledRowCount(pb.a2_ideal_targets) + filledRowCount(pb.a2_avoid_targets)
+  }
+  const rows = filledRowCount(pb[s.key], s.seedColumns)
+  if (s.key === 'a6_questions' && pb.a6_hypotheses.trim()) return rows + 1
+  return rows
 }
 
 // The exit criterion of Part A, quoted from the playbook.
@@ -322,8 +343,8 @@ export function playbookToContext(pb: Playbook, locale = 'fr'): string {
   const lines: string[] = []
 
   for (const s of sections) {
-    const render = (rows: PlaybookRow[], cols: PlaybookColumn[], title: string) => {
-      const filled = rows.filter(rowHasContent)
+    const render = (rows: PlaybookRow[], cols: PlaybookColumn[], title: string, ignore: string[] = []) => {
+      const filled = rows.filter(r => rowHasContent(r, ignore))
       if (!filled.length) return
       lines.push(`\n${title}:`)
       for (const row of filled) {
@@ -331,7 +352,7 @@ export function playbookToContext(pb: Playbook, locale = 'fr'): string {
         if (parts.length) lines.push(`  - ${parts.join(' | ')}`)
       }
     }
-    render(pb[s.key], s.columns, `${s.code} ${s.label}`)
+    render(pb[s.key], s.columns, `${s.code} ${s.label}`, s.seedColumns)
     if (s.pairedWith) render(pb[s.pairedWith], [avoidTargetsColumn(locale)], `${s.code} ${avoidTargetsColumn(locale).label}`)
     if (s.extraTextKey && pb.a6_hypotheses.trim()) {
       lines.push(`  ${s.extraTextLabel}: ${pb.a6_hypotheses.trim()}`)

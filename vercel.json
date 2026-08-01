@@ -6,7 +6,7 @@
     "app/api/context/**/route.ts": {
       "maxDuration": 300
     },
-    "app/api/profile/**/route.ts": {
+    "app/api/playbook/**/route.ts": {
       "maxDuration": 300
     }
   }

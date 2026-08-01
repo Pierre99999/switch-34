@@ -37,6 +37,7 @@ export default function OnboardingPage() {
   const [importError, setImportError] = useState<string | null>(null)
   // Which import produced the notice — the first line names the source.
   const [showImportNotice, setShowImportNotice] = useState<'url' | 'doc' | null>(null)
+  const [importKind, setImportKind] = useState<'url' | 'doc'>('url')
 
   // Director step 2: invite code display
   const [orgInviteCode, setOrgInviteCode] = useState('')
@@ -113,6 +114,7 @@ export default function OnboardingPage() {
   // ── Step 2: Import profile from URL ──
   async function handleImportUrl() {
     if (!importUrl.trim()) return
+    setImportKind('url')
     setImporting(true)
     setImportError(null)
     setImportSuccess(null)
@@ -130,7 +132,10 @@ export default function OnboardingPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('vendors').update({ playbook: data.playbook, company_url: importUrl.trim() }).eq('user_id', user.id)
+        await supabase.from('vendors').update({
+          playbook: { ...data.playbook, source: { kind: 'url', name: importUrl.trim(), at: new Date().toISOString() } },
+          company_url: importUrl.trim(),
+        }).eq('user_id', user.id)
       }
       setImportSuccess(t('onboarding.profileImported'))
       setShowImportNotice('url')
@@ -143,6 +148,7 @@ export default function OnboardingPage() {
   async function handleImportDoc(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setImportKind('doc')
     setImporting(true)
     setImportError(null)
     setImportSuccess(null)
@@ -157,7 +163,9 @@ export default function OnboardingPage() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('vendors').update({ playbook: data.playbook }).eq('user_id', user.id)
+        await supabase.from('vendors').update({
+          playbook: { ...data.playbook, source: { kind: 'doc', name: file.name, at: new Date().toISOString() } },
+        }).eq('user_id', user.id)
       }
       setImportSuccess(t('onboarding.profileImported'))
       setShowImportNotice('doc')
@@ -189,9 +197,12 @@ export default function OnboardingPage() {
 
   // ── Render ──
   const fr = selectedLocale === 'fr'
+  const readingStep = fr
+    ? (importKind === 'doc' ? 'Lecture du document' : 'Lecture de votre site')
+    : (importKind === 'doc' ? 'Reading the document' : 'Reading your website')
   const importSteps = fr
-    ? ['Lecture de votre site', 'Segments et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
-    : ['Reading your website', 'Segments and value proposition', 'Positioning and alternatives', 'Perception objections']
+    ? [readingStep, 'Segments et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
+    : [readingStep, 'Segments and value proposition', 'Positioning and alternatives', 'Perception objections']
   const totalSteps = role === 'director' ? 4 : 2
   const selectedChallenge = SALES_CHALLENGES.find(c => c.key === challenge) ?? null
 

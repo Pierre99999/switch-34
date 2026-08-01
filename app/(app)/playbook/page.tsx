@@ -10,7 +10,7 @@ import AIProgress from '@/components/ui/AIProgress'
 import {
   type Playbook, type PlaybookRow, type PlaybookSection, type PlaybookColumn, type PlaybookTableKey,
   emptyPlaybook, normalizePlaybook, getPlaybookSections, avoidTargetsColumn,
-  filledRowCount, playbookProgress, exitCriterion, usageRules,
+  sectionFilledCount, playbookProgress, exitCriterion, usageRules,
 } from '@/lib/playbook'
 
 const cellClass = "w-full bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
@@ -93,11 +93,7 @@ function SectionCard({
   const [open, setOpen] = useState(false)
   const fr = locale === 'fr'
 
-  const filled = section.key === 'a2_ideal_targets'
-    ? filledRowCount(pb.a2_ideal_targets) + filledRowCount(pb.a2_avoid_targets)
-    : filledRowCount(pb[section.key])
-  const extraFilled = section.extraTextKey && pb.a6_hypotheses.trim() ? 1 : 0
-  const total = filled + extraFilled
+  const total = sectionFilledCount(pb, section)
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
@@ -190,6 +186,7 @@ export default function PlaybookPage() {
 
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
+  const [importKind, setImportKind] = useState<'url' | 'doc'>('url')
   const [importError, setImportError] = useState<string | null>(null)
   const [importSuccess, setImportSuccess] = useState<string | null>(null)
 
@@ -231,10 +228,11 @@ export default function PlaybookPage() {
     setSaving(false)
   }
 
-  async function applyImported(imported: Playbook) {
+  async function applyImported(imported: Playbook, source: { kind: 'url' | 'doc'; name: string }) {
     // Import overwrites A1-A4 and leaves everything the team wrote alone.
     const next: Playbook = {
       ...pb,
+      source: { ...source, at: new Date().toISOString() },
       a1_value_proposition: imported.a1_value_proposition.length ? imported.a1_value_proposition : pb.a1_value_proposition,
       a2_ideal_targets: imported.a2_ideal_targets.length ? imported.a2_ideal_targets : pb.a2_ideal_targets,
       a2_avoid_targets: imported.a2_avoid_targets.length ? imported.a2_avoid_targets : pb.a2_avoid_targets,
@@ -248,6 +246,7 @@ export default function PlaybookPage() {
 
   async function handleImportUrl() {
     if (!importUrl.trim()) return
+    setImportKind('url')
     setImporting(true); setImportError(null); setImportSuccess(null)
     try {
       const res = await fetch('/api/playbook/from-url', {
@@ -256,7 +255,7 @@ export default function PlaybookPage() {
       })
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
-      await applyImported(normalizePlaybook(data.playbook, locale))
+      await applyImported(normalizePlaybook(data.playbook, locale), { kind: 'url', name: importUrl.trim() })
       if (vendor) await createClient().from('vendors').update({ company_url: importUrl.trim() }).eq('id', vendor.id)
     } catch {
       setImportError(fr ? 'Erreur réseau — réessayez' : 'Network error — try again')
@@ -268,6 +267,7 @@ export default function PlaybookPage() {
   async function handleImportDoc(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setImportKind('doc')
     setImporting(true); setImportError(null); setImportSuccess(null)
     try {
       const formData = new FormData()
@@ -276,7 +276,7 @@ export default function PlaybookPage() {
       const res = await fetch('/api/playbook/from-doc', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); return }
-      await applyImported(normalizePlaybook(data.playbook, locale))
+      await applyImported(normalizePlaybook(data.playbook, locale), { kind: 'doc', name: file.name })
     } catch {
       setImportError(fr ? 'Erreur réseau — réessayez' : 'Network error — try again')
     } finally {
@@ -287,9 +287,12 @@ export default function PlaybookPage() {
 
   const { started, total } = playbookProgress(pb, locale)
   const myChallenge = challengeLabel(vendor?.sales_challenge ?? null, locale)
+  const readingStep = fr
+    ? (importKind === 'doc' ? 'Lecture du document' : 'Lecture de votre site')
+    : (importKind === 'doc' ? 'Reading the document' : 'Reading your website')
   const importSteps = fr
-    ? ['Lecture de votre site', 'Segments et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
-    : ['Reading your website', 'Segments and value proposition', 'Positioning and alternatives', 'Perception objections']
+    ? [readingStep, 'Segments et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
+    : [readingStep, 'Segments and value proposition', 'Positioning and alternatives', 'Perception objections']
 
   const sectionDirty = (s: PlaybookSection): boolean => {
     if (s.key === 'a2_ideal_targets') {
@@ -366,6 +369,27 @@ export default function PlaybookPage() {
               ? 'Switch remplit A1 à A4 — segments, cibles, positionnement, objections de perception. A5 à A7 viennent de votre histoire commerciale : ils ne s’inventent pas depuis un site.'
               : 'Switch fills A1 to A4 — segments, targets, positioning, perception objections. A5 to A7 come from your own sales history: a website cannot reveal them.'}
           </p>
+
+          {/* Without this, an import leaves no trace and there is no way to
+              tell what was analysed — or whether it ran at all. */}
+          {pb.source && (
+            <div className="flex items-start gap-2.5 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 mb-4">
+              <span className="text-base leading-none mt-0.5">{pb.source.kind === 'doc' ? '📄' : '🌐'}</span>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide">
+                  {fr ? 'Dernière analyse' : 'Last analysis'}
+                </div>
+                <div className="text-sm text-neutral-700 break-all">{pb.source.name}</div>
+                <div className="text-xs text-neutral-400 mt-0.5">
+                  {new Date(pb.source.at).toLocaleString(fr ? 'fr-FR' : 'en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                  })}
+                  {' · '}
+                  {pb.source.kind === 'doc' ? (fr ? 'document' : 'document') : (fr ? 'site web' : 'website')}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className={`flex flex-col gap-4 ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
             <div>
