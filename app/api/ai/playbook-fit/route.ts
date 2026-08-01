@@ -63,10 +63,11 @@ export async function POST(req: NextRequest) {
           description: 'aligned = clearly matches a socle row. partial = matches loosely or only in part. mismatch = contradicts the socle, or is on the avoid list. unknown = the material says nothing either way.',
         },
         summary: { type: 'string', description: 'One sentence: what we understood about THIS prospect on this axis.' },
+        reason: { type: 'string', description: 'One sentence explaining WHY this verdict and not another — name what matches and what does not. The seller must be able to disagree with you on the strength of this sentence alone.' },
         playbook_ref: { type: 'string', description: 'The socle row you matched against, quoted or closely paraphrased. Empty string if verdict is unknown. Never cite a row that is not in the playbook.' },
         gap: { type: 'string', description: 'What is missing, or what the next conversation must settle to confirm this. Empty if aligned and certain.' },
       },
-      required: ['verdict', 'summary', 'playbook_ref'],
+      required: ['verdict', 'summary', 'reason', 'playbook_ref'],
     }
 
     const message = await client.messages.create({
@@ -94,6 +95,7 @@ RULES:
     ? 'NOTHING has been captured from a conversation yet. Everything you have comes from the prospect\'s own public material, so every verdict is a HYPOTHESIS. Be correspondingly careful, and use "gap" to say what must be asked to confirm it.'
     : 'A conversation has been captured. Prefer what the prospect actually said over what their website suggests, and say so in the summary.'}
 - Set avoid_list_hit to true only when the prospect clearly matches a row of A2's "segments to avoid".
+- "reason" must make the verdict arguable: say what matched and what did not. "Partial" with no stated reason is useless to the seller.
 - Keep every field to ONE sentence. Quote the playbook row in a dozen words, not in full. You must return all five axes, so budget your words.` + localeInstruction(locale),
       tools: [
         {

@@ -625,8 +625,9 @@ export default function DealDashboardPage() {
     const title = [
       `${locale === 'fr' ? 'Adéquation playbook' : 'Playbook fit'} · ${name}`,
       axis.summary,
+      axis.reason ? `${locale === 'fr' ? 'Pourquoi : ' : 'Why: '}${axis.reason}` : '',
       axis.playbook_ref ? `${locale === 'fr' ? 'Playbook : ' : 'Playbook: '}${axis.playbook_ref}` : '',
-      axis.gap ? `${locale === 'fr' ? 'À vérifier : ' : 'To settle: '}${axis.gap}` : '',
+      axis.gap ? `${locale === 'fr' ? 'À trancher : ' : 'To settle: '}${axis.gap}` : '',
     ].filter(Boolean).join('\n')
     return <FitDot verdict={axis.verdict} title={title} />
   }

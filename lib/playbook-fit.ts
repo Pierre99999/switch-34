@@ -23,6 +23,8 @@ export type FitAxis = {
   verdict: FitVerdict
   /** What we understood about this prospect, in one sentence. */
   summary: string
+  /** Why THIS verdict and not another — the comparison that produced it. */
+  reason: string
   /** The socle row this was matched against — quoted, so the verdict is checkable. */
   playbook_ref: string
   /** What is missing, or what the next conversation should settle. */
@@ -61,6 +63,35 @@ export const FIT_AXIS_LABELS: Record<FitAxisKey, { fr: string; en: string }> = {
   perception: { fr: 'Perception', en: 'Perception' },
 }
 
+// What each verdict means, shown as a legend — a colour with no key is a
+// puzzle, and the user has to trust it blind.
+export const VERDICT_MEANING: Record<FitVerdict, { fr: string; en: string }> = {
+  aligned: {
+    fr: 'Correspond clairement à une ligne de votre socle.',
+    en: 'Clearly matches a row of your socle.',
+  },
+  partial: {
+    fr: 'Correspond en partie seulement, ou de façon encore incertaine.',
+    en: 'Matches only in part, or not yet with certainty.',
+  },
+  mismatch: {
+    fr: 'Contredit votre socle, ou relève d’un segment que vous avez décidé de fuir.',
+    en: 'Contradicts your socle, or belongs to a segment you decided to avoid.',
+  },
+  unknown: {
+    fr: 'Ce que vous savez de ce prospect ne dit rien sur cet axe.',
+    en: 'What you know about this prospect says nothing either way.',
+  },
+}
+
+export const FIT_AXIS_QUESTION: Record<FitAxisKey, { fr: string; en: string }> = {
+  segment: { fr: 'Ce prospect est-il une de vos cibles idéales ?', en: 'Is this prospect one of your ideal segments?' },
+  problem: { fr: 'Son problème est-il un de ceux que vous savez résoudre ?', en: 'Is their problem one you know how to solve?' },
+  value: { fr: 'La valeur que vous délivrez lui parle-t-elle ?', en: 'Does the value you deliver land for them?' },
+  alternative: { fr: 'Face à quoi se décide-t-il, et avez-vous la différence pertinente ?', en: 'What are they deciding against, and do you have the relevant difference?' },
+  perception: { fr: 'Lesquelles de vos objections connues sont actives ici ?', en: 'Which of your known objections are alive here?' },
+}
+
 export const FIT_AXIS_SOURCE: Record<FitAxisKey, string> = {
   segment: 'A2', problem: 'A1', value: 'A1', alternative: 'A3', perception: 'A4',
 }
@@ -76,6 +107,7 @@ export function normalizeFit(raw: unknown): PlaybookFit | null {
       key: a.key,
       verdict: valid.includes(a.verdict) ? a.verdict : 'unknown',
       summary: typeof a.summary === 'string' ? a.summary : '',
+      reason: typeof a.reason === 'string' ? a.reason : '',
       playbook_ref: typeof a.playbook_ref === 'string' ? a.playbook_ref : '',
       gap: typeof a.gap === 'string' ? a.gap : undefined,
     })) as FitAxis[]
