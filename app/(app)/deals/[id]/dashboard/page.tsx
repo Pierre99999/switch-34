@@ -15,6 +15,9 @@ import {
 } from '@/lib/scoring'
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
 import RoundTimeline from '@/components/deal/RoundTimeline'
+import { normalizePlaybook, type Playbook } from '@/lib/playbook'
+import { actorCoverage, type DealContact } from '@/lib/playbook-fit'
+import PlaybookFitCard from '@/components/deal/PlaybookFitCard'
 import AIProgress from '@/components/ui/AIProgress'
 import { useI18n } from '@/lib/i18n/context'
 
@@ -352,6 +355,8 @@ export default function DealDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
+  const [stakeholders, setStakeholders] = useState<DealContact[]>([])
+  const [playbook, setPlaybook] = useState<Playbook | null>(null)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
 
@@ -377,10 +382,17 @@ export default function DealDashboardPage() {
 
   const load = useCallback(async () => {
     const supabase = createClient()
-    const [{ data: dealData }, { data: roundData }] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser()
+    const [{ data: dealData }, { data: roundData }, { data: stakeholderData }, { data: vendorData }] = await Promise.all([
       supabase.from('deals').select('*').eq('id', dealId).single(),
       supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
+      supabase.from('deal_stakeholders').select('name, actor_type, actor_types').eq('deal_id', dealId),
+      user
+        ? supabase.from('vendors').select('playbook, locale').eq('user_id', user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
+    setStakeholders(stakeholderData ?? [])
+    setPlaybook(vendorData?.playbook ? normalizePlaybook(vendorData.playbook, locale) : null)
     if (dealData) setDeal(dealData)
     if (roundData) {
       setRounds(roundData)
@@ -397,7 +409,7 @@ export default function DealDashboardPage() {
       const latestCaptured = [...roundData].reverse().find(isCaptured)
       setSelectedRound(prev => prev > 0 ? prev : (latestCaptured?.round ?? 0))
     }
-  }, [dealId])
+  }, [dealId, locale])
 
   useEffect(() => { load() }, [load])
 
@@ -714,6 +726,15 @@ export default function DealDashboardPage() {
           )}
           {errorBlock}
         </div>
+      )}
+
+      {/* Playbook fit — a second reading, beside the gates, never inside them */}
+      {playbook && (
+        <PlaybookFitCard
+          coverage={actorCoverage(playbook, stakeholders)}
+          locale={locale}
+          dealId={dealId}
+        />
       )}
 
       {/* Layer cards */}
