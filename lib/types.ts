@@ -184,6 +184,9 @@ export type Vendor = {
   sales_context_template: string | null
   sales_challenge: string | null
   sales_challenge_note: string | null
+  // The Sales Playbook (socle). Replaces `dimensions`, which is retained in
+  // the database for old accounts but no longer read.
+  playbook: unknown
   dimensions: VendorDimensions | null
   created_at: string
   updated_at: string

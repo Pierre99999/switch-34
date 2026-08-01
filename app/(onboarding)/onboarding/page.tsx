@@ -117,7 +117,7 @@ export default function OnboardingPage() {
     setImportError(null)
     setImportSuccess(null)
     try {
-      const res = await fetch('/api/profile/from-url', {
+      const res = await fetch('/api/playbook/from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: importUrl.trim(), locale }),
@@ -125,12 +125,12 @@ export default function OnboardingPage() {
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); setImporting(false); return }
 
-      // Save dimensions to vendor. The URL is stored too so the profile page
+      // Save the playbook socle. The URL is stored too so the playbook page
       // can show it back instead of asking for it a second time.
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('vendors').update({ dimensions: data.dimensions, company_url: importUrl.trim() }).eq('user_id', user.id)
+        await supabase.from('vendors').update({ playbook: data.playbook, company_url: importUrl.trim() }).eq('user_id', user.id)
       }
       setImportSuccess(t('onboarding.profileImported'))
       setShowImportNotice('url')
@@ -150,14 +150,14 @@ export default function OnboardingPage() {
       const formData = new FormData()
       formData.append('file', file)
       formData.append('locale', locale)
-      const res = await fetch('/api/profile/from-doc', { method: 'POST', body: formData })
+      const res = await fetch('/api/playbook/from-doc', { method: 'POST', body: formData })
       const data = await res.json()
       if (!res.ok || data.error) { setImportError(data.error ?? 'Failed'); setImporting(false); return }
 
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        await supabase.from('vendors').update({ dimensions: data.dimensions }).eq('user_id', user.id)
+        await supabase.from('vendors').update({ playbook: data.playbook }).eq('user_id', user.id)
       }
       setImportSuccess(t('onboarding.profileImported'))
       setShowImportNotice('doc')
@@ -177,7 +177,7 @@ export default function OnboardingPage() {
       await supabase.from('vendors').update({ onboarding_completed: true }).eq('user_id', user.id)
     }
     await refreshRole()
-    router.push('/profile')
+    router.push('/playbook')
     router.refresh()
   }
 
@@ -190,8 +190,8 @@ export default function OnboardingPage() {
   // ── Render ──
   const fr = selectedLocale === 'fr'
   const importSteps = fr
-    ? ['Lecture de votre site', 'Extraction des 9 dimensions', 'Rédaction du profil', 'Enregistrement']
-    : ['Reading your website', 'Extracting the 9 dimensions', 'Writing the profile', 'Saving']
+    ? ['Lecture de votre site', 'Segments et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
+    : ['Reading your website', 'Segments and value proposition', 'Positioning and alternatives', 'Perception objections']
   const totalSteps = role === 'director' ? 4 : 2
   const selectedChallenge = SALES_CHALLENGES.find(c => c.key === challenge) ?? null
 
@@ -211,13 +211,13 @@ export default function OnboardingPage() {
               <span className="text-xl">✓</span>
             </div>
             <h2 id="import-notice-title" className="text-lg font-semibold text-neutral-900 mb-3">
-              {fr ? 'Profil analysé' : 'Profile analyzed'}
+              {fr ? 'Socle pré-rempli' : 'Socle pre-filled'}
             </h2>
             <div className="space-y-3 text-sm text-neutral-600 leading-relaxed">
               <p>
                 {fr
-                  ? `Nous avons analysé ${showImportNotice === 'doc' ? 'votre document' : 'votre site web'}. Certaines dimensions peuvent être incomplètes, car elles ne sont pas toujours visibles publiquement.`
-                  : `We analyzed ${showImportNotice === 'doc' ? 'your document' : 'your website'}. Some dimensions may be incomplete, as they are not always publicly visible.`}
+                  ? `Nous avons analysé ${showImportNotice === 'doc' ? 'votre document' : 'votre site web'}. Certaines sections peuvent être incomplètes, car elles ne sont pas toujours visibles publiquement. A5 à A7 viennent de votre histoire commerciale : elles restent à remplir.`
+                  : `We analyzed ${showImportNotice === 'doc' ? 'your document' : 'your website'}. Some sections may be incomplete, as they are not always publicly visible. A5 to A7 come from your own sales history and are still yours to fill in.`}
               </p>
               <p>
                 {fr
@@ -226,8 +226,8 @@ export default function OnboardingPage() {
               </p>
               <p>
                 {fr
-                  ? 'Vous pourrez compléter votre profil à tout moment.'
-                  : 'You can complete your profile at any time.'}
+                  ? 'Vous pourrez compléter votre playbook à tout moment.'
+                  : 'You can complete your playbook at any time.'}
               </p>
             </div>
             <button onClick={() => setShowImportNotice(null)} className={`${btnPrimary} mt-6`} autoFocus>

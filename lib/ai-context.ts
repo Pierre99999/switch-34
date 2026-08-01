@@ -4,6 +4,7 @@ import { type Vendor, type Deal, type DealRound, type EvidenceLevel, LAYER_VARIA
 import { simpleStatus, gateScore, prescriptions, DECISIVE_VARS } from './scoring'
 import { evidenceFromDeclarations } from './voice-credit'
 import type { VoiceDeclaration } from './types'
+import { normalizePlaybook, playbookToContext } from './playbook'
 
 export function buildVendorContext(vendor: Vendor): string {
   // The problem they named at onboarding. Everything the AI produces should
@@ -12,6 +13,14 @@ export function buildVendorContext(vendor: Vendor): string {
     .filter(Boolean).join(' — ')
   const challengeLine = challenge ? `\nTHIS SELLER'S STATED CHALLENGE: ${challenge}` : ''
 
+  // The Sales Playbook socle is the current source of truth.
+  const socle = playbookToContext(normalizePlaybook(vendor.playbook, vendor.locale ?? 'fr'), vendor.locale ?? 'fr')
+  if (socle) {
+    return [`VENDOR: ${vendor.company_name}`, challenge ? `Stated challenge: ${challenge}` : '', socle]
+      .filter(Boolean).join('\n')
+  }
+
+  // Fallback for accounts created before the playbook replaced the profile.
   const d = vendor.dimensions
   if (!d) return `Vendor: ${vendor.company_name}\nProduct: ${vendor.product_description ?? ''}\nValue prop: ${vendor.value_proposition ?? ''}${challengeLine}`
 

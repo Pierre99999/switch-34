@@ -115,7 +115,7 @@ export default function NavBar() {
         <div className="hidden md:flex items-center gap-1">
           <span className="text-lg font-bold text-blue-500 mr-4 tracking-tight">Switch</span>
           {tab(t('nav.pipeline'), '/pipeline', pathname === '/pipeline')}
-          {tab(t('nav.profile'), '/profile', pathname === '/profile')}
+          {tab(t('nav.profile'), '/playbook', pathname === '/playbook')}
           {role === 'director' && tab(t('nav.team'), '/team', pathname === '/team')}
           {isAdmin && tab('Admin', '/admin', pathname === '/admin')}
           {dealId && (
@@ -163,7 +163,7 @@ export default function NavBar() {
         <div className="md:hidden border-t border-neutral-200 bg-white">
           <div className="max-w-6xl mx-auto px-4 py-3 space-y-1">
             {mobileItem(t('nav.pipeline'), '/pipeline', pathname === '/pipeline')}
-            {mobileItem(t('nav.profile'), '/profile', pathname === '/profile')}
+            {mobileItem(t('nav.profile'), '/playbook', pathname === '/playbook')}
             {role === 'director' && mobileItem(t('nav.team'), '/team', pathname === '/team')}
             {isAdmin && mobileItem('Admin', '/admin', pathname === '/admin')}
             {dealId && (
