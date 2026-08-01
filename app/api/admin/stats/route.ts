@@ -19,13 +19,16 @@ export async function GET() {
   }
 
   // All vendors (one per user), all deals, all rounds, all AI usage, feedback.
-  const [{ data: vendors }, { data: deals }, { data: rounds }, { data: usage }, { data: feedbackRows }] = await Promise.all([
+  const [{ data: vendors }, { data: deals }, { data: rounds }, { data: usage }, { data: feedbackRows }, { data: orgRows }] = await Promise.all([
     admin.from('vendors').select('user_id, full_name, company_name, role, locale, created_at'),
     admin.from('deals').select('id, user_id, prospect_name, status, current_round, created_at'),
     admin.from('deal_rounds').select('id, deal_id, briefing_line, capture_notes'),
     admin.from('ai_usage').select('user_id, model, input_tokens, output_tokens'),
     admin.from('feedback').select('id, user_id, sentiment, message, page, status, created_at').order('created_at', { ascending: false }).limit(200),
+    // Teams a test rep can be attached to.
+    admin.from('organizations').select('id, name').order('name'),
   ])
+  const organizations = orgRows ?? []
 
   // Aggregate tokens and euro cost per user.
   const usageByUser = new Map<string, { inputTokens: number; outputTokens: number; costEur: number }>()
@@ -150,6 +153,7 @@ export async function GET() {
     dealsByStatus,
     users,
     orphans,
+    organizations,
     feedback,
   })
 }

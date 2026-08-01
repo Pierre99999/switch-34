@@ -43,6 +43,7 @@ type Stats = {
   dealsByStatus: Record<string, number>
   users: AdminUser[]
   orphans?: OrphanUser[]
+  organizations?: { id: string; name: string }[]
   feedback: Feedback[]
 }
 
@@ -64,6 +65,8 @@ function fmtDate(iso: string | null) {
 }
 
 const ROLE_LABEL: Record<string, string> = { director: 'Directeur', sales: 'Commercial', unknown: '—' }
+
+const adminInput = "mt-1 w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 placeholder:text-neutral-300 transition-all"
 
 export default function AdminPage() {
   const router = useRouter()
@@ -106,6 +109,40 @@ export default function AdminPage() {
       body: JSON.stringify({ id, status }),
     })
     if (!res.ok) await loadStats()
+  }
+
+  // ── Test account creation ──
+  const [newEmail, setNewEmail] = useState('')
+  const [newName, setNewName] = useState('')
+  const [newCompany, setNewCompany] = useState('')
+  const [newRole, setNewRole] = useState<'director' | 'sales'>('director')
+  const [newLocale, setNewLocale] = useState<'fr' | 'en'>('fr')
+  const [newOrgId, setNewOrgId] = useState('')
+  const [skipOnboarding, setSkipOnboarding] = useState(true)
+  const [creating, setCreating] = useState(false)
+  const [created, setCreated] = useState<{ email: string; password: string } | null>(null)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  async function handleCreateAccount() {
+    setCreating(true)
+    setCreateError(null)
+    setCreated(null)
+    const res = await fetch('/api/admin/create-test-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: newEmail, fullName: newName, companyName: newCompany,
+        role: newRole, locale: newLocale, skipOnboarding,
+        organizationId: newRole === 'sales' ? newOrgId : null,
+      }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setCreating(false)
+    if (!res.ok) { setCreateError(data.error ?? `Création impossible (${res.status})`); return }
+    setCreated({ email: data.email, password: data.password })
+    setNewEmail(''); setNewName(''); setNewCompany(''); setNewOrgId('')
+    await loadStats()
   }
 
   async function handleDelete(userId: string) {
@@ -293,6 +330,119 @@ export default function AdminPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mint a ready-to-use account to test another context. */}
+      <div className="mt-10">
+        <h2 className="text-sm font-semibold text-neutral-700 mb-1">Créer un compte de test</h2>
+        <p className="text-xs text-neutral-500 mb-4 max-w-2xl">
+          Le compte est créé immédiatement, email déjà confirmé. Le mot de passe s&apos;affiche une seule fois,
+          juste après la création — copiez-le avant de quitter la page, il n&apos;est stocké nulle part.
+        </p>
+
+        <div className="bg-white rounded-2xl border border-neutral-200 p-5 sm:p-6 shadow-sm">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Email *</label>
+              <input
+                value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                placeholder="test-acme@exemple.com" type="email"
+                className={adminInput}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Nom</label>
+              <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Jean Dupont" className={adminInput} />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Rôle</label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {(['director', 'sales'] as const).map(r => (
+                  <button
+                    key={r} type="button" onClick={() => setNewRole(r)}
+                    className={`border rounded-xl px-3 py-2 text-sm font-medium transition-all ${newRole === r ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-400'}`}
+                  >
+                    {ROLE_LABEL[r]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Langue</label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {(['fr', 'en'] as const).map(l => (
+                  <button
+                    key={l} type="button" onClick={() => setNewLocale(l)}
+                    className={`border rounded-xl px-3 py-2 text-sm font-medium transition-all ${newLocale === l ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-neutral-200 text-neutral-600 hover:border-neutral-400'}`}
+                  >
+                    {l === 'fr' ? 'Français' : 'English'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {newRole === 'director' ? (
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Entreprise *</label>
+                <input value={newCompany} onChange={e => setNewCompany(e.target.value)} placeholder="Acme" className={adminInput} />
+                <p className="text-[11px] text-neutral-400 mt-1">Une organisation est créée, avec son propre Sales Playbook.</p>
+              </div>
+            ) : (
+              <div className="sm:col-span-2">
+                <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Équipe à rejoindre *</label>
+                <select value={newOrgId} onChange={e => setNewOrgId(e.target.value)} className={adminInput}>
+                  <option value="">— Choisir une équipe —</option>
+                  {(stats.organizations ?? []).map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-neutral-400 mt-1">Le commercial hérite du playbook de cette équipe, en lecture seule.</p>
+              </div>
+            )}
+
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+                <input type="checkbox" checked={skipOnboarding} onChange={e => setSkipOnboarding(e.target.checked)} className="rounded border-neutral-300" />
+                Passer l&apos;onboarding (compte prêt à l&apos;emploi)
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-neutral-100 flex items-center gap-3 flex-wrap">
+            <button
+              onClick={handleCreateAccount}
+              disabled={creating || !newEmail.trim() || (newRole === 'director' ? !newCompany.trim() : !newOrgId)}
+              className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
+            >
+              {creating ? 'Création…' : 'Créer le compte'}
+            </button>
+            {createError && <span className="text-sm text-rose-600">{createError}</span>}
+          </div>
+
+          {created && (
+            <div className="mt-5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-4">
+              <p className="text-sm font-medium text-emerald-800 mb-2">Compte créé — copiez le mot de passe maintenant</p>
+              <div className="font-mono text-sm text-emerald-900 bg-white border border-emerald-200 rounded-lg px-3 py-2 break-all">
+                {created.email}<br />{created.password}
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${created.email}\n${created.password}`)
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 2000)
+                }}
+                className="mt-2 text-sm font-medium text-emerald-700 hover:text-emerald-800"
+              >
+                {copied ? 'Copié !' : 'Copier'}
+              </button>
+              <p className="text-xs text-emerald-700/80 mt-2">
+                Connectez-vous avec ces identifiants dans une fenêtre privée pour rester connecté ici en parallèle.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Auth identities with no account behind them. These hold the email
