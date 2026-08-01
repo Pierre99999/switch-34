@@ -71,7 +71,10 @@ export async function POST(req: NextRequest) {
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      // Five axes, each with a summary, a quoted playbook row and a gap, in
+      // French, ran past 2048 and the tool call was cut mid-way — the axes
+      // emitted before the cut were saved and the rest silently vanished.
+      max_tokens: 8192,
       system: `You judge whether a prospect FITS a sales team's playbook, using Pierre Gaubil's Switch methodology.
 
 This is NOT a health check on the deal — someone else scores that. Your only question is: does this prospect look like the deals this team wins?
@@ -90,7 +93,8 @@ RULES:
 - ${basis === 'context'
     ? 'NOTHING has been captured from a conversation yet. Everything you have comes from the prospect\'s own public material, so every verdict is a HYPOTHESIS. Be correspondingly careful, and use "gap" to say what must be asked to confirm it.'
     : 'A conversation has been captured. Prefer what the prospect actually said over what their website suggests, and say so in the summary.'}
-- Set avoid_list_hit to true only when the prospect clearly matches a row of A2's "segments to avoid".` + localeInstruction(locale),
+- Set avoid_list_hit to true only when the prospect clearly matches a row of A2's "segments to avoid".
+- Keep every field to ONE sentence. Quote the playbook row in a dozen words, not in full. You must return all five axes, so budget your words.` + localeInstruction(locale),
       tools: [
         {
           name: 'save_fit',
@@ -111,6 +115,15 @@ RULES:
 
     await recordUsage(supabase, { userId: user.id, route: 'ai/playbook-fit', model: 'claude-sonnet-4-6', usage: message.usage, dealId })
 
+    // A truncated tool call still parses — it just holds fewer axes. Saving
+    // it would quietly replace a complete reading with a partial one, which
+    // is exactly how a five-axis fit became a one-axis fit on re-evaluation.
+    if (message.stop_reason === 'max_tokens') {
+      return NextResponse.json({
+        error: 'The response was cut short. Nothing was saved — try again.',
+      }, { status: 502 })
+    }
+
     const toolUse = message.content.find(b => b.type === 'tool_use')
     if (!toolUse || toolUse.type !== 'tool_use') {
       return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
@@ -126,6 +139,15 @@ RULES:
       avoid_list_hit: input.avoid_list_hit === true,
     })
     if (!fit) return NextResponse.json({ error: 'The AI returned no usable axes.' }, { status: 500 })
+
+    // Belt and braces: even without a truncation flag, an incomplete set is
+    // not worth overwriting a stored reading with.
+    const AXES = 5
+    if (fit.axes.length < AXES) {
+      return NextResponse.json({
+        error: `Only ${fit.axes.length} of ${AXES} axes came back. Nothing was saved — try again.`,
+      }, { status: 502 })
+    }
 
     await supabase.from('deals').update({ playbook_fit: fit }).eq('id', dealId)
 

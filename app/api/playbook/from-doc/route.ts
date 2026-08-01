@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 8192,
     system,
     tools: [tool],
     tool_choice: { type: 'any' as const },
@@ -54,6 +54,12 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) await recordUsage(supabase, { userId: user.id, route: 'playbook/from-doc', model: 'claude-sonnet-4-6', usage: message.usage })
+
+  // A cut-off tool call still parses, with rows missing. Refuse it rather
+  // than presenting a half-read site as the finished socle.
+  if (message.stop_reason === 'max_tokens') {
+    return NextResponse.json({ error: 'The analysis was cut short. Nothing was saved — try again.' }, { status: 502 })
+  }
 
   const toolUse = message.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {
