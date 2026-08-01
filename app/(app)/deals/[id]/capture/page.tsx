@@ -7,6 +7,7 @@ import { type Deal, type DealRound, type BriefingQuestion, type TranscriptSpeake
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import AIProgress from '@/components/ui/AIProgress'
 import { useToast } from '@/components/ui/Toast'
+import { scoreUpdateFromSuggestions, type ScoreSuggestion } from '@/lib/deal-rounds'
 import { useI18n } from '@/lib/i18n/context'
 
 export default function CapturePage() {
@@ -138,18 +139,11 @@ export default function CapturePage() {
         throw new Error(boxesErr || 'Knowledge base update failed')
       }
 
-      const suggestions = data.suggestions ?? {}
-      const scoreUpdate: Record<string, number> = {}
-      const evidenceLevels: Record<string, string> = { ...(currentRoundData.evidence_levels ?? {}) }
-      const rationales: Record<string, string> = { ...(currentRoundData.rationales ?? {}) }
-      const declarations: Record<string, unknown> = { ...((currentRoundData as Record<string, unknown>).declarations as Record<string, unknown> ?? {}) }
-      for (const [variable, s] of Object.entries(suggestions)) {
-        if (s.score !== null) scoreUpdate[variable] = s.score
-        if (s.evidence) evidenceLevels[variable] = s.evidence
-        if (s.rationale) rationales[variable] = s.rationale
-        if (s.declarations) declarations[variable] = s.declarations
-      }
-      const { error: updateErr } = await supabase.from('deal_rounds').update({ ...scoreUpdate, evidence_levels: evidenceLevels, rationales, declarations }).eq('id', currentRoundData.id)
+      const suggestions = (data.suggestions ?? {}) as Record<string, ScoreSuggestion>
+      const { error: updateErr } = await supabase
+        .from('deal_rounds')
+        .update(scoreUpdateFromSuggestions(currentRoundData, suggestions))
+        .eq('id', currentRoundData.id)
       if (updateErr) throw new Error(updateErr.message)
 
       // Regenerate the read AFTER scoring so the dashboard reflects the

@@ -14,6 +14,7 @@ import {
   type GateInfo, type MomentumInfo,
 } from '@/lib/scoring'
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
+import { inheritedRoundFields, scoreUpdateFromSuggestions, type ScoreSuggestion } from '@/lib/deal-rounds'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import { normalizePlaybook, type Playbook } from '@/lib/playbook'
 import {
@@ -535,19 +536,7 @@ export default function DealDashboardPage() {
       // Each imported conversation is its own round, so momentum can be read
       // across them. Scores carry over the same way a normal round does.
       const nextRound = deal.current_round + 1
-      const prevRound = rounds.find(r => r.round === deal.current_round)
-      const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
-      const inherited: Record<string, unknown> = {}
-      if (prevRound) {
-        for (const v of allVars) {
-          const score = prevRound[v as keyof DealRound] as number | null
-          if (score !== null) inherited[v] = score
-        }
-        const prevEvidence = (prevRound.evidence_levels ?? {}) as Record<string, string>
-        if (Object.keys(prevEvidence).length > 0) inherited.evidence_levels = prevEvidence
-        const prevRationales = (prevRound.rationales ?? {}) as Record<string, string>
-        if (Object.keys(prevRationales).length > 0) inherited.rationales = prevRationales
-      }
+      const inherited = inheritedRoundFields(rounds.find(r => r.round === deal.current_round))
 
       const { data: newRound, error: insertErr } = await supabase
         .from('deal_rounds')
@@ -571,19 +560,9 @@ export default function DealDashboardPage() {
       const scoreData = await scoresRes.json().catch(() => ({}))
       if (!scoresRes.ok) throw new Error(scoreData.error ?? 'Scoring failed')
 
-      const suggestions = (scoreData.suggestions ?? {}) as Record<string, { score: number | null; evidence?: string; rationale?: string; declarations?: unknown[] }>
-      const scoreUpdate: Record<string, unknown> = {}
-      const evidenceLevels: Record<string, string> = { ...((newRound.evidence_levels ?? {}) as Record<string, string>) }
-      const rationales: Record<string, string> = { ...((newRound.rationales ?? {}) as Record<string, string>) }
-      const declarations: Record<string, unknown> = {}
-      for (const [variable, sug] of Object.entries(suggestions)) {
-        if (sug.score !== null && sug.score !== undefined) scoreUpdate[variable] = sug.score
-        if (sug.evidence) evidenceLevels[variable] = sug.evidence
-        if (sug.rationale) rationales[variable] = sug.rationale
-        if (sug.declarations) declarations[variable] = sug.declarations
-      }
+      const suggestions = (scoreData.suggestions ?? {}) as Record<string, ScoreSuggestion>
       await supabase.from('deal_rounds')
-        .update({ ...scoreUpdate, evidence_levels: evidenceLevels, rationales, declarations })
+        .update(scoreUpdateFromSuggestions(newRound, suggestions))
         .eq('id', newRound.id)
 
       await Promise.all([
@@ -616,21 +595,7 @@ export default function DealDashboardPage() {
     try {
       const supabase = createClient()
       const nextRound = deal.current_round + 1
-      const prevRound = rounds.find(r => r.round === deal.current_round)
-      const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
-      const inheritedScores: Record<string, unknown> = {}
-      if (prevRound) {
-        for (const v of allVars) {
-          const score = prevRound[v as keyof DealRound] as number | null
-          if (score !== null) inheritedScores[v] = score
-        }
-        const prevEvidence = (prevRound.evidence_levels ?? {}) as Record<string, string>
-        if (Object.keys(prevEvidence).length > 0) inheritedScores.evidence_levels = prevEvidence
-        const prevAuthority = ((prevRound as Record<string, unknown>).authority_levels ?? {}) as Record<string, string>
-        if (Object.keys(prevAuthority).length > 0) inheritedScores.authority_levels = prevAuthority
-        const prevRationales = (prevRound.rationales ?? {}) as Record<string, string>
-        if (Object.keys(prevRationales).length > 0) inheritedScores.rationales = prevRationales
-      }
+      const inheritedScores = inheritedRoundFields(rounds.find(r => r.round === deal.current_round))
 
       const { data: newRound, error: insertErr } = await supabase
         .from('deal_rounds')
