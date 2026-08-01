@@ -111,7 +111,7 @@ export const translations = {
   'newDeal.subtitle': { en: 'Name the prospect and contact. Add context and URLs from the account context tab.', fr: 'Nommez le prospect et le contact. Ajoutez le contexte depuis l\'onglet contexte.' },
   'newDeal.prospectCompany': { en: 'Company name', fr: 'Nom de l\'entreprise' },
   'newDeal.prospectPlaceholder': { en: 'Acme Manufacturing', fr: 'Acme Manufacturing' },
-  'newDeal.step0Desc': { en: 'What company are you prospecting? Describe what\'s important to understand.', fr: 'Quelle entreprise prospectez-vous ? Décrivez ce qui est important à comprendre.' },
+  'newDeal.step0Desc': { en: 'Name the company, then give us its website or a document. Switch reads it against your Sales Playbook.', fr: 'Nommez l\'entreprise, puis donnez son site web ou un document. Switch l\'analyse à la lumière de votre Sales Playbook.' },
   'newDeal.salesContext': { en: 'What must you understand about this prospect to build and advance the deal?', fr: 'Que faut-il absolument comprendre de ce prospect pour savoir comment construire et faire avancer le deal ?' },
   'newDeal.salesContextHint': { en: 'Describe what your sales reps need to understand about each prospect to build the right commercial strategy.', fr: 'Décrivez les éléments que vos commerciaux doivent chercher à comprendre chez chaque prospect pour construire la bonne stratégie commerciale.' },
   'newDeal.salesContextPlaceholder': { en: 'e.g. They are migrating their ERP, the CFO is the decision-maker, they have a tight timeline…', fr: 'ex. Ils migrent leur ERP, le DAF est le décideur, ils ont un calendrier serré…' },

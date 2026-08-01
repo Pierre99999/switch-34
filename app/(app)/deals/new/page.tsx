@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useI18n } from '@/lib/i18n/context'
@@ -30,63 +30,26 @@ export default function NewDealPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Step 0: Prospect name + context
+  // Step 0: who the prospect is, and the material to analyse.
+  // What to look for no longer needs asking — the Sales Playbook says it.
   const [prospectName, setProspectName] = useState('')
-  const [salesContext, setSalesContext] = useState('')
-  const [vendorId, setVendorId] = useState<string | null>(null)
-  const [savedTemplate, setSavedTemplate] = useState<string>('')
-  const [savingTemplate, setSavingTemplate] = useState(false)
-  const [templateSaved, setTemplateSaved] = useState(false)
-
-  // Load saved template from vendor to pre-fill the sales context
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: vendor } = await supabase
-        .from('vendors')
-        .select('id, sales_context_template')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      if (vendor) {
-        setVendorId(vendor.id)
-        const tpl = vendor.sales_context_template ?? ''
-        setSavedTemplate(tpl)
-        if (tpl && !salesContext) setSalesContext(tpl)
-      }
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function handleSaveTemplate() {
-    if (!vendorId) return
-    setSavingTemplate(true)
-    const supabase = createClient()
-    await supabase.from('vendors').update({ sales_context_template: salesContext }).eq('id', vendorId)
-    setSavedTemplate(salesContext)
-    setTemplateSaved(true)
-    setSavingTemplate(false)
-    setTimeout(() => setTemplateSaved(false), 2000)
-  }
-
-  // Step 1: URL + context fetch
   const [prospectUrl, setProspectUrl] = useState('')
   const [fetching, setFetching] = useState(false)
   const [fetchSuccess, setFetchSuccess] = useState(false)
+  const [analyzedSource, setAnalyzedSource] = useState<string | null>(null)
 
   const analyzeSteps = locale === 'fr'
     ? ['Lecture du site du prospect', 'Identification des dimensions', 'Extraction des informations', 'Construction du profil']
     : ['Reading the prospect site', 'Identifying the dimensions', 'Extracting the information', 'Building the profile']
   const [fetchedDimensions, setFetchedDimensions] = useState<Record<string, unknown> | null>(null)
 
-  // Step 2: Contacts
+  // Step 1: Contacts
   const [contacts, setContacts] = useState<Contact[]>([{ name: '', title: '', linkedin: '', actor_types: [] }])
 
-  // Step 3: Revenue
+  // Step 2: Revenue
   const [potentialRevenue, setPotentialRevenue] = useState('')
 
-  // ── Step 1: Fetch context from URL ──
+  // ── Analyse the prospect's website ──
   async function handleFetchUrl() {
     if (!prospectUrl.trim()) return
     setFetching(true)
@@ -95,7 +58,7 @@ export default function NewDealPage() {
       const res = await fetch('/api/context/from-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: prospectUrl.trim(), locale, salesContext: salesContext.trim() || undefined }),
+        body: JSON.stringify({ url: prospectUrl.trim(), locale }),
       })
       const text = await res.text()
       let data: { dimensions?: Record<string, unknown>; error?: string }
@@ -104,6 +67,7 @@ export default function NewDealPage() {
       if (data.dimensions) {
         setFetchedDimensions(data.dimensions)
         setFetchSuccess(true)
+        setAnalyzedSource(prospectUrl.trim())
       } else {
         throw new Error(locale === 'fr' ? 'Aucune donnée extraite du site.' : 'No data could be extracted from the site.')
       }
@@ -111,6 +75,34 @@ export default function NewDealPage() {
       setError(e instanceof Error ? e.message : 'Network error')
     }
     setFetching(false)
+  }
+
+  // ── Analyse a document instead of a website ──
+  async function handleFetchDoc(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFetching(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('locale', locale)
+      const res = await fetch('/api/context/from-doc', { method: 'POST', body: formData })
+      const text = await res.text()
+      let data: { dimensions?: Record<string, unknown>; error?: string }
+      try { data = JSON.parse(text) } catch { throw new Error(`[${res.status}] ${text.slice(0, 200) || 'Empty response'}`) }
+      if (!res.ok || data.error) throw new Error(data.error ?? `Request failed (${res.status})`)
+      if (!data.dimensions) {
+        throw new Error(locale === 'fr' ? 'Aucune donnée extraite du document.' : 'No data could be extracted from the document.')
+      }
+      setFetchedDimensions(data.dimensions)
+      setFetchSuccess(true)
+      setAnalyzedSource(file.name)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error')
+    }
+    setFetching(false)
+    e.target.value = ''
   }
 
   // ── Contact helpers ──
@@ -149,7 +141,7 @@ export default function NewDealPage() {
         contact_title: primaryContact?.title || null,
         contact_linkedin: primaryContact?.linkedin || null,
         potential_revenue: potentialRevenue ? Number(potentialRevenue) : null,
-        prospect_dimensions: fetchedDimensions ?? { _dynamic: true, sales_context: salesContext.trim(), dimensions: [] },
+        prospect_dimensions: fetchedDimensions ?? { _dynamic: true, sales_context: '', dimensions: [] },
         current_round: 0,
       })
       .select()
@@ -175,7 +167,7 @@ export default function NewDealPage() {
     router.refresh()
   }
 
-  const totalSteps = 4
+  const totalSteps = 3
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-6">
@@ -189,84 +181,64 @@ export default function NewDealPage() {
         </div>
       </div>
 
-      {/* ── Step 0: Prospect name ── */}
+      {/* ── Step 0: Who they are, and the material to analyse ── */}
       {step === 0 && (
         <div className="space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.prospectCompany')}</h2>
             <p className="text-sm text-neutral-500">{t('newDeal.step0Desc')}</p>
           </div>
-          <div>
-            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.prospectCompany')} *</label>
-            <input
-              type="text" value={prospectName} onChange={e => setProspectName(e.target.value)}
-              placeholder="Acme Manufacturing"
-              className={inputClass}
-              autoFocus
-            />
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
-            <label className="text-sm font-semibold text-amber-900">{t('newDeal.salesContext')}</label>
-            <p className="text-xs text-amber-700 leading-relaxed">{t('newDeal.salesContextHint')}</p>
-            <textarea
-              value={salesContext} onChange={e => setSalesContext(e.target.value)}
-              placeholder={t('newDeal.salesContextPlaceholder')}
-              rows={6}
-              className="w-full bg-white border border-amber-300 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 resize-y transition-all"
-            />
-            <div className="flex items-center justify-between gap-3 pt-1">
-              <button
-                type="button"
-                onClick={handleSaveTemplate}
-                disabled={savingTemplate || !vendorId || salesContext.trim() === savedTemplate.trim()}
-                className="text-xs font-medium text-amber-800 hover:text-amber-900 underline underline-offset-2 disabled:opacity-40 disabled:no-underline"
-              >
-                {savingTemplate
-                  ? t('newDeal.templateSaving')
-                  : templateSaved
-                    ? t('newDeal.templateSaved')
-                    : t('newDeal.saveTemplate')}
-              </button>
-              {savedTemplate && (
-                <span className="text-[11px] text-amber-700">{t('newDeal.templateAvailable')}</span>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => router.back()} className={btnSecondary}>{t('common.cancel')}</button>
-            <button onClick={() => setStep(1)} disabled={!prospectName.trim()} className={btnPrimary}>
-              {t('onboarding.next')}
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* ── Step 1: URL + context fetch ── */}
-      {step === 1 && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.contextStep')}</h2>
-            <p className="text-sm text-neutral-500">{t('newDeal.contextStepDesc')}</p>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.prospectUrl')}</label>
-            <div className="flex gap-2 mt-1">
+          <div className={fetching ? 'opacity-40 pointer-events-none space-y-6' : 'space-y-6'}>
+            <div>
+              <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.prospectCompany')} *</label>
               <input
-                type="text" value={prospectUrl} onChange={e => setProspectUrl(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleFetchUrl()}
-                placeholder={t('newDeal.prospectUrlPlaceholder')}
-                disabled={fetching}
-                className="flex-1 bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                type="text" value={prospectName} onChange={e => setProspectName(e.target.value)}
+                placeholder="Acme Manufacturing"
+                className={inputClass}
+                autoFocus
               />
-              <button
-                onClick={handleFetchUrl}
-                disabled={fetching || !prospectUrl.trim()}
-                className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
-              >
-                {fetching ? (locale === 'fr' ? 'Analyse…' : 'Analyzing…') : t('newDeal.analyze')}
-              </button>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{t('newDeal.prospectUrl')}</label>
+              <div className="flex gap-2 mt-1">
+                <input
+                  type="text" value={prospectUrl} onChange={e => setProspectUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleFetchUrl()}
+                  placeholder={t('newDeal.prospectUrlPlaceholder')}
+                  disabled={fetching}
+                  className="flex-1 bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
+                />
+                <button
+                  onClick={handleFetchUrl}
+                  disabled={fetching || !prospectUrl.trim() || !prospectName.trim()}
+                  className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
+                >
+                  {fetching ? (locale === 'fr' ? 'Analyse…' : 'Analyzing…') : t('newDeal.analyze')}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-neutral-200" />
+              <span className="text-xs text-neutral-300">{t('profile.or')}</span>
+              <div className="flex-1 h-px bg-neutral-200" />
+            </div>
+
+            <div>
+              <div className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-1.5">
+                {t('profile.document')} <span className="text-neutral-300 normal-case">(PDF / .txt)</span>
+              </div>
+              <label className={`flex items-center justify-center border-2 border-dashed border-neutral-200 bg-white rounded-xl px-4 py-6 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all ${!prospectName.trim() || fetching ? 'opacity-40 pointer-events-none' : ''}`}>
+                <span className="text-sm text-neutral-400">
+                  {locale === 'fr' ? 'Cliquez pour importer — site, plaquette, appel d’offres, notes' : 'Click to import — site, brochure, RFP, notes'}
+                </span>
+                <input type="file" accept=".pdf,.txt,.md" onChange={handleFetchDoc} className="hidden" disabled={fetching || !prospectName.trim()} />
+              </label>
             </div>
           </div>
+
           {fetching && (
             <div className="bg-white border border-neutral-200 rounded-2xl p-5">
               <AIProgress steps={analyzeSteps} durationSec={30} />
@@ -275,19 +247,26 @@ export default function NewDealPage() {
               </p>
             </div>
           )}
+
           {fetchSuccess && (
             <div className="bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-xl">
               <p className="text-sm text-emerald-700 font-medium">{t('newDeal.contextFetched')}</p>
-              <p className="text-xs text-emerald-600/80 mt-0.5">{locale === 'fr' ? 'Vous pourrez consulter et ajuster le détail sur la page Contexte.' : 'You can review and adjust the details on the Context page.'}</p>
+              <p className="text-xs text-emerald-600/80 mt-0.5">
+                {analyzedSource
+                  ? (locale === 'fr' ? `Analysé depuis ${analyzedSource}. Vous pourrez ajuster le détail sur la page Contexte.` : `Analyzed from ${analyzedSource}. You can adjust the details on the Context page.`)
+                  : (locale === 'fr' ? 'Vous pourrez consulter et ajuster le détail sur la page Contexte.' : 'You can review and adjust the details on the Context page.')}
+              </p>
             </div>
           )}
+
           {error && <p className="text-sm text-rose-600">{error}</p>}
+
           {/* Navigation is withheld while the analysis runs: leaving mid-way
               would drop the result the user is waiting for. */}
           {!fetching && (
             <div className="flex gap-3">
-              <button onClick={() => setStep(0)} className={btnSecondary}>{t('onboarding.back')}</button>
-              <button onClick={() => setStep(2)} className={btnPrimary}>
+              <button onClick={() => router.back()} className={btnSecondary}>{t('common.cancel')}</button>
+              <button onClick={() => setStep(1)} disabled={!prospectName.trim()} className={btnPrimary}>
                 {fetchSuccess ? t('onboarding.next') : t('onboarding.skipForNow')}
               </button>
             </div>
@@ -295,8 +274,8 @@ export default function NewDealPage() {
         </div>
       )}
 
-      {/* ── Step 2: Contacts ── */}
-      {step === 2 && (
+      {/* ── Step 1: Contacts ── */}
+      {step === 1 && (
         <div className="space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.contactsStep')}</h2>
@@ -348,16 +327,16 @@ export default function NewDealPage() {
             </button>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setStep(1)} className={btnSecondary}>{t('onboarding.back')}</button>
-            <button onClick={() => setStep(3)} className={btnPrimary}>
+            <button onClick={() => setStep(0)} className={btnSecondary}>{t('onboarding.back')}</button>
+            <button onClick={() => setStep(2)} className={btnPrimary}>
               {contacts[0]?.name ? t('onboarding.next') : t('onboarding.skipForNow')}
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Step 3: Revenue ── */}
-      {step === 3 && (
+      {/* ── Step 2: Revenue ── */}
+      {step === 2 && (
         <div className="space-y-6">
           <div>
             <h2 className="text-lg font-semibold text-neutral-900 mb-1">{t('newDeal.revenueStep')}</h2>
@@ -373,7 +352,7 @@ export default function NewDealPage() {
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
           <div className="flex gap-3">
-            <button onClick={() => setStep(2)} className={btnSecondary}>{t('onboarding.back')}</button>
+            <button onClick={() => setStep(1)} className={btnSecondary}>{t('onboarding.back')}</button>
             <button onClick={handleCreate} disabled={loading} className={btnPrimary}>
               {loading ? t('newDeal.creating') : t('newDeal.create')}
             </button>
