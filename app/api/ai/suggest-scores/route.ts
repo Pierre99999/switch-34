@@ -55,6 +55,16 @@ export async function POST(req: NextRequest) {
     return `- ${s.name}${s.role ? ` (${s.role})` : ''} → roles: ${roles.join(', ')}`
   }).join('\n') || '(no stakeholders mapped yet — use role "unknown" when the speaker is unqualified)'
 
+  // Names read straight off the imported transcript. Without this the model
+  // re-infers who spoke from the note text, and attribution the parser had
+  // already established gets guessed a second time.
+  const speakers = ((round as Record<string, unknown>).capture_speakers ?? []) as { name?: string; title?: string; side?: string }[]
+  const speakerList = speakers.length > 0
+    ? `\n\nPEOPLE PRESENT IN THIS ROUND'S CONVERSATION (from the transcript itself — trust these names over anything you infer):\n${
+      speakers.map(sp => `- ${sp.name}${sp.title ? ` (${sp.title})` : ''} — ${sp.side === 'seller' ? 'OUR side, never counts as prospect evidence' : 'prospect side'}`).join('\n')
+    }`
+    : ''
+
   const suggestionProperties: Record<string, unknown> = {}
   for (const v of allVars) {
     suggestionProperties[v] = {
@@ -115,7 +125,7 @@ VOICE ATTRIBUTION — for every criterion you score, list the DECLARATIONS: who 
 - A single champion's enthusiasm is only "declared". A blocker conceding a favorable point is heavy. Report the raw stances; the weighting is automatic.
 
 STAKEHOLDERS (name → role):
-${stakeholderList}
+${stakeholderList}${speakerList}
 
 URGENCY — the decisive criterion. Consider frequency, intensity, spread, financial/strategic/client impact, risk. A 4-5 requires multiple dimensions lit up.
 PERSONAL PAIN — specific individuals who PERSONALLY suffer (career, reputation, stress). Company problem with no personal pain = low.

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { type Deal, type DealRound, type BriefingQuestion } from '@/lib/types'
+import { type Deal, type DealRound, type BriefingQuestion, type TranscriptSpeaker } from '@/lib/types'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import AIProgress from '@/components/ui/AIProgress'
 import { useToast } from '@/components/ui/Toast'
@@ -26,6 +26,11 @@ export default function CapturePage() {
   const [suggestingScores, setSuggestingScores] = useState(false)
   const [parsingTranscript, setParsingTranscript] = useState(false)
   const [transcriptSuccess, setTranscriptSuccess] = useState<string | null>(null)
+  const [pastedTranscript, setPastedTranscript] = useState('')
+  const [showPaste, setShowPaste] = useState(false)
+  // Who spoke in the imported transcript. Kept out of capture_notes so a
+  // speaker list alone never counts as a captured conversation.
+  const [speakers, setSpeakers] = useState<TranscriptSpeaker[]>([])
   const [onCall, setOnCall] = useState(false)
   const [asked, setAsked] = useState<Set<string>>(new Set())
 
@@ -37,6 +42,8 @@ export default function CapturePage() {
   function populateFromRound(r: DealRound | null) {
     setNotes(r?.capture_notes ?? {})
     setFreeNote((r?.capture_notes as Record<string, string>)?.__free__ ?? '')
+    const sp = (r as unknown as { capture_speakers?: TranscriptSpeaker[] } | null)?.capture_speakers
+    setSpeakers(Array.isArray(sp) ? sp : [])
   }
 
   const load = useCallback(async () => {
@@ -75,7 +82,7 @@ export default function CapturePage() {
     const supabase = createClient()
     const { error } = await supabase
       .from('deal_rounds')
-      .update({ capture_notes: merged })
+      .update({ capture_notes: merged, capture_speakers: speakers })
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
     else {
@@ -100,7 +107,7 @@ export default function CapturePage() {
       const supabase = createClient()
       const { error: saveErr } = await supabase
         .from('deal_rounds')
-        .update({ capture_notes: merged })
+        .update({ capture_notes: merged, capture_speakers: speakers })
         .eq('id', currentRoundData.id)
       if (saveErr) throw new Error(saveErr.message)
 
@@ -169,23 +176,21 @@ export default function CapturePage() {
     }
   }
 
-  async function handleImportTranscript(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !currentRoundData) return
+  async function parseTranscript(payload: { file?: File; text?: string }) {
+    if (!currentRoundData) return
     setParsingTranscript(true)
     setError(null)
     setTranscriptSuccess(null)
     try {
-      const questionPayload = [
-        ...questions.map((q) => ({
-          key: q.text,
-          variable: q.variable,
-          text: q.text,
-          intent: q.intent,
-        })),
-      ]
+      const questionPayload = questions.map((q) => ({
+        key: q.text,
+        variable: q.variable,
+        text: q.text,
+        intent: q.intent,
+      }))
       const formData = new FormData()
-      formData.append('file', file)
+      if (payload.file) formData.append('file', payload.file)
+      if (payload.text) formData.append('text', payload.text)
       formData.append('questions', JSON.stringify(questionPayload))
       formData.append('locale', locale)
       const res = await fetch('/api/ai/parse-transcript', { method: 'POST', body: formData })
@@ -199,13 +204,30 @@ export default function CapturePage() {
           setNotes(prev => ({ ...prev, [key]: prev[key] ? `${prev[key]}\n\n${val}` : val }))
         }
       }
+      // Merge by name so importing a second transcript does not lose the
+      // people from the first.
+      const incoming = (data.speakers ?? []) as TranscriptSpeaker[]
+      if (incoming.length) {
+        setSpeakers(prev => {
+          const seen = new Set(prev.map(p => p.name.toLowerCase()))
+          return [...prev, ...incoming.filter(i => !seen.has(i.name.toLowerCase()))]
+        })
+      }
+      setPastedTranscript('')
+      setShowPaste(false)
       setTranscriptSuccess(t('capture.transcriptImported'))
     } catch {
       setError('Network error — try again')
     } finally {
       setParsingTranscript(false)
-      e.target.value = ''
     }
+  }
+
+  async function handleImportTranscript(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await parseTranscript({ file })
+    e.target.value = ''
   }
 
 
@@ -307,9 +329,68 @@ export default function CapturePage() {
               disabled={parsingTranscript}
             />
           </label>
+          {/* Most transcripts are copied out of Gong/Teams/Meet, not
+              downloaded — pasting has to be as easy as dropping a file. */}
+          <button
+            type="button"
+            onClick={() => setShowPaste(v => !v)}
+            disabled={parsingTranscript}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed text-sm font-medium transition-all disabled:opacity-50 ${showPaste ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-neutral-300 text-neutral-600 hover:border-violet-400 hover:bg-violet-50'}`}
+          >
+            <span>📋</span>
+            <span>{locale === 'fr' ? 'Coller un transcript' : 'Paste a transcript'}</span>
+          </button>
           <span className="text-xs text-neutral-400">{t('capture.importTranscriptHint')}</span>
           {transcriptSuccess && (
             <span className="text-xs text-green-600 font-medium">{transcriptSuccess}</span>
+          )}
+
+          {showPaste && (
+            <div className="w-full mt-1">
+              <textarea
+                value={pastedTranscript}
+                onChange={e => setPastedTranscript(e.target.value)}
+                rows={8}
+                disabled={parsingTranscript}
+                placeholder={locale === 'fr'
+                  ? 'Collez ici le transcript de la conversation. Gardez les noms des intervenants : Switch pondère chaque propos selon le rôle de celui qui l’a dit.'
+                  : 'Paste the conversation transcript here. Keep the speaker names: Switch weighs each statement by the role of whoever said it.'}
+                className={inputClass}
+              />
+              <div className="flex items-center gap-3 mt-2">
+                <button
+                  onClick={() => parseTranscript({ text: pastedTranscript.trim() })}
+                  disabled={parsingTranscript || pastedTranscript.trim().length < 50}
+                  className="px-5 py-2.5 bg-violet-500 text-white text-sm font-medium rounded-xl hover:bg-violet-600 shadow-sm shadow-violet-500/20 disabled:opacity-40 transition-all"
+                >
+                  {parsingTranscript ? t('capture.parsing') : (locale === 'fr' ? '✦ Analyser le transcript' : '✦ Analyze the transcript')}
+                </button>
+                <button
+                  onClick={() => { setShowPaste(false); setPastedTranscript('') }}
+                  disabled={parsingTranscript}
+                  className="text-sm text-neutral-400 hover:text-neutral-600 disabled:opacity-40"
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {speakers.length > 0 && (
+            <div className="w-full flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-neutral-400">
+                {locale === 'fr' ? 'Intervenants repérés :' : 'Speakers identified:'}
+              </span>
+              {speakers.map((sp, i) => (
+                <span
+                  key={i}
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${sp.side === 'seller' ? 'bg-neutral-100 text-neutral-500' : 'bg-violet-50 text-violet-700'}`}
+                  title={sp.side === 'seller' ? (locale === 'fr' ? 'Votre camp' : 'Your side') : (locale === 'fr' ? 'Côté prospect' : 'Prospect side')}
+                >
+                  {sp.name}{sp.title ? ` · ${sp.title}` : ''}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       )}

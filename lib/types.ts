@@ -192,6 +192,14 @@ export type Vendor = {
   updated_at: string
 }
 
+// Read off an imported transcript: who was in the room, and on which side.
+// Stored in its own column, never in capture_notes — see migration.
+export type TranscriptSpeaker = {
+  name: string
+  title?: string
+  side: 'prospect' | 'seller'
+}
+
 export type Deal = {
   id: string
   user_id: string
@@ -240,6 +248,7 @@ export type DealRound = {
   external_friction: number | null
   rationales: Record<string, string>
   capture_notes: Record<string, string>
+  capture_speakers: TranscriptSpeaker[] | null
   briefing_line: string | null
   briefing_read: string | null
   briefing_angle: string | null

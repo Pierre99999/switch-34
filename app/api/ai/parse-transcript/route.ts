@@ -11,10 +11,13 @@ export async function POST(req: NextRequest) {
 
   const formData = await req.formData()
   const file = formData.get('file') as File | null
+  // Most transcripts arrive as a paste from Gong/Teams/Meet rather than a
+  // file; requiring a download first was friction for nothing.
+  const pasted = (formData.get('text') as string | null)?.trim() ?? ''
   const questionsJson = formData.get('questions') as string | null
   const locale = formData.get('locale') as string | null
 
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  if (!file && !pasted) return NextResponse.json({ error: 'No transcript provided' }, { status: 400 })
   if (!questionsJson) return NextResponse.json({ error: 'No questions provided' }, { status: 400 })
 
   const questions: { key: string; variable: string; text: string; intent?: string }[] = JSON.parse(questionsJson)
@@ -31,8 +34,8 @@ export async function POST(req: NextRequest) {
     return { ...q, safeKey: safe }
   })
 
-  const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf')
-  const buffer = Buffer.from(await file.arrayBuffer())
+  const isPdf = !!file && (file.type === 'application/pdf' || file.name.endsWith('.pdf'))
+  const buffer = file ? Buffer.from(await file.arrayBuffer()) : null
 
   let userContent: Anthropic.MessageParam['content']
 
@@ -42,13 +45,17 @@ export async function POST(req: NextRequest) {
 
   const instruction = `Analyze this conversation transcript. For each briefing question below, extract what the prospect actually said that is relevant — use their words as much as possible, keep it raw and factual. If the topic was not discussed, return an empty string for that question.
 
+Prefix every extracted passage with the name of the speaker as it appears in the transcript. When several people answer the same question, use one line per speaker. Never merge what two people said, and never attribute to a name something they did not say. If the transcript names nobody, write the passage without a prefix rather than inventing one.
+
+Also list the participants in "speakers": their name as written, their title if stated, and which side they are on.
+
 Also extract anything else that was said (objections, names, budget signals, timing, competition, politics, blockers, accelerators) into the __free__ field.
 
 Questions to map against:
 
 ${questionList}`
 
-  if (isPdf) {
+  if (isPdf && buffer) {
     userContent = [
       {
         type: 'document',
@@ -57,7 +64,7 @@ ${questionList}`
       { type: 'text', text: instruction },
     ]
   } else {
-    const text = buffer.toString('utf-8').slice(0, 60000)
+    const text = (buffer ? buffer.toString('utf-8') : pasted).slice(0, 60000)
     userContent = `${instruction}\n\nTranscript:\n${text}`
   }
 
@@ -78,14 +85,31 @@ ${questionList}`
     message = await client.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 8192,
-      system: `You are a sales conversation analyst. You read conversation transcripts (from tools like Gong, Chorus, Fireflies, or manual notes) and extract what was said, mapped to specific diagnostic questions. Be faithful to what was actually said — do not interpret or reframe. Use the prospect's actual words and phrasing. Be concise but complete.` + localeInstruction(locale ?? undefined),
+      system: `You are a sales conversation analyst. You read conversation transcripts (from tools like Gong, Chorus, Fireflies, or manual notes) and extract what was said, mapped to specific diagnostic questions. Be faithful to what was actually said — do not interpret or reframe. Use the prospect's actual words and phrasing. Be concise but complete.
+
+WHO SAID IT MATTERS AS MUCH AS WHAT WAS SAID. The scoring engine weighs a statement by the role of the person who made it — a champion's enthusiasm and a budget holder's concession do not carry the same weight. Attribution you drop here cannot be recovered later.` + localeInstruction(locale ?? undefined),
       tools: [
         {
           name: 'fill_capture_notes',
           description: 'Map transcript content to each briefing question',
           input_schema: {
             type: 'object' as const,
-            properties: toolProperties,
+            properties: {
+              ...toolProperties,
+              speakers: {
+                type: 'array',
+                description: 'Everyone who spoke in this transcript. Only people actually present — never inferred from a mention.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Name exactly as it appears in the transcript.' },
+                    title: { type: 'string', description: 'Their role or title if the transcript states one. Empty otherwise.' },
+                    side: { type: 'string', enum: ['prospect', 'seller'], description: 'Which side of the table they sit on.' },
+                  },
+                  required: ['name', 'side'],
+                },
+              },
+            },
             required: [...sanitizedQuestions.map(q => q.safeKey), '__free__'],
           },
         },
@@ -103,11 +127,23 @@ ${questionList}`
     return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
   }
 
-  const rawNotes = toolUse.input as Record<string, string>
+  const raw = toolUse.input as Record<string, unknown>
+  const speakers = Array.isArray(raw.speakers)
+    ? (raw.speakers as { name?: string; title?: string; side?: string }[])
+        .filter(sp => typeof sp?.name === 'string' && sp.name.trim())
+        .map(sp => ({
+          name: sp.name!.trim(),
+          title: typeof sp.title === 'string' ? sp.title.trim() : '',
+          side: sp.side === 'seller' ? 'seller' : 'prospect',
+        }))
+    : []
+
   const notes: Record<string, string> = {}
-  for (const [safeKey, value] of Object.entries(rawNotes)) {
+  for (const [safeKey, value] of Object.entries(raw)) {
+    if (safeKey === 'speakers') continue
+    if (typeof value !== 'string') continue
     notes[keyMap[safeKey] ?? safeKey] = value
   }
 
-  return NextResponse.json({ notes })
+  return NextResponse.json({ notes, speakers })
 }
