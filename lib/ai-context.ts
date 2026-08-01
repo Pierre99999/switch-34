@@ -5,7 +5,7 @@ import { simpleStatus, gateScore, prescriptions, DECISIVE_VARS } from './scoring
 import { evidenceFromDeclarations } from './voice-credit'
 import type { VoiceDeclaration } from './types'
 import { normalizePlaybook, playbookToContext } from './playbook'
-import { normalizeFit, FIT_AXIS_LABELS, FIT_AXIS_SOURCE } from './playbook-fit'
+import { normalizeFit, FIT_AXIS_LABELS, FIT_AXIS_SOURCE, type ActorCoverage } from './playbook-fit'
 
 export function buildVendorContext(vendor: Vendor): string {
   // The problem they named at onboarding. Everything the AI produces should
@@ -53,6 +53,56 @@ export function buildFitContext(deal: Deal): string {
     lines.push(`  - ${name} (${FIT_AXIS_SOURCE[a.key]}): ${a.verdict}${a.summary ? ` — ${a.summary}` : ''}`)
     if (a.playbook_ref) lines.push(`      playbook: ${a.playbook_ref}`)
     if (a.gap) lines.push(`      to settle: ${a.gap}`)
+  }
+  return lines.join('\n')
+}
+
+// Fit gaps as mandated actions, in the same channel as the score-based
+// prescriptions — the briefing already cannot ignore that section. A prospect
+// who does not match the playbook is a deal you have little chance of winning,
+// so every unsettled axis is a question the next conversation owes you.
+export function buildFitPrescriptions(deal: Deal, coverage?: ActorCoverage): string {
+  const fit = normalizeFit(deal.playbook_fit)
+  const lines: string[] = []
+
+  if (fit) {
+    const unsettled = fit.axes.filter(a => a.verdict !== 'aligned')
+    for (const a of unsettled) {
+      const name = FIT_AXIS_LABELS[a.key].en
+      const what = a.gap?.trim() || a.reason?.trim() || a.summary?.trim() || ''
+      const head = a.verdict === 'mismatch'
+        ? `FIT · ${name} — OFF-BOOK: this prospect contradicts the playbook here.`
+        : a.verdict === 'unknown'
+          ? `FIT · ${name} — UNKNOWN: nothing tells us either way yet.`
+          : `FIT · ${name} — PARTIAL: it matches only in part.`
+      lines.push(`  ${head}${what ? ` The conversation must settle: ${what}` : ''}`)
+    }
+    if (fit.avoid_list_hit) {
+      lines.push('  FIT · AVOID LIST — this prospect matches a segment the team decided to stop selling to. Treat the exception as the subject of the conversation, not a detail.')
+    }
+  }
+
+  // A missing necessary actor is the most actionable gap of all: the fix is a
+  // person to get into the room, not a question to ask.
+  for (const m of coverage?.missing ?? []) {
+    lines.push(`  FIT · ACTOR — "${m.label}" is required by the playbook and absent from this deal.${m.risk ? ` Risk: ${m.risk}` : ''} The conversation must open a path to them.`)
+  }
+
+  if (lines.length === 0) return ''
+  return ['PLAYBOOK FIT PRESCRIPTIONS (unsettled — each must shape this briefing):', ...lines].join('\n')
+}
+
+// A4 is a list of objections the team already knows how to defuse, with the
+// wording they chose. Handing it to the briefing costs no question slot: the
+// work is done, it just has to reach the right deal at the right moment.
+export function buildKnownObjections(vendor: Vendor): string {
+  const pb = normalizePlaybook(vendor.playbook, vendor.locale ?? 'fr')
+  const rows = pb.a4_perception.filter(r => (r.objection ?? '').trim())
+  if (rows.length === 0) return ''
+  const lines = ['KNOWN PERCEPTION OBJECTIONS (from the playbook, A4 — the team already wrote how to defuse each):']
+  for (const r of rows) {
+    lines.push(`  - "${r.objection.trim()}"${r.prospect_type?.trim() ? ` [with: ${r.prospect_type.trim()}]` : ''}`)
+    if (r.defuse?.trim()) lines.push(`      their own defusing line: ${r.defuse.trim()}`)
   }
   return lines.join('\n')
 }

@@ -3,7 +3,9 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext, buildVoiceContext, buildFitContext } from '@/lib/ai-context'
+import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext, buildVoiceContext, buildFitContext, buildFitPrescriptions, buildKnownObjections } from '@/lib/ai-context'
+import { normalizePlaybook } from '@/lib/playbook'
+import { actorCoverage, normalizeFit } from '@/lib/playbook-fit'
 import { LAYER_LABELS, type DealRound } from '@/lib/types'
 import { computeDealState } from '@/lib/scoring'
 import { localeInstruction } from '@/lib/ai-locale'
@@ -27,11 +29,12 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const [{ data: deal }, { data: round }, { data: vendor }, { data: allRounds }] = await Promise.all([
+    const [{ data: deal }, { data: round }, { data: vendor }, { data: allRounds }, { data: stakeholders }] = await Promise.all([
       supabase.from('deals').select('*').eq('id', dealId).single(),
       supabase.from('deal_rounds').select('*').eq('id', roundId).single(),
       supabase.from('vendors').select('*').eq('user_id', user.id).maybeSingle(),
       supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
+      supabase.from('deal_stakeholders').select('name, actor_type, actor_types').eq('deal_id', dealId),
     ])
 
     if (!deal || !round) return NextResponse.json({ error: 'Deal or round not found' }, { status: 404 })
@@ -43,10 +46,23 @@ export async function POST(req: NextRequest) {
     const opportunisticLayers = [2, 3, 4].filter(l => l > activeLayer)
     const opportunisticDesc = opportunisticLayers.map(l => `L${l} (${LAYER_LABELS[l]})`).join(', ')
 
+    // How hard the playbook fit should press on this briefing. A prospect who
+    // does not match the playbook is a deal with little chance of being won,
+    // so an unsettled fit buys question slots — but never more than two, or
+    // the conversation stops probing the gate and becomes an interrogation.
+    const coverage = vendor ? actorCoverage(normalizePlaybook(vendor.playbook, vendor.locale ?? 'fr'), stakeholders ?? []) : undefined
+    const fit = normalizeFit(deal.playbook_fit)
+    const offBook = !!fit?.avoid_list_hit || !!fit?.axes.some(a => a.verdict === 'mismatch')
+    const unsettledFit = (fit?.axes.filter(a => a.verdict !== 'aligned').length ?? 0) + (coverage?.missing.length ?? 0)
+    const fitSlots = unsettledFit === 0 ? 0 : offBook ? 2 : 1
+    const pressingSlots = Math.max(2, 4 - fitSlots)
+
     const context = [
       vendor ? buildVendorContext(vendor) : '',
       buildProspectContext(deal),
       buildFitContext(deal),
+      buildFitPrescriptions(deal, coverage),
+      vendor ? buildKnownObjections(vendor) : '',
       buildScoresContext(round as DealRound),
       buildPrescriptionsContext(round as DealRound),
       buildVoiceContext(round as DealRound),
@@ -85,7 +101,8 @@ THE REFORMULATION — the most powerful move:
 The briefing should suggest at least one reformulation angle: a way to connect disparate facts from capture notes into a new understanding the prospect doesn't yet have. This is "constructed data" — the moment where the sale truly begins. Look for: symptoms vs. root causes, cost of inaction nobody has calculated, contradictions between what different stakeholders said.
 
 Question generation rules:
-- Generate exactly 4 PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.
+- Generate exactly ${pressingSlots} PRESSING questions for Layer ${activeLayer}. Fewer, deeper — not a checklist.${fitSlots > 0 ? `
+- Then generate exactly ${fitSlots} PRESSING question${fitSlots > 1 ? 's' : ''} that settle${fitSlots > 1 ? '' : 's'} the PLAYBOOK FIT PRESCRIPTIONS above. This is not optional: selling to a prospect who does not match the playbook is how deals are lost late and expensively. Target the weakest axis first — off-book before unknown, unknown before partial. Set their layer to ${activeLayer}.` : ''}
 - Generate exactly 2 OPPORTUNISTIC questions spread across higher layers (${opportunisticDesc}). They MUST target TWO DIFFERENT layers — never both on the same one. Only ask them if the conversation naturally opens there.
 - IMPORTANT — do not starve Layer 3 (Impact): whenever Layer 3 is one of the higher layers, ONE of the two opportunistic questions must target it (product capability, implementation feasibility, adoption reality, tangible impact, urgency resolution). Impact signals surface when the prospect volunteers them, and they must be captured — otherwise Gate 3 never gets scored.
 - Maximum 6 questions total. If you feel the urge to write more, cut the weakest ones.
@@ -93,7 +110,10 @@ Question generation rules:
 - The intent explains what the main question is trying to establish — one sentence, for the seller's eyes only.
 - Questions must sound like a human conversation, never a form or an interrogation — the "invisible questionnaire" principle.
 - When urgency scores are weak, ALWAYS include a "cost of inaction" question: "What happens if nothing changes in 6 months?"
-- If a PLAYBOOK FIT section is present and marked HYPOTHESIS, it was formed from the prospect's website, not from anything they said. Any axis that is "partial", "mismatch" or "unknown" — and especially its "to settle" line — is a question this conversation should answer. Turn at least one of them into a question, phrased naturally, without ever mentioning the playbook or the scoring to the prospect.
+- A fit read marked HYPOTHESIS was formed from the prospect's website, not from anything they said: ask to VERIFY it, never assert it.
+- Never mention the playbook, the axes or the scoring to the prospect. These questions must sound like ordinary curiosity.${offBook ? `
+- THIS PROSPECT IS OFF-BOOK on at least one axis. One of your questions MUST be an exception test — what would have to be true for this to be worth continuing? — and "do_not" MUST carry a line about not investing further (demo, proposal, custom work) until that is settled. Walking away is not losing, and it only costs little if it happens early.` : ''}
+- OBJECTIONS: when a known perception objection from A4 is plausibly alive on this deal, put it in the objections list using the team's OWN defusing line, adapted to this prospect. Do not invent objections that are not in A4 unless the capture notes show one.
 - When Layer 1 is active, focus on discovering the GAP between symptoms and root causes (the five whys technique).
 
 Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.` + localeInstruction(locale),
@@ -110,7 +130,7 @@ Be specific — reference actual prospect details, actual scores, actual capture
               win_condition: { type: 'string', description: `What would make this conversation a success for Layer ${activeLayer}. Be specific.` },
               questions: {
                 type: 'array',
-                description: `4 pressing questions for Layer ${activeLayer}, then 2 opportunistic questions across higher layers (${opportunisticDesc}). Maximum 6 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
+                description: `${pressingSlots} pressing questions for Layer ${activeLayer}${fitSlots > 0 ? `, then ${fitSlots} pressing question${fitSlots > 1 ? 's' : ''} settling the playbook fit` : ''}, then 2 opportunistic questions across higher layers (${opportunisticDesc}). Maximum 6 questions total. Each question has sub-questions to probe deeper if the main question opens a thread.`,
                 items: {
                   type: 'object',
                   properties: {
