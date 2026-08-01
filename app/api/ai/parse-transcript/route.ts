@@ -3,6 +3,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { localeInstruction } from '@/lib/ai-locale'
+import { LAYER_VARIABLES, VARIABLE_LABELS } from '@/lib/types'
 
 const client = new Anthropic()
 
@@ -18,9 +19,18 @@ export async function POST(req: NextRequest) {
   const locale = formData.get('locale') as string | null
 
   if (!file && !pasted) return NextResponse.json({ error: 'No transcript provided' }, { status: 400 })
-  if (!questionsJson) return NextResponse.json({ error: 'No questions provided' }, { status: 400 })
 
-  const questions: { key: string; variable: string; text: string; intent?: string }[] = JSON.parse(questionsJson)
+  // A conversation that happened before the deal was in Switch has no briefing
+  // to map against. Fall back to the diagnostic criteria themselves, so an
+  // already-running deal can still be brought in from its transcripts.
+  const questions: { key: string; variable: string; text: string; intent?: string }[] = questionsJson
+    ? JSON.parse(questionsJson)
+    : (Object.values(LAYER_VARIABLES).flat() as string[]).map(v => ({
+      key: v,
+      variable: v,
+      text: VARIABLE_LABELS[v] ?? v,
+      intent: `Anything said that bears on "${VARIABLE_LABELS[v] ?? v}".`,
+    }))
 
   function sanitizeKey(k: string): string {
     return k.replace(/[^a-zA-Z0-9_.-]/g, '_').slice(0, 64) || 'q'

@@ -21,6 +21,7 @@ import {
   type DealContact, type PlaybookFit, type FitVerdict, type ActorCoverage,
 } from '@/lib/playbook-fit'
 import PlaybookFitCard from '@/components/deal/PlaybookFitCard'
+import PastConversationImport from '@/components/deal/PastConversationImport'
 import AIProgress from '@/components/ui/AIProgress'
 import { useI18n } from '@/lib/i18n/context'
 
@@ -378,6 +379,8 @@ export default function DealDashboardPage() {
   const [fit, setFit] = useState<PlaybookFit | null>(null)
   const [fitLoading, setFitLoading] = useState(false)
   const [fitError, setFitError] = useState<string | null>(null)
+  const [importingPast, setImportingPast] = useState(false)
+  const [importPastError, setImportPastError] = useState<string | null>(null)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
 
@@ -501,6 +504,109 @@ export default function DealDashboardPage() {
       setErrorDetail(detail ?? null)
       setGeneratingBriefing(false)
     }
+  }
+
+  // Bring a conversation that happened before this deal reached Switch into
+  // the diagnostic: one transcript becomes one round, scored exactly like a
+  // captured one. No briefing exists for it, and none is invented.
+  async function handleImportPastConversation(payload: { file?: File; text?: string }) {
+    if (!deal) return
+    setImportingPast(true)
+    setImportPastError(null)
+    try {
+      const supabase = createClient()
+
+      const formData = new FormData()
+      if (payload.file) formData.append('file', payload.file)
+      if (payload.text) formData.append('text', payload.text)
+      formData.append('locale', locale)
+      const parseRes = await fetch('/api/ai/parse-transcript', { method: 'POST', body: formData })
+      const parsed = await parseRes.json().catch(() => ({}))
+      if (!parseRes.ok) throw new Error(parsed.error ?? `Transcript could not be read (${parseRes.status})`)
+
+      const notes = (parsed.notes ?? {}) as Record<string, string>
+      const hasContent = Object.values(notes).some(v => typeof v === 'string' && v.trim())
+      if (!hasContent) {
+        throw new Error(locale === 'fr'
+          ? 'Rien d’exploitable n’a été extrait de ce transcript.'
+          : 'Nothing usable could be extracted from this transcript.')
+      }
+
+      // Each imported conversation is its own round, so momentum can be read
+      // across them. Scores carry over the same way a normal round does.
+      const nextRound = deal.current_round + 1
+      const prevRound = rounds.find(r => r.round === deal.current_round)
+      const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
+      const inherited: Record<string, unknown> = {}
+      if (prevRound) {
+        for (const v of allVars) {
+          const score = prevRound[v as keyof DealRound] as number | null
+          if (score !== null) inherited[v] = score
+        }
+        const prevEvidence = (prevRound.evidence_levels ?? {}) as Record<string, string>
+        if (Object.keys(prevEvidence).length > 0) inherited.evidence_levels = prevEvidence
+        const prevRationales = (prevRound.rationales ?? {}) as Record<string, string>
+        if (Object.keys(prevRationales).length > 0) inherited.rationales = prevRationales
+      }
+
+      const { data: newRound, error: insertErr } = await supabase
+        .from('deal_rounds')
+        .insert({
+          deal_id: dealId,
+          round: nextRound,
+          ...inherited,
+          capture_notes: notes,
+          capture_speakers: parsed.speakers ?? [],
+        })
+        .select()
+        .single()
+      if (insertErr || !newRound) throw new Error(insertErr?.message ?? 'Could not create the round')
+      await supabase.from('deals').update({ current_round: nextRound }).eq('id', dealId)
+
+      const scoresRes = await fetch('/api/ai/suggest-scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, roundId: newRound.id, locale }),
+      })
+      const scoreData = await scoresRes.json().catch(() => ({}))
+      if (!scoresRes.ok) throw new Error(scoreData.error ?? 'Scoring failed')
+
+      const suggestions = (scoreData.suggestions ?? {}) as Record<string, { score: number | null; evidence?: string; rationale?: string; declarations?: unknown[] }>
+      const scoreUpdate: Record<string, unknown> = {}
+      const evidenceLevels: Record<string, string> = { ...((newRound.evidence_levels ?? {}) as Record<string, string>) }
+      const rationales: Record<string, string> = { ...((newRound.rationales ?? {}) as Record<string, string>) }
+      const declarations: Record<string, unknown> = {}
+      for (const [variable, sug] of Object.entries(suggestions)) {
+        if (sug.score !== null && sug.score !== undefined) scoreUpdate[variable] = sug.score
+        if (sug.evidence) evidenceLevels[variable] = sug.evidence
+        if (sug.rationale) rationales[variable] = sug.rationale
+        if (sug.declarations) declarations[variable] = sug.declarations
+      }
+      await supabase.from('deal_rounds')
+        .update({ ...scoreUpdate, evidence_levels: evidenceLevels, rationales, declarations })
+        .eq('id', newRound.id)
+
+      await Promise.all([
+        fetch('/api/ai/update-boxes', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dealId, roundId: newRound.id, locale }),
+        }).catch(() => {}),
+        fetch('/api/ai/read', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dealId, roundId: newRound.id, locale }),
+        }).catch(() => {}),
+        fetch('/api/ai/playbook-fit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dealId, locale }),
+        }).catch(() => {}),
+      ])
+
+      await load()
+      setSelectedRound(nextRound)
+    } catch (e) {
+      setImportPastError(e instanceof Error ? e.message : 'Import failed')
+    }
+    setImportingPast(false)
   }
 
   async function handleStartNextRound() {
@@ -702,16 +808,32 @@ export default function DealDashboardPage() {
             </div>
           )}
           {!generatingBriefing && !round1Briefed && (contextGuard ?? (
-            <>
-              <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
-                {locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`}
-              </PrimaryButton>
-              <p className="text-xs text-neutral-500 mt-3">
-                {locale === 'fr'
-                  ? 'Les portes sont vides pour l’instant, c’est normal : elles se remplissent à partir de votre première conversation. Ce briefing est construit sur votre profil et le contexte prospect.'
-                  : 'The gates are empty for now — that is expected. They fill in from your first conversation. This briefing is built from your profile and the prospect context.'}
-              </p>
-            </>
+            <div className="space-y-4">
+              {/* Two starting points: a deal that begins now, and one that
+                  was already running before it reached Switch. */}
+              {!importingPast && (
+                <div className="bg-white rounded-xl border border-neutral-200 px-5 py-4">
+                  <div className="text-sm font-semibold text-neutral-800">
+                    {locale === 'fr' ? 'Vous n’avez pas encore parlé au prospect ?' : 'Have you not spoken to the prospect yet?'}
+                  </div>
+                  <p className="text-sm text-neutral-600 mt-1 mb-3">
+                    {locale === 'fr'
+                      ? 'Les portes sont vides, c’est normal : elles se remplissent à partir de votre première conversation. Le briefing est construit sur votre Sales Playbook et le contexte prospect.'
+                      : 'The gates are empty, and that is expected: they fill in from your first conversation. The briefing is built from your Sales Playbook and the prospect context.'}
+                  </p>
+                  <PrimaryButton onClick={handleStartNextRound} disabled={generatingBriefing}>
+                    {locale === 'fr' ? `✦ Créer le briefing du round ${deal.current_round + 1}` : `✦ Create round ${deal.current_round + 1} briefing`}
+                  </PrimaryButton>
+                </div>
+              )}
+
+              <PastConversationImport
+                locale={locale}
+                busy={importingPast}
+                error={importPastError}
+                onImport={handleImportPastConversation}
+              />
+            </div>
           ))}
           {generatingBriefing && <AIProgress steps={briefingSteps} />}
           {errorBlock}
