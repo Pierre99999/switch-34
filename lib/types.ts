@@ -204,6 +204,8 @@ export type Deal = {
   status: 'active' | 'won' | 'lost' | 'paused'
   potential_revenue: number | null
   prospect_dimensions: ProspectDimensions | null
+  // How this deal reads against the Sales Playbook socle. See lib/playbook-fit.
+  playbook_fit: unknown
   created_at: string
   updated_at: string
 }

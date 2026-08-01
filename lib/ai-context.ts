@@ -5,6 +5,7 @@ import { simpleStatus, gateScore, prescriptions, DECISIVE_VARS } from './scoring
 import { evidenceFromDeclarations } from './voice-credit'
 import type { VoiceDeclaration } from './types'
 import { normalizePlaybook, playbookToContext } from './playbook'
+import { normalizeFit, FIT_AXIS_LABELS, FIT_AXIS_SOURCE } from './playbook-fit'
 
 export function buildVendorContext(vendor: Vendor): string {
   // The problem they named at onboarding. Everything the AI produces should
@@ -36,6 +37,24 @@ export function buildVendorContext(vendor: Vendor): string {
   if (d.product?.current_product) sections.push(`Product: ${d.product.current_product}`)
   if (d.product?.defensibility) sections.push(`Defensibility: ${d.product.defensibility}`)
   return sections.join('\n')
+}
+
+// How this deal reads against the socle. Given to the briefing so it can turn
+// an uncertain axis into a question to ask, rather than leaving it hanging.
+export function buildFitContext(deal: Deal): string {
+  const fit = normalizeFit(deal.playbook_fit)
+  if (!fit) return ''
+  const lines = [
+    `PLAYBOOK FIT (${fit.basis === 'context' ? 'HYPOTHESIS — formed from the prospect\'s public material, not yet confirmed by any conversation' : 'informed by captured conversation'}):`,
+  ]
+  if (fit.avoid_list_hit) lines.push('  ⚠ This prospect matches a segment the team decided to AVOID.')
+  for (const a of fit.axes) {
+    const name = FIT_AXIS_LABELS[a.key].en
+    lines.push(`  - ${name} (${FIT_AXIS_SOURCE[a.key]}): ${a.verdict}${a.summary ? ` — ${a.summary}` : ''}`)
+    if (a.playbook_ref) lines.push(`      playbook: ${a.playbook_ref}`)
+    if (a.gap) lines.push(`      to settle: ${a.gap}`)
+  }
+  return lines.join('\n')
 }
 
 export function buildProspectContext(deal: Deal): string {

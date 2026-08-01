@@ -13,6 +13,81 @@
 import type { Playbook } from './playbook'
 import { rowHasContent } from './playbook'
 
+// ── The semantic axes ────────────────────────────────────────
+
+export type FitVerdict = 'aligned' | 'partial' | 'mismatch' | 'unknown'
+export type FitAxisKey = 'segment' | 'problem' | 'value' | 'alternative' | 'perception'
+
+export type FitAxis = {
+  key: FitAxisKey
+  verdict: FitVerdict
+  /** What we understood about this prospect, in one sentence. */
+  summary: string
+  /** The socle row this was matched against — quoted, so the verdict is checkable. */
+  playbook_ref: string
+  /** What is missing, or what the next conversation should settle. */
+  gap?: string
+}
+
+export type PlaybookFit = {
+  axes: FitAxis[]
+  /**
+   * 'context' means the read comes from the prospect's own public material —
+   * a hypothesis, not a finding. Only a captured conversation makes it
+   * 'conversation'. Labelling this is what stops a website from reading as
+   * established fact, the way it did on the revo deal.
+   */
+  basis: 'context' | 'conversation'
+  computed_at: string
+  /** The prospect resembles a segment the team decided to stop selling to. */
+  avoid_list_hit?: boolean
+}
+
+// Each axis is read next to an existing criterion — never inside its score.
+export const AXIS_CRITERION: Record<FitAxisKey, string> = {
+  segment: 'concerns_fit',
+  problem: 'real_business_problem',
+  value: 'value_solution_fit',
+  alternative: 'competitive_position',
+  perception: 'credibility_perception',
+}
+export const ACTORS_CRITERION = 'stakeholder_map'
+
+export const FIT_AXIS_LABELS: Record<FitAxisKey, { fr: string; en: string }> = {
+  segment: { fr: 'Segment', en: 'Segment' },
+  problem: { fr: 'Problème', en: 'Problem' },
+  value: { fr: 'Valeur', en: 'Value' },
+  alternative: { fr: 'Alternative', en: 'Alternative' },
+  perception: { fr: 'Perception', en: 'Perception' },
+}
+
+export const FIT_AXIS_SOURCE: Record<FitAxisKey, string> = {
+  segment: 'A2', problem: 'A1', value: 'A1', alternative: 'A3', perception: 'A4',
+}
+
+export function normalizeFit(raw: unknown): PlaybookFit | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Partial<PlaybookFit>
+  if (!Array.isArray(r.axes)) return null
+  const valid: FitVerdict[] = ['aligned', 'partial', 'mismatch', 'unknown']
+  const axes = r.axes
+    .filter(a => a && typeof a === 'object' && a.key in AXIS_CRITERION)
+    .map(a => ({
+      key: a.key,
+      verdict: valid.includes(a.verdict) ? a.verdict : 'unknown',
+      summary: typeof a.summary === 'string' ? a.summary : '',
+      playbook_ref: typeof a.playbook_ref === 'string' ? a.playbook_ref : '',
+      gap: typeof a.gap === 'string' ? a.gap : undefined,
+    })) as FitAxis[]
+  if (!axes.length) return null
+  return {
+    axes,
+    basis: r.basis === 'conversation' ? 'conversation' : 'context',
+    computed_at: typeof r.computed_at === 'string' ? r.computed_at : '',
+    avoid_list_hit: r.avoid_list_hit === true,
+  }
+}
+
 export type CanonicalActor =
   | 'champion' | 'decision_maker' | 'user' | 'reviewer' | 'budget_guardian' | 'blocker'
 

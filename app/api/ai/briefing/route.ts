@@ -3,7 +3,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext, buildVoiceContext } from '@/lib/ai-context'
+import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext, buildVoiceContext, buildFitContext } from '@/lib/ai-context'
 import { LAYER_LABELS, type DealRound } from '@/lib/types'
 import { computeDealState } from '@/lib/scoring'
 import { localeInstruction } from '@/lib/ai-locale'
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     const context = [
       vendor ? buildVendorContext(vendor) : '',
       buildProspectContext(deal),
+      buildFitContext(deal),
       buildScoresContext(round as DealRound),
       buildPrescriptionsContext(round as DealRound),
       buildVoiceContext(round as DealRound),
@@ -92,6 +93,7 @@ Question generation rules:
 - The intent explains what the main question is trying to establish — one sentence, for the seller's eyes only.
 - Questions must sound like a human conversation, never a form or an interrogation — the "invisible questionnaire" principle.
 - When urgency scores are weak, ALWAYS include a "cost of inaction" question: "What happens if nothing changes in 6 months?"
+- If a PLAYBOOK FIT section is present and marked HYPOTHESIS, it was formed from the prospect's website, not from anything they said. Any axis that is "partial", "mismatch" or "unknown" — and especially its "to settle" line — is a question this conversation should answer. Turn at least one of them into a question, phrased naturally, without ever mentioning the playbook or the scoring to the prospect.
 - When Layer 1 is active, focus on discovering the GAP between symptoms and root causes (the five whys technique).
 
 Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.` + localeInstruction(locale),

@@ -146,12 +146,21 @@ export default function CapturePage() {
       if (updateErr) throw new Error(updateErr.message)
 
       // Regenerate the read AFTER scoring so the dashboard reflects the
-      // post-conversation situation, not the pre-call plan.
-      await fetch('/api/ai/read', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
-      }).catch(() => {})
+      // post-conversation situation, not the pre-call plan. The playbook fit
+      // is re-evaluated at the same time: it was a hypothesis formed on the
+      // prospect's website, and this conversation is what can confirm it.
+      await Promise.all([
+        fetch('/api/ai/read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dealId, roundId: currentRoundData.id, locale }),
+        }).catch(() => {}),
+        fetch('/api/ai/playbook-fit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dealId, locale }),
+        }).catch(() => {}),
+      ])
 
       router.push(`/deals/${dealId}/dashboard`)
     } catch (e) {

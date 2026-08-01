@@ -16,7 +16,10 @@ import {
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import { normalizePlaybook, type Playbook } from '@/lib/playbook'
-import { actorCoverage, type DealContact } from '@/lib/playbook-fit'
+import {
+  actorCoverage, normalizeFit, AXIS_CRITERION, ACTORS_CRITERION, FIT_AXIS_LABELS,
+  type DealContact, type PlaybookFit, type FitVerdict, type ActorCoverage,
+} from '@/lib/playbook-fit'
 import PlaybookFitCard from '@/components/deal/PlaybookFitCard'
 import AIProgress from '@/components/ui/AIProgress'
 import { useI18n } from '@/lib/i18n/context'
@@ -47,10 +50,23 @@ const EVIDENCE_PILL: Record<EvidenceLevel, string> = {
   verified: 'text-emerald-700 bg-emerald-100',
 }
 
-function VariableRow({ label, rationale, children }: { label: string; rationale?: string; children: React.ReactNode }) {
+// The playbook verdict shown beside a criterion. Deliberately a marker, not a
+// number: the fit is a separate reading and must not look like part of the score.
+function FitDot({ verdict, title }: { verdict: FitVerdict; title: string }) {
+  const dot = verdict === 'aligned' ? 'bg-emerald-500'
+    : verdict === 'partial' ? 'bg-amber-500'
+    : verdict === 'mismatch' ? 'bg-rose-500'
+    : 'bg-neutral-300'
+  return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 cursor-help ${dot}`} title={title} />
+}
+
+function VariableRow({ label, rationale, fitMarker, children }: { label: string; rationale?: string; fitMarker?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-sm text-neutral-700 font-medium">{label}</div>
+      <div className="text-sm text-neutral-700 font-medium flex items-center gap-1.5">
+        <span>{label}</span>
+        {fitMarker}
+      </div>
       {children}
       {rationale && (
         <p className="text-[11px] text-neutral-500 mt-1 pl-2 border-l-2 border-neutral-200 leading-relaxed italic">{rationale}</p>
@@ -201,6 +217,7 @@ function LayerCard({
   onEvidence,
   gate,
   momentum,
+  fitMarkerFor,
 }: {
   layer: number
   round: DealRound | null
@@ -211,6 +228,7 @@ function LayerCard({
   onEvidence: (field: string, value: EvidenceLevel) => void
   gate: GateInfo | null
   momentum: MomentumInfo | null
+  fitMarkerFor: (variable: string) => React.ReactNode
 }) {
   const { t, locale } = useI18n()
   const vars = LAYER_VARIABLES[layer as keyof typeof LAYER_VARIABLES]
@@ -299,7 +317,7 @@ function LayerCard({
           const label = DECISIVE_VARS[layer]?.includes(v) ? `⚡ ${t(`var.${v}` as any)}` : t(`var.${v}` as any)
           const hasEvidence = currentValue !== null && evidenceLevels[v] !== undefined
           return (
-            <VariableRow key={v} label={label} rationale={rationale}>
+            <VariableRow key={v} label={label} rationale={rationale} fitMarker={fitMarkerFor(v)}>
               {isEditing ? (
                 <ScorePicker
                   value={currentValue}
@@ -357,6 +375,9 @@ export default function DealDashboardPage() {
   const [generatingBriefing, setGeneratingBriefing] = useState(false)
   const [stakeholders, setStakeholders] = useState<DealContact[]>([])
   const [playbook, setPlaybook] = useState<Playbook | null>(null)
+  const [fit, setFit] = useState<PlaybookFit | null>(null)
+  const [fitLoading, setFitLoading] = useState(false)
+  const [fitError, setFitError] = useState<string | null>(null)
 
   const currentRoundData = rounds.find(r => r.round === selectedRound) ?? null
 
@@ -393,7 +414,10 @@ export default function DealDashboardPage() {
     ])
     setStakeholders(stakeholderData ?? [])
     setPlaybook(vendorData?.playbook ? normalizePlaybook(vendorData.playbook, locale) : null)
-    if (dealData) setDeal(dealData)
+    if (dealData) {
+      setDeal(dealData)
+      setFit(normalizeFit(dealData.playbook_fit))
+    }
     if (roundData) {
       setRounds(roundData)
       // A round only "exists" on the dashboard once its conversation has been
@@ -436,6 +460,24 @@ export default function DealDashboardPage() {
     setPending({})
     setPendingEvidence({})
     setSaving(false)
+  }
+
+  async function handleAnalyzeFit() {
+    setFitLoading(true)
+    setFitError(null)
+    try {
+      const res = await fetch('/api/ai/playbook-fit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId, locale }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? `Failed (${res.status})`)
+      setFit(normalizeFit(data.fit))
+    } catch (e) {
+      setFitError(e instanceof Error ? e.message : 'Failed to evaluate the fit')
+    }
+    setFitLoading(false)
   }
 
   async function handleGenerateBriefing(roundId: string) {
@@ -565,6 +607,29 @@ export default function DealDashboardPage() {
       </PrimaryButton>
     </div>
   ) : null
+
+  // Which criteria carry a playbook verdict, and what it says on hover.
+  const coverage = playbook ? actorCoverage(playbook, stakeholders) : null
+  function fitMarkerFor(variable: string): React.ReactNode {
+    if (variable === ACTORS_CRITERION && coverage?.applicable) {
+      const missing = coverage.missing
+      const verdict: FitVerdict = missing.length === 0 ? 'aligned' : 'partial'
+      const title = missing.length === 0
+        ? (locale === 'fr' ? 'Playbook A5 — tous les rôles nécessaires sont couverts.' : 'Playbook A5 — every necessary role is covered.')
+        : (locale === 'fr' ? `Playbook A5 — manquant : ${missing.map(m => m.label).join(', ')}` : `Playbook A5 — missing: ${missing.map(m => m.label).join(', ')}`)
+      return <FitDot verdict={verdict} title={title} />
+    }
+    const axis = fit?.axes.find(a => AXIS_CRITERION[a.key] === variable)
+    if (!axis) return null
+    const name = FIT_AXIS_LABELS[axis.key][locale === 'fr' ? 'fr' : 'en']
+    const title = [
+      `${locale === 'fr' ? 'Adéquation playbook' : 'Playbook fit'} · ${name}`,
+      axis.summary,
+      axis.playbook_ref ? `${locale === 'fr' ? 'Playbook : ' : 'Playbook: '}${axis.playbook_ref}` : '',
+      axis.gap ? `${locale === 'fr' ? 'À vérifier : ' : 'To settle: '}${axis.gap}` : '',
+    ].filter(Boolean).join('\n')
+    return <FitDot verdict={axis.verdict} title={title} />
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
@@ -729,11 +794,15 @@ export default function DealDashboardPage() {
       )}
 
       {/* Playbook fit — a second reading, beside the gates, never inside them */}
-      {playbook && (
+      {playbook && coverage && (
         <PlaybookFitCard
-          coverage={actorCoverage(playbook, stakeholders)}
+          coverage={coverage}
+          fit={fit}
           locale={locale}
           dealId={dealId}
+          onAnalyze={handleAnalyzeFit}
+          analyzing={fitLoading}
+          error={fitError}
         />
       )}
 
@@ -751,6 +820,7 @@ export default function DealDashboardPage() {
             onEvidence={handleEvidence}
             gate={layer === 4 ? null : dealState.gates[layer]}
             momentum={layer === 4 ? dealState.momentum : null}
+            fitMarkerFor={fitMarkerFor}
           />
         ))}
       </div>
