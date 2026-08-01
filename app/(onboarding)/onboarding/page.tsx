@@ -201,8 +201,8 @@ export default function OnboardingPage() {
     ? (importKind === 'doc' ? 'Lecture du document' : 'Lecture de votre site')
     : (importKind === 'doc' ? 'Reading the document' : 'Reading your website')
   const importSteps = fr
-    ? [readingStep, 'Segments et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
-    : [readingStep, 'Segments and value proposition', 'Positioning and alternatives', 'Perception objections']
+    ? [readingStep, 'Cibles et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
+    : [readingStep, 'Targets and value proposition', 'Positioning and alternatives', 'Perception objections']
   const totalSteps = role === 'director' ? 4 : 2
   const selectedChallenge = SALES_CHALLENGES.find(c => c.key === challenge) ?? null
 

@@ -118,23 +118,23 @@ export type PlaybookSection = {
 
 const SECTIONS_FR: PlaybookSection[] = [
   {
-    key: 'a1_value_proposition', code: 'A1', label: 'La proposition de valeur, par segment',
+    key: 'a1_value_proposition', code: 'A1', label: 'La proposition de valeur, par cible',
     produces: 'La définition claire de qui vous ciblez, pour résoudre quel problème, et pourquoi vous gagnez.',
     intro: "Votre proposition de valeur est votre terrain de jeu. Ce n'est pas une description de produit : c'est la transformation que vous créez, formulée en conséquence pour le client, avec sa preuve.",
     columns: [
-      { key: 'segment', label: 'Segment / type de client' },
+      { key: 'segment', label: 'Cible / type de client' },
       { key: 'problem', label: 'Problème que vous résolvez', wide: true },
       { key: 'consequence', label: 'Conséquence concrète pour eux', wide: true },
       { key: 'proof', label: 'Preuve' },
     ],
-    addLabel: '+ Ajouter un segment',
+    addLabel: '+ Ajouter une cible',
   },
   {
-    key: 'a2_ideal_targets', code: 'A2', label: 'Le terrain de jeu — cibles idéales, cibles à fuir',
+    key: 'a2_ideal_targets', code: 'A2', label: 'Le terrain de jeu — segments idéaux, segments à fuir',
     produces: 'La carte des endroits où vous pêchez — et de ceux où vous ne lancez plus jamais votre ligne.',
-    intro: 'Les meilleures opportunités ressemblent aux deals que vous avez déjà bien gagnés. Vos deals les plus faciles révèlent votre zone de domination ; vos deals lents, perdus ou non rentables dessinent la liste des cibles à fuir.',
-    columns: [{ key: 'target', label: 'Cibles idéales (vous gagnez souvent, vite, bien)', wide: true }],
-    addLabel: '+ Ajouter une cible idéale',
+    intro: 'Les meilleures opportunités ressemblent aux deals que vous avez déjà bien gagnés. Vos deals les plus faciles révèlent votre zone de domination ; vos deals lents, perdus ou non rentables dessinent la liste des segments à fuir.',
+    columns: [{ key: 'target', label: 'Segments idéaux (vous gagnez souvent, vite, bien)', wide: true }],
+    addLabel: '+ Ajouter un segment idéal',
     pairedWith: 'a2_avoid_targets',
   },
   {
@@ -201,23 +201,23 @@ const SECTIONS_FR: PlaybookSection[] = [
 
 const SECTIONS_EN: PlaybookSection[] = [
   {
-    key: 'a1_value_proposition', code: 'A1', label: 'The value proposition, by segment',
+    key: 'a1_value_proposition', code: 'A1', label: 'The value proposition, by target',
     produces: 'A clear definition of who you target, which problem you solve, and why you win.',
     intro: 'Your value proposition is your playing field. It is not a product description: it is the transformation you create, stated as a consequence for the customer, with its proof.',
     columns: [
-      { key: 'segment', label: 'Segment / customer type' },
+      { key: 'segment', label: 'Target / customer type' },
       { key: 'problem', label: 'Problem you solve', wide: true },
       { key: 'consequence', label: 'Concrete consequence for them', wide: true },
       { key: 'proof', label: 'Proof' },
     ],
-    addLabel: '+ Add a segment',
+    addLabel: '+ Add a target',
   },
   {
-    key: 'a2_ideal_targets', code: 'A2', label: 'The playing field — ideal targets, targets to avoid',
+    key: 'a2_ideal_targets', code: 'A2', label: 'The playing field — ideal segments, segments to avoid',
     produces: 'A map of where you fish — and where you never cast a line again.',
-    intro: 'The best opportunities look like the deals you have already won well. Your easiest deals reveal your zone of dominance; your slow, lost or unprofitable deals draw the list of targets to avoid.',
-    columns: [{ key: 'target', label: 'Ideal targets (you win often, fast, well)', wide: true }],
-    addLabel: '+ Add an ideal target',
+    intro: 'The best opportunities look like the deals you have already won well. Your easiest deals reveal your zone of dominance; your slow, lost or unprofitable deals draw the list of segments to avoid.',
+    columns: [{ key: 'target', label: 'Ideal segments (you win often, fast, well)', wide: true }],
+    addLabel: '+ Add an ideal segment',
     pairedWith: 'a2_avoid_targets',
   },
   {
@@ -289,8 +289,8 @@ export function getPlaybookSections(locale: string): PlaybookSection[] {
 // The second column of A2, which has no section of its own.
 export function avoidTargetsColumn(locale: string): PlaybookColumn {
   return locale === 'fr'
-    ? { key: 'target', label: 'Cibles à fuir (deals lents, perdus, non rentables)', wide: true }
-    : { key: 'target', label: 'Targets to avoid (slow, lost, unprofitable deals)', wide: true }
+    ? { key: 'target', label: 'Segments à fuir (deals lents, perdus, non rentables)', wide: true }
+    : { key: 'target', label: 'Segments to avoid (slow, lost, unprofitable deals)', wide: true }
 }
 
 // ── Completion ───────────────────────────────────────────────

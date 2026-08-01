@@ -14,7 +14,7 @@ export const PLAYBOOK_SYSTEM_PROMPT = `You are building the "socle" of a Sales P
 The socle describes what a company knows about ITSELF as a seller — never about one deal. Write it as the company's own sales team would, in their words.
 
 WHAT TO EXTRACT:
-- a1_value_proposition: one row per customer segment. Not a product description — the transformation created, stated as a consequence for the customer, with its proof. Leave "proof" empty unless the material actually shows one (a figure, a named client, a case study).
+- a1_value_proposition: one row per target (customer type). Not a product description — the transformation created, stated as a consequence for the customer, with its proof. Leave "proof" empty unless the material actually shows one (a figure, a named client, a case study).
 - a2_ideal_targets: the segments where this company clearly wins. a2_avoid_targets: only if the material genuinely signals a poor fit — otherwise leave empty.
 - a3_positioning: keep the three seeded alternatives (status quo, in-house solution, competitor) and fill what each promises and the relevant difference. Add named competitors only if the material names them.
 - a4_perception: objections a prospect would likely hold BEFORE the first meeting, from what the material shows: size, price, youth of the company, country, thin references. This is judgement about how the market reads them — infer it, but stay plausible.

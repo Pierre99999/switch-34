@@ -133,7 +133,7 @@ function SectionCard({
               <RowTable
                 rows={pb[section.pairedWith]}
                 columns={[avoidTargetsColumn(locale)]}
-                addLabel={fr ? '+ Ajouter une cible à fuir' : '+ Add a target to avoid'}
+                addLabel={fr ? '+ Ajouter un segment à fuir' : '+ Add a segment to avoid'}
                 onChange={rows => onChange({ [section.pairedWith as PlaybookTableKey]: rows } as Partial<Playbook>)}
                 readOnly={readOnly}
               />
@@ -291,8 +291,8 @@ export default function PlaybookPage() {
     ? (importKind === 'doc' ? 'Lecture du document' : 'Lecture de votre site')
     : (importKind === 'doc' ? 'Reading the document' : 'Reading your website')
   const importSteps = fr
-    ? [readingStep, 'Segments et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
-    : [readingStep, 'Segments and value proposition', 'Positioning and alternatives', 'Perception objections']
+    ? [readingStep, 'Cibles et proposition de valeur', 'Positionnement et alternatives', 'Objections de perception']
+    : [readingStep, 'Targets and value proposition', 'Positioning and alternatives', 'Perception objections']
 
   const sectionDirty = (s: PlaybookSection): boolean => {
     if (s.key === 'a2_ideal_targets') {
@@ -366,8 +366,8 @@ export default function PlaybookPage() {
           </h2>
           <p className="text-xs text-neutral-400 mb-4">
             {fr
-              ? 'Switch remplit A1 à A4 — segments, cibles, positionnement, objections de perception. A5 à A7 viennent de votre histoire commerciale : ils ne s’inventent pas depuis un site.'
-              : 'Switch fills A1 to A4 — segments, targets, positioning, perception objections. A5 to A7 come from your own sales history: a website cannot reveal them.'}
+              ? 'Switch remplit A1 à A4 — cibles, segments, positionnement, objections de perception. A5 à A7 viennent de votre histoire commerciale : ils ne s’inventent pas depuis un site.'
+              : 'Switch fills A1 to A4 — targets, segments, positioning, perception objections. A5 to A7 come from your own sales history: a website cannot reveal them.'}
           </p>
 
           {/* Without this, an import leaves no trace and there is no way to
