@@ -19,7 +19,7 @@ type AdminUser = {
   lastSignIn: string | null
 }
 
-type FeedbackStatus = 'new' | 'rejected' | 'in_progress' | 'done'
+type FeedbackStatus = 'new' | 'rejected' | 'in_progress' | 'done' | 'archived'
 
 type Feedback = {
   id: string
@@ -36,6 +36,7 @@ const FEEDBACK_STATUSES: { value: FeedbackStatus; label: string; on: string; off
   { value: 'in_progress', label: 'En cours',  on: 'bg-amber-500 text-white border-amber-500',     off: 'text-amber-600 border-amber-200 hover:border-amber-400' },
   { value: 'done',        label: 'Appliqué',  on: 'bg-emerald-500 text-white border-emerald-500', off: 'text-emerald-600 border-emerald-200 hover:border-emerald-400' },
   { value: 'rejected',    label: 'Refusé',    on: 'bg-rose-500 text-white border-rose-500',       off: 'text-rose-600 border-rose-200 hover:border-rose-400' },
+  { value: 'archived',    label: 'Archivé',   on: 'bg-neutral-500 text-white border-neutral-500',  off: 'text-neutral-500 border-neutral-200 hover:border-neutral-400' },
 ]
 
 type Stats = {
@@ -77,6 +78,9 @@ export default function AdminPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus | 'all'>('all')
+  const [feedbackAuthor, setFeedbackAuthor] = useState<string>('all')
+  const [expandedFeedback, setExpandedFeedback] = useState<Set<string>>(new Set())
+  const [confirmFeedbackId, setConfirmFeedbackId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const loadStats = useCallback(async () => {
@@ -145,6 +149,32 @@ export default function AdminPage() {
     await loadStats()
   }
 
+  async function handleFeedbackDelete(id: string) {
+    setActionError(null)
+    // Optimistic: the row goes now, and comes back if the server refuses.
+    setStats(prev => prev ? { ...prev, feedback: prev.feedback.filter(f => f.id !== id) } : prev)
+    setConfirmFeedbackId(null)
+    const res = await fetch('/api/admin/feedback-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setActionError(data.error ?? `Suppression impossible (${res.status})`)
+      await loadStats()
+    }
+  }
+
+  function toggleFeedback(id: string) {
+    setExpandedFeedback(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
   async function handleDelete(userId: string) {
     setDeletingId(userId)
     setActionError(null)
@@ -172,9 +202,13 @@ export default function AdminPage() {
   )
   if (!stats) return null
 
-  const visibleFeedback = feedbackFilter === 'all'
+  const byAuthor = feedbackAuthor === 'all'
     ? stats.feedback
-    : stats.feedback.filter(f => f.status === feedbackFilter)
+    : stats.feedback.filter(f => f.author === feedbackAuthor)
+  const visibleFeedback = feedbackFilter === 'all'
+    ? byAuthor.filter(f => f.status !== 'archived')
+    : byAuthor.filter(f => f.status === feedbackFilter)
+  const feedbackAuthors = [...new Set(stats.feedback.map(f => f.author))].sort()
 
   const stat = (label: string, value: number | string, accent = 'text-neutral-900') => (
     <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
@@ -217,9 +251,12 @@ export default function AdminPage() {
         <section className="mb-10">
           <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">Retours des testeurs ({stats.feedback.length})</h2>
 
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-2 mb-3 flex-wrap items-center">
             {([['all', 'Tout'], ...FEEDBACK_STATUSES.map(st => [st.value, st.label] as const)] as [FeedbackStatus | 'all', string][]).map(([value, label]) => {
-              const count = value === 'all' ? stats.feedback.length : stats.feedback.filter(f => f.status === value).length
+              const pool = feedbackAuthor === 'all' ? stats.feedback : stats.feedback.filter(f => f.author === feedbackAuthor)
+              const count = value === 'all'
+                ? pool.filter(f => f.status !== 'archived').length
+                : pool.filter(f => f.status === value).length
               const active = feedbackFilter === value
               return (
                 <button
@@ -233,35 +270,90 @@ export default function AdminPage() {
                 </button>
               )
             })}
+
+            <select
+              value={feedbackAuthor}
+              onChange={e => setFeedbackAuthor(e.target.value)}
+              className="ml-auto bg-white border border-neutral-200 rounded-full px-3 py-1.5 text-xs text-neutral-600 focus:outline-none focus:border-neutral-400"
+            >
+              <option value="all">Tous les utilisateurs</option>
+              {feedbackAuthors.map(a => (
+                <option key={a} value={a}>{a} ({stats.feedback.filter(f => f.author === a).length})</option>
+              ))}
+            </select>
           </div>
 
           {visibleFeedback.length === 0 && (
             <p className="text-sm text-neutral-400 mb-4">Aucun retour dans cette catégorie.</p>
           )}
 
-          <div className="space-y-3">
-            {visibleFeedback.map((f, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className="text-base">{f.sentiment === 'positive' ? '👍' : f.sentiment === 'negative' ? '👎' : '💬'}</span>
-                  <span className="text-sm font-semibold text-neutral-800">{f.author}</span>
-                  {f.page && <span className="text-[11px] font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">{f.page}</span>}
-                  <span className="text-xs text-neutral-400 ml-auto">{fmtDate(f.createdAt)}</span>
+          {/* One line each until opened: a dozen full comments in a row is
+              more than anyone reads, and the useful scan is who said what
+              about which page. */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm divide-y divide-neutral-100 overflow-hidden">
+            {visibleFeedback.map(f => {
+              const open = expandedFeedback.has(f.id)
+              const st = FEEDBACK_STATUSES.find(x => x.value === f.status)
+              return (
+                <div key={f.id} className={f.status === 'archived' ? 'opacity-60' : ''}>
+                  <button
+                    onClick={() => toggleFeedback(f.id)}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left hover:bg-neutral-50/70 transition-colors"
+                  >
+                    <span className="text-base flex-shrink-0">{f.sentiment === 'positive' ? '👍' : f.sentiment === 'negative' ? '👎' : '💬'}</span>
+                    <span className="text-sm font-semibold text-neutral-800 flex-shrink-0">{f.author}</span>
+                    {f.page && <span className="text-[11px] font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5 flex-shrink-0 hidden sm:inline">{f.page}</span>}
+                    {!open && (
+                      <span className="text-sm text-neutral-500 truncate min-w-0">{f.message}</span>
+                    )}
+                    <span className="ml-auto flex items-center gap-2 flex-shrink-0">
+                      {st && f.status !== 'new' && (
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${st.on}`}>{st.label}</span>
+                      )}
+                      <span className="text-xs text-neutral-400 hidden sm:inline">{fmtDate(f.createdAt)}</span>
+                      <span className="text-neutral-300 text-xs">{open ? '▲' : '▼'}</span>
+                    </span>
+                  </button>
+
+                  {open && (
+                    <div className="px-4 pb-4">
+                      {f.page && <div className="text-[11px] font-medium text-blue-600 mb-2 sm:hidden">{f.page}</div>}
+                      <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{f.message}</p>
+                      <div className="flex gap-1.5 mt-3 pt-3 border-t border-neutral-100 flex-wrap items-center">
+                        {FEEDBACK_STATUSES.map(x => (
+                          <button
+                            key={x.value}
+                            onClick={() => handleFeedbackStatus(f.id, x.value)}
+                            className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${f.status === x.value ? x.on : `bg-white ${x.off}`}`}
+                          >
+                            {x.label}
+                          </button>
+                        ))}
+                        {confirmFeedbackId === f.id ? (
+                          <span className="ml-auto inline-flex items-center gap-2">
+                            <span className="text-[11px] text-neutral-500">Supprimer définitivement ?</span>
+                            <button
+                              onClick={() => handleFeedbackDelete(f.id)}
+                              className="text-[11px] font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg px-2.5 py-1 transition-all"
+                            >
+                              Confirmer
+                            </button>
+                            <button onClick={() => setConfirmFeedbackId(null)} className="text-[11px] text-neutral-400 hover:text-neutral-600">Annuler</button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmFeedbackId(f.id)}
+                            className="ml-auto text-[11px] font-medium text-neutral-400 hover:text-rose-600 transition-colors"
+                          >
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap">{f.message}</p>
-                <div className="flex gap-1.5 mt-3 pt-3 border-t border-neutral-100 flex-wrap">
-                  {FEEDBACK_STATUSES.map(st => (
-                    <button
-                      key={st.value}
-                      onClick={() => handleFeedbackStatus(f.id, st.value)}
-                      className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${f.status === st.value ? st.on : `bg-white ${st.off}`}`}
-                    >
-                      {st.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
       )}
