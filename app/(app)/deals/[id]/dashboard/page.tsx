@@ -13,7 +13,7 @@ import {
   type GateInfo, type MomentumInfo,
 } from '@/lib/scoring'
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
-import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted, type ScoreSuggestion } from '@/lib/deal-rounds'
+import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted, roundState as computeRoundState, hasCapture as roundHasCapture, type ScoreSuggestion } from '@/lib/deal-rounds'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import { normalizePlaybook, type Playbook } from '@/lib/playbook'
 import {
@@ -521,16 +521,8 @@ export default function DealDashboardPage() {
   ]
 
   const isLatestRound = selectedRound === deal.current_round
-  const allVars = Object.values(LAYER_VARIABLES).flat() as string[]
-  const hasAnyScore = currentRoundData !== null && allVars.some(v => currentRoundData[v as keyof typeof currentRoundData] !== null)
-  const hasBriefing = !!(currentRoundData?.briefing_line)
-  const hasCapture = currentRoundData !== null && (() => {
-    const notes = currentRoundData.capture_notes as Record<string, string> | null
-    // Any capture content counts, including the free note and transcript imports.
-    return !!notes && Object.values(notes).some(v => typeof v === 'string' && v.trim())
-  })()
-  // A round is SCORED once it has capture content OR any score written.
-  const roundState = !hasBriefing ? 'UNSTARTED' : (hasCapture || hasAnyScore) ? 'SCORED' : 'BRIEFED'
+  const hasCapture = roundHasCapture(currentRoundData)
+  const roundState = computeRoundState(currentRoundData)
   const dealState = computeDealState(rounds, selectedRound)
 
   // On the Départ view: is round 1 already briefed but not yet captured?

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted } from './deal-rounds'
+import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted, roundState } from './deal-rounds'
 import type { DealRound } from './types'
 
 function round(over: Partial<DealRound> & Record<string, unknown> = {}): DealRound {
@@ -88,6 +88,41 @@ test('a scored round is started', () => {
 
 test('a round scored zero is started', () => {
   assert.equal(isRoundUnstarted(round({ urgency: 0 })), false)
+})
+
+// ── roundState ────────────────────────────────────────────────
+
+test('a round with no briefing is unstarted', () => {
+  assert.equal(roundState(round()), 'UNSTARTED')
+  assert.equal(roundState(null), 'UNSTARTED')
+})
+
+test('a briefed round with nothing captured is BRIEFED', () => {
+  assert.equal(roundState(round({ briefing_line: 'Urgency is the question.' })), 'BRIEFED')
+})
+
+test('inherited scores do not make a round SCORED', () => {
+  // The bug: a new round carries the previous round's scores from the moment
+  // it is created, so "has a score" was true before the conversation had
+  // happened — and the dashboard offered the NEXT round's briefing.
+  const r = round({ briefing_line: 'Urgency is the question.', urgency: 4, impact: 3 })
+  assert.equal(roundState(r), 'BRIEFED')
+})
+
+test('a captured round is SCORED', () => {
+  const r = round({ briefing_line: 'Urgency is the question.', capture_notes: { q1: 'Kevin named a deadline.' } })
+  assert.equal(roundState(r), 'SCORED')
+})
+
+test('whitespace-only capture does not make a round SCORED', () => {
+  const r = round({ briefing_line: 'Urgency.', capture_notes: { q1: '  ', __free__: '' } })
+  assert.equal(roundState(r), 'BRIEFED')
+})
+
+test('capture with no briefing line yet reads as unstarted', () => {
+  // Transient: an imported past conversation has no briefing, and only gets a
+  // briefing_line once the post-conversation read has been written.
+  assert.equal(roundState(round({ capture_notes: { q1: 'Said something.' } })), 'UNSTARTED')
 })
 
 // ── scoreUpdateFromSuggestions ────────────────────────────────

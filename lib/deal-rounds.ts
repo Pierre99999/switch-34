@@ -59,6 +59,27 @@ export function isRoundUnstarted(round: DealRound | null | undefined): boolean {
   })
 }
 
+/** Whether this round holds anything a human actually captured. */
+export function hasCapture(round: DealRound | null | undefined): boolean {
+  const notes = (round?.capture_notes ?? {}) as Record<string, unknown>
+  return Object.values(notes).some(v => typeof v === 'string' && v.trim())
+}
+
+export type RoundState = 'UNSTARTED' | 'BRIEFED' | 'SCORED'
+
+/**
+ * Where a round stands, and therefore what the dashboard should offer next.
+ *
+ * SCORED depends on the CAPTURE, never on the presence of scores: a new round
+ * inherits the previous round's scores, so "has a score" is true from the
+ * moment it is created. Reading that as "already scored" offered the round 3
+ * briefing while round 2's conversation had not happened yet.
+ */
+export function roundState(round: DealRound | null | undefined): RoundState {
+  if (!round?.briefing_line) return 'UNSTARTED'
+  return hasCapture(round) ? 'SCORED' : 'BRIEFED'
+}
+
 export type ScoreSuggestion = {
   score?: number | null
   evidence?: string
