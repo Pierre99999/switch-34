@@ -9,6 +9,8 @@ import type { Deal, DealRound } from '@/lib/types'
 import EditableProspectName from '@/components/deal/EditableProspectName'
 import { useI18n } from '@/lib/i18n/context'
 import { useRole } from '@/lib/role-context'
+import PlaybookWelcome from '@/components/ui/PlaybookWelcome'
+import { normalizePlaybook, playbookProgress } from '@/lib/playbook'
 
 
 const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
@@ -68,8 +70,12 @@ function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: nu
 type SortKey = 'prospect' | 'rep' | 'round' | 'revenue' | null
 type SortDir = 'asc' | 'desc'
 
+// Remembered per browser, not in the database: "later" is a preference about
+// this screen, not a fact about the account.
+const WELCOME_DISMISSED_KEY = 'switch.playbookWelcomeDismissed'
+
 export default function PipelinePage() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const { role } = useRole()
   const isDirector = role === 'director'
   const [deals, setDeals] = useState<Deal[]>([])
@@ -81,6 +87,7 @@ export default function PipelinePage() {
   const [archivedDeals, setArchivedDeals] = useState<Deal[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [showWelcome, setShowWelcome] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -123,10 +130,33 @@ export default function PipelinePage() {
           .in('deal_id', ids)
         setRounds(roundData || [])
       }
+      // An empty Sales Playbook is the one thing worth interrupting for: every
+      // deal is read against it. Only a director sees this — a rep inherits the
+      // team's playbook and cannot edit it.
+      if (isDirector) {
+        const { data: vendor } = await supabase
+          .from('vendors')
+          .select('playbook, locale')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        const { started } = playbookProgress(
+          normalizePlaybook(vendor?.playbook, vendor?.locale ?? 'fr'),
+          vendor?.locale ?? 'fr',
+        )
+        const dismissed = typeof window !== 'undefined'
+          && window.localStorage.getItem(WELCOME_DISMISSED_KEY) === '1'
+        setShowWelcome(started === 0 && !dismissed)
+      }
+
       setLoading(false)
     }
     load()
   }, [isDirector])
+
+  function dismissWelcome() {
+    setShowWelcome(false)
+    try { window.localStorage.setItem(WELCOME_DISMISSED_KEY, '1') } catch { /* private mode */ }
+  }
 
   async function handleSetStatus(dealId: string, status: Deal['status']) {
     const supabase = createClient()
@@ -211,6 +241,8 @@ export default function PipelinePage() {
 
   return (
     <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
+      {showWelcome && <PlaybookWelcome locale={locale} onDismiss={dismissWelcome} />}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6 sm:mb-8">
         <div>
