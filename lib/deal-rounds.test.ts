@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { inheritedRoundFields, scoreUpdateFromSuggestions } from './deal-rounds'
+import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted } from './deal-rounds'
 import type { DealRound } from './types'
 
 function round(over: Partial<DealRound> & Record<string, unknown> = {}): DealRound {
@@ -55,6 +55,39 @@ test('carries evidence levels and rationales, but not empty maps', () => {
   assert.ok(!('evidence_levels' in empty))
   assert.ok(!('rationales' in empty))
   assert.ok(!('authority_levels' in empty))
+})
+
+// ── isRoundUnstarted ──────────────────────────────────────────
+
+test('a freshly created round is unstarted', () => {
+  // This is the round left behind when briefing generation is interrupted.
+  assert.equal(isRoundUnstarted(round()), true)
+})
+
+test('a missing round is not "unstarted" — there is nothing to reuse', () => {
+  assert.equal(isRoundUnstarted(null), false)
+  assert.equal(isRoundUnstarted(undefined), false)
+})
+
+test('a briefed round is started', () => {
+  assert.equal(isRoundUnstarted(round({ briefing_line: 'The deal hinges on urgency.' })), false)
+})
+
+test('a captured round is started, even with no briefing', () => {
+  // The transcript-import path creates rounds with capture and no briefing.
+  assert.equal(isRoundUnstarted(round({ capture_notes: { q1: 'Kevin said the margin is slipping.' } })), false)
+})
+
+test('whitespace-only capture notes do not count as started', () => {
+  assert.equal(isRoundUnstarted(round({ capture_notes: { q1: '   ', __free__: '' } })), true)
+})
+
+test('a scored round is started', () => {
+  assert.equal(isRoundUnstarted(round({ urgency: 3 })), false)
+})
+
+test('a round scored zero is started', () => {
+  assert.equal(isRoundUnstarted(round({ urgency: 0 })), false)
 })
 
 // ── scoreUpdateFromSuggestions ────────────────────────────────

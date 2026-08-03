@@ -36,6 +36,29 @@ export function inheritedRoundFields(prev: DealRound | null | undefined): Record
   return inherited
 }
 
+/**
+ * A round that exists in the database but holds nothing: no briefing, no
+ * capture, no score.
+ *
+ * The round row is created before its briefing is generated, so leaving the
+ * page mid-generation — or a browser Back — strands an empty round. Clicking
+ * "create the briefing" again would then open ANOTHER round, and the timeline
+ * would show R2 for a deal still on its first conversation. Reuse this one
+ * instead of stacking a new one on top.
+ */
+export function isRoundUnstarted(round: DealRound | null | undefined): boolean {
+  if (!round) return false
+  if (round.briefing_line) return false
+
+  const notes = (round.capture_notes ?? {}) as Record<string, unknown>
+  if (Object.values(notes).some(v => typeof v === 'string' && v.trim())) return false
+
+  return !ALL_VARIABLES.some(v => {
+    const score = round[v as keyof DealRound]
+    return score !== null && score !== undefined
+  })
+}
+
 export type ScoreSuggestion = {
   score?: number | null
   evidence?: string

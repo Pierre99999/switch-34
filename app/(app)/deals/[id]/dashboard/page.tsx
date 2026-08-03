@@ -13,7 +13,7 @@ import {
   type GateInfo, type MomentumInfo,
 } from '@/lib/scoring'
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
-import { inheritedRoundFields, scoreUpdateFromSuggestions, type ScoreSuggestion } from '@/lib/deal-rounds'
+import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted, type ScoreSuggestion } from '@/lib/deal-rounds'
 import RoundTimeline from '@/components/deal/RoundTimeline'
 import { normalizePlaybook, type Playbook } from '@/lib/playbook'
 import {
@@ -402,23 +402,34 @@ export default function DealDashboardPage() {
       }
 
       // Each imported conversation is its own round, so momentum can be read
-      // across them. Scores carry over the same way a normal round does.
-      const nextRound = deal.current_round + 1
-      const inherited = inheritedRoundFields(rounds.find(r => r.round === deal.current_round))
+      // across them. Scores carry over the same way a normal round does — but
+      // an empty round left by an interrupted briefing is filled in, not
+      // skipped over.
+      const current = rounds.find(r => r.round === deal.current_round)
+      const reusable = isRoundUnstarted(current) ? current! : null
+      const nextRound = reusable ? reusable.round : deal.current_round + 1
+      const inherited = reusable ? {} : inheritedRoundFields(current)
 
-      const { data: newRound, error: insertErr } = await supabase
-        .from('deal_rounds')
-        .insert({
-          deal_id: dealId,
-          round: nextRound,
-          ...inherited,
-          capture_notes: notes,
-          capture_speakers: parsed.speakers ?? [],
-        })
-        .select()
-        .single()
+      const { data: newRound, error: insertErr } = reusable
+        ? await supabase
+          .from('deal_rounds')
+          .update({ capture_notes: notes, capture_speakers: parsed.speakers ?? [] })
+          .eq('id', reusable.id)
+          .select()
+          .single()
+        : await supabase
+          .from('deal_rounds')
+          .insert({
+            deal_id: dealId,
+            round: nextRound,
+            ...inherited,
+            capture_notes: notes,
+            capture_speakers: parsed.speakers ?? [],
+          })
+          .select()
+          .single()
       if (insertErr || !newRound) throw new Error(insertErr?.message ?? 'Could not create the round')
-      await supabase.from('deals').update({ current_round: nextRound }).eq('id', dealId)
+      if (!reusable) await supabase.from('deals').update({ current_round: nextRound }).eq('id', dealId)
 
       const scoresRes = await fetch('/api/ai/suggest-scores', {
         method: 'POST',
@@ -462,8 +473,18 @@ export default function DealDashboardPage() {
     setError(null)
     try {
       const supabase = createClient()
+      // A previous attempt may have created the round and then been
+      // interrupted — a browser Back mid-generation is enough. Reuse that
+      // empty round rather than opening another on top of it.
+      const current = rounds.find(r => r.round === deal.current_round)
+      if (isRoundUnstarted(current)) {
+        setSelectedRound(current!.round)
+        await handleGenerateBriefing(current!.id)
+        return
+      }
+
       const nextRound = deal.current_round + 1
-      const inheritedScores = inheritedRoundFields(rounds.find(r => r.round === deal.current_round))
+      const inheritedScores = inheritedRoundFields(current)
 
       const { data: newRound, error: insertErr } = await supabase
         .from('deal_rounds')
