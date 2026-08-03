@@ -6,6 +6,12 @@ import { evidenceFromDeclarations } from './voice-credit'
 import type { VoiceDeclaration } from './types'
 import { normalizePlaybook, playbookToContext } from './playbook'
 import { normalizeFit, FIT_AXIS_LABELS, FIT_AXIS_SOURCE, type ActorCoverage } from './playbook-fit'
+import { normalizeSellerRead, buildSellerReadContext } from './seller-read'
+
+// The seller's subjective read of the last conversation, for the briefing.
+export function buildSellerRead(round: DealRound | null): string {
+  return buildSellerReadContext(normalizeSellerRead((round as unknown as { seller_read?: unknown } | null)?.seller_read))
+}
 
 export function buildVendorContext(vendor: Vendor): string {
   // The problem they named at onboarding. Everything the AI produces should

@@ -22,6 +22,7 @@ import {
 } from '@/lib/playbook-fit'
 import PlaybookFitCard from '@/components/deal/PlaybookFitCard'
 import PastConversationImport from '@/components/deal/PastConversationImport'
+import { normalizeSellerRead, readGap, CONFIDENCE_LEVELS } from '@/lib/seller-read'
 import AIProgress from '@/components/ui/AIProgress'
 import { useI18n } from '@/lib/i18n/context'
 
@@ -760,6 +761,51 @@ export default function DealDashboardPage() {
           {errorBlock}
         </div>
       )}
+
+      {/* The seller's read against the evidence. Only speaks when the two
+          disagree — when they agree, silence is the right output. */}
+      {(() => {
+        const read = normalizeSellerRead((currentRoundData as unknown as { seller_read?: unknown } | null)?.seller_read)
+        const gap = readGap(read, currentRoundData)
+        if (!gap || gap.kind === 'aligned') return null
+        const optimistic = gap.kind === 'optimistic'
+        const conf = CONFIDENCE_LEVELS.find(c => c.value === gap.confidence)
+        return (
+          <div className={`mb-6 rounded-2xl border px-5 py-4 ${optimistic ? 'border-amber-200 bg-amber-50' : 'border-blue-200 bg-blue-50'}`}>
+            <div className={`text-[11px] font-semibold uppercase tracking-wide mb-1 ${optimistic ? 'text-amber-600' : 'text-blue-600'}`}>
+              {locale === 'fr' ? 'Écart de lecture' : 'Reading gap'}
+            </div>
+            <p className={`text-sm font-medium ${optimistic ? 'text-amber-800' : 'text-blue-800'}`}>
+              {optimistic
+                ? (locale === 'fr'
+                  ? 'Vous sentez ce deal mieux que les preuves ne le montrent.'
+                  : 'You feel better about this deal than the evidence shows.')
+                : (locale === 'fr'
+                  ? 'Les preuves sont meilleures que votre ressenti.'
+                  : 'The evidence is better than your read.')}
+            </p>
+            <p className="text-xs text-neutral-600 mt-1">
+              {locale === 'fr' ? 'Votre pari : ' : 'Your bet: '}
+              <strong>{conf ? (locale === 'fr' ? conf.fr : conf.en) : gap.confidence}</strong>
+              {' · '}
+              {locale === 'fr' ? 'Porte 1 : ' : 'Gate 1: '}
+              <strong>{gap.evidence.toFixed(1)}/5</strong>
+            </p>
+            <p className="text-xs text-neutral-500 mt-2 leading-relaxed">
+              {optimistic
+                ? (locale === 'fr'
+                  ? 'Qu’est-ce qui vous fait dire ça ? Si c’est réel, allez le faire dire au prospect — sinon ça ne compte pas.'
+                  : 'What makes you say that? If it is real, get the prospect to say it — otherwise it does not count.')
+                : (locale === 'fr'
+                  ? 'Quelque chose vous gêne que les notes ne montrent pas. Nommez-le : c’est souvent le vrai sujet du prochain échange.'
+                  : 'Something bothers you that the notes do not show. Name it: it is often the real subject of the next conversation.')}
+            </p>
+            {read?.note && (
+              <p className="text-xs text-neutral-600 mt-2 pl-3 border-l-2 border-neutral-300 italic">{read.note}</p>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Playbook fit — a second reading, beside the gates, never inside them */}
       {playbook && coverage && (

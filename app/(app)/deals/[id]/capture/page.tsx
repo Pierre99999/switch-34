@@ -8,6 +8,8 @@ import RoundTimeline from '@/components/deal/RoundTimeline'
 import AIProgress from '@/components/ui/AIProgress'
 import { useToast } from '@/components/ui/Toast'
 import { scoreUpdateFromSuggestions, type ScoreSuggestion } from '@/lib/deal-rounds'
+import SellerReadForm from '@/components/deal/SellerReadForm'
+import { normalizeSellerRead, type SellerRead } from '@/lib/seller-read'
 import { useI18n } from '@/lib/i18n/context'
 
 export default function CapturePage() {
@@ -32,6 +34,7 @@ export default function CapturePage() {
   // Who spoke in the imported transcript. Kept out of capture_notes so a
   // speaker list alone never counts as a captured conversation.
   const [speakers, setSpeakers] = useState<TranscriptSpeaker[]>([])
+  const [sellerRead, setSellerRead] = useState<SellerRead>({})
   const [onCall, setOnCall] = useState(false)
   const [asked, setAsked] = useState<Set<string>>(new Set())
 
@@ -45,6 +48,7 @@ export default function CapturePage() {
     setFreeNote((r?.capture_notes as Record<string, string>)?.__free__ ?? '')
     const sp = (r as unknown as { capture_speakers?: TranscriptSpeaker[] } | null)?.capture_speakers
     setSpeakers(Array.isArray(sp) ? sp : [])
+    setSellerRead(normalizeSellerRead((r as unknown as { seller_read?: unknown } | null)?.seller_read) ?? {})
   }
 
   const load = useCallback(async () => {
@@ -71,6 +75,12 @@ export default function CapturePage() {
     populateFromRound(rounds.find(rd => rd.round === r) ?? null)
   }
 
+  // Stamped when there is something to stamp, so the read carries its date.
+  function sellerReadToSave() {
+    const clean = normalizeSellerRead(sellerRead)
+    return clean ? { ...clean, at: new Date().toISOString() } : null
+  }
+
   function setNote(key: string, val: string) {
     setNotes(n => ({ ...n, [key]: val }))
   }
@@ -83,7 +93,7 @@ export default function CapturePage() {
     const supabase = createClient()
     const { error } = await supabase
       .from('deal_rounds')
-      .update({ capture_notes: merged, capture_speakers: speakers })
+      .update({ capture_notes: merged, capture_speakers: speakers, seller_read: sellerReadToSave() })
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
     else {
@@ -108,7 +118,7 @@ export default function CapturePage() {
       const supabase = createClient()
       const { error: saveErr } = await supabase
         .from('deal_rounds')
-        .update({ capture_notes: merged, capture_speakers: speakers })
+        .update({ capture_notes: merged, capture_speakers: speakers, seller_read: sellerReadToSave() })
         .eq('id', currentRoundData.id)
       if (saveErr) throw new Error(saveErr.message)
 
@@ -533,6 +543,15 @@ export default function CapturePage() {
             t('ai.step.boxes' as never),
             t('ai.step.read' as never),
           ]} />
+        </div>
+      )}
+
+      {/* The seller's own read, at the moment the conversation closes. Placed
+          before the actions because it belongs to closing the call, not to
+          reviewing it later. */}
+      {isLatestRound && hasBriefing && !suggestingScores && hasSomethingCaptured && (
+        <div className="mb-6">
+          <SellerReadForm value={sellerRead} onChange={setSellerRead} locale={locale} />
         </div>
       )}
 

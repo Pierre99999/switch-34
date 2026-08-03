@@ -249,6 +249,8 @@ export type DealRound = {
   rationales: Record<string, string>
   capture_notes: Record<string, string>
   capture_speakers: TranscriptSpeaker[] | null
+  // The seller's subjective read. See lib/seller-read.ts — never a score.
+  seller_read: unknown
   briefing_line: string | null
   briefing_read: string | null
   briefing_angle: string | null

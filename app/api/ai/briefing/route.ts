@@ -3,7 +3,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
-import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext, buildVoiceContext, buildFitContext, buildFitPrescriptions, buildKnownObjections } from '@/lib/ai-context'
+import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, buildPrescriptionsContext, buildVoiceContext, buildFitContext, buildFitPrescriptions, buildKnownObjections, buildSellerRead } from '@/lib/ai-context'
 import { normalizePlaybook } from '@/lib/playbook'
 import { actorCoverage, normalizeFit } from '@/lib/playbook-fit'
 import { LAYER_LABELS, type DealRound } from '@/lib/types'
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
       buildScoresContext(round as DealRound),
       buildPrescriptionsContext(round as DealRound),
       buildVoiceContext(round as DealRound),
+      buildSellerRead(round as DealRound),
       buildCaptureContext(allRounds ?? []),
     ].filter(Boolean).join('\n\n')
 
@@ -113,6 +114,7 @@ Question generation rules:
 - A fit read marked HYPOTHESIS was formed from the prospect's website, not from anything they said: ask to VERIFY it, never assert it.
 - Never mention the playbook, the axes or the scoring to the prospect. These questions must sound like ordinary curiosity.${offBook ? `
 - THIS PROSPECT IS OFF-BOOK on at least one axis. One of your questions MUST be an exception test — what would have to be true for this to be worth continuing? — and "do_not" MUST carry a line about not investing further (demo, proposal, custom work) until that is settled. Walking away is not losing, and it only costs little if it happens early.` : ''}
+- THE SELLER'S OWN READ, when present, is a feeling, not a finding: it must never justify a question's premise. Use it only one way — if what nags at them is not settled by the notes, turn it into a question that would settle it.
 - OBJECTIONS: when a known perception objection from A4 is plausibly alive on this deal, put it in the objections list using the team's OWN defusing line, adapted to this prospect. Do not invent objections that are not in A4 unless the capture notes show one.
 - When Layer 1 is active, focus on discovering the GAP between symptoms and root causes (the five whys technique).
 
