@@ -17,15 +17,30 @@ const cellClass = "w-full bg-neutral-50 border border-neutral-200 rounded-lg px-
 
 // ── One editable table ───────────────────────────────────────
 
+// Rows are numbered because unnumbered ones run into each other when read
+// quickly — you lose track of which segment or alternative you are on.
+type RowTone = 'neutral' | 'positive' | 'negative'
+
+const TONE: Record<RowTone, { card: string; badge: string }> = {
+  neutral: { card: 'bg-white border-neutral-200', badge: 'bg-neutral-100 text-neutral-500' },
+  positive: { card: 'bg-emerald-50/40 border-emerald-200', badge: 'bg-emerald-500 text-white' },
+  negative: { card: 'bg-rose-50/40 border-rose-200', badge: 'bg-rose-500 text-white' },
+}
+
 function RowTable({
-  rows, columns, addLabel, onChange, readOnly,
+  rows, columns, addLabel, onChange, readOnly, tone = 'neutral', numberPrefix,
 }: {
   rows: PlaybookRow[]
   columns: PlaybookColumn[]
   addLabel: string
   onChange: (rows: PlaybookRow[]) => void
   readOnly?: boolean
+  tone?: RowTone
+  /** Short word before the number, e.g. "Alternative 2". */
+  numberPrefix?: string
 }) {
+  const style = TONE[tone]
+
   function update(i: number, key: string, val: string) {
     onChange(rows.map((r, idx) => idx === i ? { ...r, [key]: val } : r))
   }
@@ -36,33 +51,49 @@ function RowTable({
     <div>
       <div className="space-y-3">
         {rows.map((row, i) => (
-          <div key={i} className="relative bg-white border border-neutral-200 rounded-xl p-3 sm:p-4">
+          <div key={i} className={`relative border rounded-xl p-3 sm:p-4 ${style.card}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${style.badge}`}>
+                {i + 1}
+              </span>
+              {numberPrefix && (
+                <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide">
+                  {numberPrefix} {i + 1}
+                </span>
+              )}
+              {!readOnly && (
+                <button
+                  onClick={() => remove(i)}
+                  aria-label="Remove row"
+                  className="ml-auto text-neutral-300 hover:text-rose-500 text-xs transition-colors px-2 py-1"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             {/* Stacked rather than a grid: mixing full-width and half-width
                 cells left holes in the layout, and a row reads better as a
                 short form than as a table on a phone. */}
-            <div className="space-y-3 pr-6">
+            <div className="space-y-3">
               {columns.map(c => (
                 <div key={c.key}>
-                  <label className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1 block">{c.label}</label>
+                  {/* On a single-column table the heading above already says
+                      what this is; repeating it on every row is noise. The
+                      column label still carries its full meaning to the AI
+                      context, which is what distinguishes ideal from avoid. */}
+                  {!(columns.length === 1 && numberPrefix) && (
+                    <label className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide mb-1 block">{c.label}</label>
+                  )}
                   <textarea
                     value={row[c.key] ?? ''}
                     onChange={e => !readOnly && update(i, c.key, e.target.value)}
                     readOnly={readOnly}
                     rows={c.wide ? 3 : 2}
-                    className={`${cellClass} ${readOnly ? 'bg-neutral-100 cursor-default' : ''}`}
+                    className={`${cellClass} ${readOnly ? 'bg-neutral-100 cursor-default' : 'bg-white'}`}
                   />
                 </div>
               ))}
             </div>
-            {!readOnly && (
-              <button
-                onClick={() => remove(i)}
-                aria-label="Remove row"
-                className="absolute top-2 right-2 text-neutral-300 hover:text-rose-500 text-xs transition-colors px-2 py-1"
-              >
-                ✕
-              </button>
-            )}
           </div>
         ))}
       </div>
@@ -120,22 +151,50 @@ function SectionCard({
             <p className="text-sm text-neutral-500 leading-relaxed">{section.intro}</p>
           </div>
 
+          {/* A2 puts two opposite lists on one screen. Read at speed they
+              blurred into each other, so each side carries its own heading,
+              colour and sign. */}
+          {section.pairedWith && (
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">✓</span>
+              <span className="text-sm font-semibold text-emerald-700">
+                {fr ? 'Segments idéaux' : 'Ideal segments'}
+              </span>
+              <span className="text-xs text-neutral-400">
+                {fr ? '— vous gagnez souvent, vite, bien' : '— you win often, fast, well'}
+              </span>
+            </div>
+          )}
+
           <RowTable
             rows={pb[section.key]}
             columns={section.columns}
             addLabel={section.addLabel}
             onChange={rows => onChange({ [section.key]: rows } as Partial<Playbook>)}
             readOnly={readOnly}
+            tone={section.pairedWith ? 'positive' : 'neutral'}
+            numberPrefix={section.rowLabel?.[fr ? 'fr' : 'en']}
           />
 
           {section.pairedWith && (
-            <div className="mt-6 pt-6 border-t border-neutral-100">
+            <div className="mt-6 pt-6 border-t-2 border-neutral-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-xs font-bold flex items-center justify-center">✕</span>
+                <span className="text-sm font-semibold text-rose-700">
+                  {fr ? 'Segments à fuir' : 'Segments to avoid'}
+                </span>
+                <span className="text-xs text-neutral-400">
+                  {fr ? '— deals lents, perdus, non rentables' : '— slow, lost, unprofitable deals'}
+                </span>
+              </div>
               <RowTable
                 rows={pb[section.pairedWith]}
                 columns={[avoidTargetsColumn(locale)]}
                 addLabel={fr ? '+ Ajouter un segment à fuir' : '+ Add a segment to avoid'}
                 onChange={rows => onChange({ [section.pairedWith as PlaybookTableKey]: rows } as Partial<Playbook>)}
                 readOnly={readOnly}
+                tone="negative"
+                numberPrefix={fr ? 'À fuir' : 'Avoid'}
               />
             </div>
           )}

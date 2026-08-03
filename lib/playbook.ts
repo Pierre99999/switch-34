@@ -107,6 +107,8 @@ export type PlaybookSection = {
   intro: string         // the paragraph of method
   columns: PlaybookColumn[]
   addLabel: string
+  // Word shown before each row number, so a row announces what it is.
+  rowLabel?: { fr: string; en: string }
   // Columns that ship pre-filled, so they do not count as written content.
   seedColumns?: string[]
   // A2 renders two tables side by side; the second one names its partner.
@@ -128,6 +130,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'proof', label: 'Preuve' },
     ],
     addLabel: '+ Ajouter une cible',
+    rowLabel: { fr: 'Cible', en: 'Target' },
   },
   {
     key: 'a2_ideal_targets', code: 'A2', label: 'Le terrain de jeu — segments idéaux, segments à fuir',
@@ -135,6 +138,7 @@ const SECTIONS_FR: PlaybookSection[] = [
     intro: 'Les meilleures opportunités ressemblent aux deals que vous avez déjà bien gagnés. Vos deals les plus faciles révèlent votre zone de domination ; vos deals lents, perdus ou non rentables dessinent la liste des segments à fuir.',
     columns: [{ key: 'target', label: 'Segments idéaux (vous gagnez souvent, vite, bien)', wide: true }],
     addLabel: '+ Ajouter un segment idéal',
+    rowLabel: { fr: 'Segment idéal', en: 'Ideal segment' },
     pairedWith: 'a2_avoid_targets',
   },
   {
@@ -148,6 +152,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'proof', label: 'Preuve' },
     ],
     addLabel: '+ Ajouter une alternative',
+    rowLabel: { fr: 'Alternative', en: 'Alternative' },
     seedColumns: ['alternative'],
   },
   {
@@ -160,6 +165,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'defuse', label: "Comment la nommer et la désamorcer d'emblée", wide: true },
     ],
     addLabel: '+ Ajouter une objection',
+    rowLabel: { fr: 'Objection', en: 'Objection' },
   },
   {
     key: 'a5_actors', code: 'A5', label: 'Les acteurs nécessaires',
@@ -171,6 +177,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'risk', label: "Risque si le deal avance sans lui", wide: true },
     ],
     addLabel: '+ Ajouter un rôle',
+    rowLabel: { fr: 'Rôle', en: 'Role' },
   },
   {
     key: 'a6_questions', code: 'A6', label: 'Le questionnaire invisible',
@@ -181,6 +188,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'questions', label: 'Vos questions clés', wide: true },
     ],
     addLabel: '+ Ajouter une famille',
+    rowLabel: { fr: 'Famille', en: 'Family' },
     seedColumns: ['family'],
     extraTextKey: 'a6_hypotheses',
     extraTextLabel: 'Hypothèses à vérifier en priorité',
@@ -196,6 +204,7 @@ const SECTIONS_FR: PlaybookSection[] = [
       { key: 'signal', label: 'Signal précoce (vu, ou manqué)', wide: true },
     ],
     addLabel: '+ Ajouter un deal clos',
+    rowLabel: { fr: 'Deal', en: 'Deal' },
   },
 ]
 
@@ -211,6 +220,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'proof', label: 'Proof' },
     ],
     addLabel: '+ Add a target',
+    rowLabel: { fr: 'Cible', en: 'Target' },
   },
   {
     key: 'a2_ideal_targets', code: 'A2', label: 'The playing field — ideal segments, segments to avoid',
@@ -218,6 +228,7 @@ const SECTIONS_EN: PlaybookSection[] = [
     intro: 'The best opportunities look like the deals you have already won well. Your easiest deals reveal your zone of dominance; your slow, lost or unprofitable deals draw the list of segments to avoid.',
     columns: [{ key: 'target', label: 'Ideal segments (you win often, fast, well)', wide: true }],
     addLabel: '+ Add an ideal segment',
+    rowLabel: { fr: 'Segment idéal', en: 'Ideal segment' },
     pairedWith: 'a2_avoid_targets',
   },
   {
@@ -231,6 +242,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'proof', label: 'Proof' },
     ],
     addLabel: '+ Add an alternative',
+    rowLabel: { fr: 'Alternative', en: 'Alternative' },
     seedColumns: ['alternative'],
   },
   {
@@ -243,6 +255,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'defuse', label: 'How to name it and defuse it upfront', wide: true },
     ],
     addLabel: '+ Add an objection',
+    rowLabel: { fr: 'Objection', en: 'Objection' },
   },
   {
     key: 'a5_actors', code: 'A5', label: 'The necessary actors',
@@ -254,6 +267,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'risk', label: 'Risk if the deal moves without them', wide: true },
     ],
     addLabel: '+ Add a role',
+    rowLabel: { fr: 'Rôle', en: 'Role' },
   },
   {
     key: 'a6_questions', code: 'A6', label: 'The invisible questionnaire',
@@ -264,6 +278,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'questions', label: 'Your key questions', wide: true },
     ],
     addLabel: '+ Add a family',
+    rowLabel: { fr: 'Famille', en: 'Family' },
     seedColumns: ['family'],
     extraTextKey: 'a6_hypotheses',
     extraTextLabel: 'Assumptions to verify first',
@@ -279,6 +294,7 @@ const SECTIONS_EN: PlaybookSection[] = [
       { key: 'signal', label: 'Early signal (seen, or missed)', wide: true },
     ],
     addLabel: '+ Add a closed deal',
+    rowLabel: { fr: 'Deal', en: 'Deal' },
   },
 ]
 
