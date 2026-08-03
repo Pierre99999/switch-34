@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted, roundState } from './deal-rounds'
+import { inheritedRoundFields, scoreUpdateFromSuggestions, isRoundUnstarted, roundState, nextStep } from './deal-rounds'
 import type { DealRound } from './types'
 
 function round(over: Partial<DealRound> & Record<string, unknown> = {}): DealRound {
@@ -123,6 +123,48 @@ test('capture with no briefing line yet reads as unstarted', () => {
   // Transient: an imported past conversation has no briefing, and only gets a
   // briefing_line once the post-conversation read has been written.
   assert.equal(roundState(round({ capture_notes: { q1: 'Said something.' } })), 'UNSTARTED')
+})
+
+// ── nextStep ──────────────────────────────────────────────────
+
+const activeDeal = (current_round: number) => ({ current_round, status: 'active' })
+
+test('a brand new deal waits on its first briefing', () => {
+  assert.deepEqual(nextStep(activeDeal(0), []), { kind: 'brief', round: 1 })
+})
+
+test('a round created but never briefed still waits on the briefing', () => {
+  const r = round({ round: 1 })
+  assert.deepEqual(nextStep(activeDeal(1), [r]), { kind: 'brief', round: 1 })
+})
+
+test('a briefed round waits on the conversation', () => {
+  const r = round({ round: 2, briefing_line: 'Urgency.' })
+  assert.deepEqual(nextStep(activeDeal(2), [r]), { kind: 'capture', round: 2 })
+})
+
+test('inherited scores do not turn a briefed round into a finished one', () => {
+  // Same trap as the dashboard: a round carries the previous scores from birth.
+  const r = round({ round: 2, briefing_line: 'Urgency.', urgency: 4 })
+  assert.deepEqual(nextStep(activeDeal(2), [r]), { kind: 'capture', round: 2 })
+})
+
+test('a captured round moves the deal on to the next one', () => {
+  const r = round({ round: 2, briefing_line: 'Urgency.', capture_notes: { q1: 'Kevin named a deadline.' } })
+  assert.deepEqual(nextStep(activeDeal(2), [r]), { kind: 'next_round', round: 3 })
+})
+
+test('a closed deal waits on nothing', () => {
+  const r = round({ round: 2, briefing_line: 'Urgency.' })
+  assert.equal(nextStep({ current_round: 2, status: 'won' }, [r]).kind, 'closed')
+  assert.equal(nextStep({ current_round: 2, status: 'lost' }, [r]).kind, 'closed')
+  assert.equal(nextStep({ current_round: 2, status: 'paused' }, [r]).kind, 'closed')
+})
+
+test('rounds of other deals are ignored by the caller, not guessed at', () => {
+  // nextStep reads only the round matching current_round.
+  const other = round({ round: 5, briefing_line: 'Elsewhere.' })
+  assert.deepEqual(nextStep(activeDeal(2), [other]), { kind: 'brief', round: 2 })
 })
 
 // ── scoreUpdateFromSuggestions ────────────────────────────────

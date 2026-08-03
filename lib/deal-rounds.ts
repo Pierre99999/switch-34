@@ -80,6 +80,42 @@ export function roundState(round: DealRound | null | undefined): RoundState {
   return hasCapture(round) ? 'SCORED' : 'BRIEFED'
 }
 
+/**
+ * What this deal is waiting on, and where to go to do it.
+ *
+ * The pipeline is a work queue: what a seller needs from it is not the score,
+ * it is which deals are waiting on a briefing and which on a conversation.
+ */
+export type NextStepKind = 'brief' | 'capture' | 'next_round' | 'closed'
+
+export type NextStep = {
+  kind: NextStepKind
+  /** The round the step concerns — the one to brief, or the one to capture. */
+  round: number
+}
+
+export function nextStep(
+  deal: { current_round: number; status?: string | null },
+  rounds: DealRound[],
+): NextStep {
+  if (deal.status && deal.status !== 'active') {
+    return { kind: 'closed', round: deal.current_round }
+  }
+
+  const current = rounds.find(r => r.round === deal.current_round)
+  switch (roundState(current)) {
+    // No round yet, or one created and never briefed.
+    case 'UNSTARTED':
+      return { kind: 'brief', round: Math.max(deal.current_round, 1) }
+    // Briefed and waiting for the conversation to be captured.
+    case 'BRIEFED':
+      return { kind: 'capture', round: deal.current_round }
+    // Captured and scored: the deal moves on with a new round.
+    case 'SCORED':
+      return { kind: 'next_round', round: deal.current_round + 1 }
+  }
+}
+
 export type ScoreSuggestion = {
   score?: number | null
   evidence?: string

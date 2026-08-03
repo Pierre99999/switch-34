@@ -11,6 +11,7 @@ import { useI18n } from '@/lib/i18n/context'
 import { useRole } from '@/lib/role-context'
 import PlaybookWelcome from '@/components/ui/PlaybookWelcome'
 import { normalizePlaybook, playbookProgress } from '@/lib/playbook'
+import { nextStep, type NextStepKind } from '@/lib/deal-rounds'
 
 
 const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
@@ -28,6 +29,45 @@ function getLayerMinEvidence(round: DealRound | null, layer: number): EvidenceLe
   const levels = vars.map(v => ev[v] as EvidenceLevel | undefined).filter(Boolean) as EvidenceLevel[]
   if (levels.length === 0) return null
   return EVIDENCE_ORDER[Math.min(...levels.map(l => EVIDENCE_ORDER.indexOf(l)))]
+}
+
+// The pipeline as a work queue: what is this deal waiting on, and where do I
+// go to do it.
+const NEXT_STEP: Record<NextStepKind, {
+  label: { fr: string; en: string }
+  short: { fr: string; en: string }
+  pill: string
+  button: string
+  href: (dealId: string) => string
+}> = {
+  brief: {
+    label: { fr: 'Créer le briefing', en: 'Create the briefing' },
+    short: { fr: 'Briefing à créer', en: 'Briefing to create' },
+    pill: 'bg-blue-50 text-blue-600 border-blue-200',
+    button: 'bg-blue-500 text-white hover:bg-blue-600',
+    href: id => `/deals/${id}/dashboard`,
+  },
+  capture: {
+    label: { fr: 'Capturer la conversation', en: 'Capture the conversation' },
+    short: { fr: 'Conversation à capturer', en: 'Conversation to capture' },
+    pill: 'bg-violet-50 text-violet-600 border-violet-200',
+    button: 'bg-violet-500 text-white hover:bg-violet-600',
+    href: id => `/deals/${id}/capture`,
+  },
+  next_round: {
+    label: { fr: 'Lancer le round suivant', en: 'Start the next round' },
+    short: { fr: 'Round suivant', en: 'Next round' },
+    pill: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    button: 'bg-emerald-500 text-white hover:bg-emerald-600',
+    href: id => `/deals/${id}/dashboard`,
+  },
+  closed: {
+    label: { fr: 'Deal clos', en: 'Deal closed' },
+    short: { fr: 'Clos', en: 'Closed' },
+    pill: 'bg-neutral-100 text-neutral-500 border-neutral-200',
+    button: 'bg-neutral-200 text-neutral-600 hover:bg-neutral-300',
+    href: id => `/deals/${id}/dashboard`,
+  },
 }
 
 const VERDICT_COLORS: Record<string, { text: string; bg: string }> = {
@@ -87,6 +127,7 @@ export default function PipelinePage() {
   const [archivedDeals, setArchivedDeals] = useState<Deal[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [stepFilter, setStepFilter] = useState<NextStepKind | 'all'>('all')
   const [showWelcome, setShowWelcome] = useState(false)
 
   useEffect(() => {
@@ -220,7 +261,12 @@ export default function PipelinePage() {
 
   const sortIndicator = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
 
-  const sortedDeals = [...deals].sort((a, b) => {
+  const stepFor = (deal: Deal) => nextStep(deal, rounds.filter(r => r.deal_id === deal.id))
+  const stepCount = (kind: NextStepKind) => deals.filter(d => stepFor(d).kind === kind).length
+
+  const filteredDeals = stepFilter === 'all' ? deals : deals.filter(d => stepFor(d).kind === stepFilter)
+
+  const sortedDeals = [...filteredDeals].sort((a, b) => {
     if (!sortKey) return 0
     const dir = sortDir === 'asc' ? 1 : -1
     switch (sortKey) {
@@ -280,6 +326,37 @@ export default function PipelinePage() {
         </div>
       </div>
 
+      {/* The pipeline read as a work queue: how many deals are waiting on
+          what, and one click to filter down to them. */}
+      {deals.length > 0 && (
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {([['all', locale === 'fr' ? 'Tous' : 'All'], ...(['brief', 'capture', 'next_round'] as NextStepKind[]).map(k => [k, NEXT_STEP[k].short[locale === 'fr' ? 'fr' : 'en']] as const)] as [NextStepKind | 'all', string][]).map(([value, label]) => {
+            const count = value === 'all' ? deals.length : stepCount(value)
+            const active = stepFilter === value
+            if (value !== 'all' && count === 0) return null
+            return (
+              <button
+                key={value}
+                onClick={() => setStepFilter(value)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-all ${
+                  active ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-neutral-600 border-neutral-200 hover:border-neutral-400'
+                }`}
+              >
+                {label} <span className={active ? 'opacity-70' : 'text-neutral-400'}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {sortedDeals.length === 0 && deals.length > 0 && (
+        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm py-10 text-center mb-4">
+          <p className="text-sm text-neutral-400">
+            {locale === 'fr' ? 'Aucun deal à cette étape.' : 'No deal at this step.'}
+          </p>
+        </div>
+      )}
+
       {/* Empty state (both views) */}
       {deals.length === 0 && (
         <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm py-16 text-center">
@@ -334,9 +411,26 @@ export default function PipelinePage() {
                   <ScoreCell round={r} layer={3} label="L3" />
                   <ScoreCell round={r} layer={4} label="L4" />
                 </div>
-                <Link href={`/deals/${deal.id}/dashboard`} className="block text-center text-sm text-blue-500 hover:text-blue-600 font-medium pt-2 border-t border-neutral-100">
-                  {t('pipeline.dashboard')}
-                </Link>
+                {(() => {
+                  const step = stepFor(deal)
+                  const cfg = NEXT_STEP[step.kind]
+                  return (
+                    <div className="pt-2 border-t border-neutral-100 space-y-2">
+                      <div className="text-[11px] text-neutral-400">
+                        {locale === 'fr' ? 'Prochaine étape' : 'Next step'} · R{step.round}
+                      </div>
+                      <Link
+                        href={cfg.href(deal.id)}
+                        className={`block text-center text-sm font-medium rounded-xl py-2.5 transition-all ${cfg.button}`}
+                      >
+                        {cfg.label[locale === 'fr' ? 'fr' : 'en']}
+                      </Link>
+                      <Link href={`/deals/${deal.id}/dashboard`} className="block text-center text-xs text-neutral-400 hover:text-blue-500">
+                        {t('pipeline.dashboard')}
+                      </Link>
+                    </div>
+                  )
+                })()}
               </div>
             )
           })}
@@ -347,19 +441,20 @@ export default function PipelinePage() {
       <div className="hidden md:block bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
         <div className="min-w-[900px]">
         {/* Table header */}
-        <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
+        <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.2fr 1.2fr 0.6fr 0.9fr 3.2fr 2.2fr 0.9fr' : '2.6fr 0.6fr 0.9fr 4fr 2.2fr 0.9fr' }}>
           <button onClick={() => toggleSort('prospect')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.prospect')}{sortIndicator('prospect')}</button>
           {isDirector && <button onClick={() => toggleSort('rep')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.rep')}{sortIndicator('rep')}</button>}
           <button onClick={() => toggleSort('round')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.round')}{sortIndicator('round')}</button>
           <button onClick={() => toggleSort('revenue')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.revenue')}{sortIndicator('revenue')}</button>
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{locale === 'fr' ? 'Prochaine étape' : 'Next step'}</div>
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
         </div>
 
         {sortedDeals.map((deal: Deal) => {
           const r = latestRound(deal.id)
           return (
-            <div key={deal.id} className="grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors" style={{ gridTemplateColumns: isDirector ? '2.5fr 1.5fr 0.6fr 1fr 4fr 1fr' : '3fr 0.6fr 1fr 5fr 1fr' }}>
+            <div key={deal.id} className="grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors" style={{ gridTemplateColumns: isDirector ? '2.2fr 1.2fr 0.6fr 0.9fr 3.2fr 2.2fr 0.9fr' : '2.6fr 0.6fr 0.9fr 4fr 2.2fr 0.9fr' }}>
               <div>
                 <EditableProspectName
                   dealId={deal.id}
@@ -386,6 +481,22 @@ export default function PipelinePage() {
                 <ScoreCell round={r} layer={3} label={t('layer.3')} />
                 <ScoreCell round={r} layer={4} label={t('layer.4')} />
               </div>
+              {(() => {
+                const step = stepFor(deal)
+                const cfg = NEXT_STEP[step.kind]
+                return (
+                  <div className="flex items-center min-w-0">
+                    <Link
+                      href={cfg.href(deal.id)}
+                      className={`text-xs font-medium rounded-lg px-3 py-2 transition-all truncate ${cfg.button}`}
+                      title={`${cfg.label[locale === 'fr' ? 'fr' : 'en']} — R${step.round}`}
+                    >
+                      {cfg.label[locale === 'fr' ? 'fr' : 'en']}
+                      <span className="opacity-70 ml-1.5">R{step.round}</span>
+                    </Link>
+                  </div>
+                )
+              })()}
               <div className="flex items-center justify-end gap-2">
                 <Link href={`/deals/${deal.id}/dashboard`} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
                   {t('pipeline.dashboard')}
