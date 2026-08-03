@@ -10,7 +10,7 @@ import AIProgress from '@/components/ui/AIProgress'
 import {
   type Playbook, type PlaybookRow, type PlaybookSection, type PlaybookColumn, type PlaybookTableKey,
   emptyPlaybook, normalizePlaybook, getPlaybookSections, avoidTargetsColumn,
-  sectionFilledCount, playbookProgress, exitCriterion, usageRules,
+  sectionFilledCount, playbookProgress, exitCriterion, usageRules, rowHasContent,
 } from '@/lib/playbook'
 
 const cellClass = "w-full bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none placeholder:text-neutral-300 transition-all"
@@ -40,12 +40,30 @@ function RowTable({
   numberPrefix?: string
 }) {
   const style = TONE[tone]
+  const { locale } = useI18n()
+  const fr = locale === 'fr'
+  // Index awaiting confirmation. A deleted row is gone for good — there is no
+  // undo and no history — so anything the team wrote is confirmed first.
+  const [confirming, setConfirming] = useState<number | null>(null)
 
   function update(i: number, key: string, val: string) {
     onChange(rows.map((r, idx) => idx === i ? { ...r, [key]: val } : r))
   }
-  function remove(i: number) { onChange(rows.filter((_, idx) => idx !== i)) }
+  function remove(i: number) {
+    onChange(rows.filter((_, idx) => idx !== i))
+    setConfirming(null)
+  }
+  function requestRemove(i: number) {
+    // An empty row holds nothing to lose; asking would just be nagging.
+    if (!rowHasContent(rows[i])) remove(i)
+    else setConfirming(i)
+  }
   function add() { onChange([...rows, Object.fromEntries(columns.map(c => [c.key, '']))]) }
+
+  // What the row says, to name it in the confirmation.
+  const preview = confirming === null ? '' : (
+    columns.map(c => rows[confirming]?.[c.key]?.trim()).find(Boolean) ?? ''
+  )
 
   return (
     <div>
@@ -63,8 +81,8 @@ function RowTable({
               )}
               {!readOnly && (
                 <button
-                  onClick={() => remove(i)}
-                  aria-label="Remove row"
+                  onClick={() => requestRemove(i)}
+                  aria-label={fr ? 'Supprimer cette ligne' : 'Delete this row'}
                   className="ml-auto text-neutral-300 hover:text-rose-500 text-xs transition-colors px-2 py-1"
                 >
                   ✕
@@ -101,6 +119,46 @@ function RowTable({
         <button onClick={add} className="mt-3 text-sm font-medium text-blue-500 hover:text-blue-600 transition-colors">
           {addLabel}
         </button>
+      )}
+
+      {confirming !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 backdrop-blur-sm px-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setConfirming(null)}
+        >
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-neutral-200 p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-neutral-900 mb-2">
+              {fr ? 'Supprimer cet élément ?' : 'Delete this item?'}
+            </h3>
+            {preview && (
+              <p className="text-sm text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 mb-3 line-clamp-3">
+                {preview}
+              </p>
+            )}
+            <p className="text-sm text-neutral-500">
+              {fr
+                ? 'Cette suppression est définitive : le contenu ne pourra pas être récupéré.'
+                : 'This cannot be undone: the content cannot be recovered.'}
+            </p>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setConfirming(null)}
+                autoFocus
+                className="flex-1 px-4 py-2.5 text-sm font-medium rounded-xl text-neutral-600 bg-white border border-neutral-200 hover:border-neutral-400 transition-all"
+              >
+                {fr ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => remove(confirming)}
+                className="flex-1 px-4 py-2.5 bg-rose-600 text-white text-sm font-semibold rounded-xl hover:bg-rose-700 transition-all"
+              >
+                {fr ? 'Supprimer' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
