@@ -75,10 +75,18 @@ export default function CapturePage() {
     populateFromRound(rounds.find(rd => rd.round === r) ?? null)
   }
 
-  // Stamped when there is something to stamp, so the read carries its date.
-  function sellerReadToSave() {
+  // The capture payload. seller_read is only included when the seller filled
+  // something in: an optional side-feature must never be able to break saving
+  // the notes themselves, which is what an unconditional write did when the
+  // column was missing.
+  function capturePayload() {
     const clean = normalizeSellerRead(sellerRead)
-    return clean ? { ...clean, at: new Date().toISOString() } : null
+    const payload: Record<string, unknown> = {
+      capture_notes: { ...notes, __free__: freeNote },
+      capture_speakers: speakers,
+    }
+    if (clean) payload.seller_read = { ...clean, at: new Date().toISOString() }
+    return payload
   }
 
   function setNote(key: string, val: string) {
@@ -89,11 +97,10 @@ export default function CapturePage() {
     if (!currentRoundData) return
     setSaving(true)
     setError(null)
-    const merged = { ...notes, __free__: freeNote }
     const supabase = createClient()
     const { error } = await supabase
       .from('deal_rounds')
-      .update({ capture_notes: merged, capture_speakers: speakers, seller_read: sellerReadToSave() })
+      .update(capturePayload())
       .eq('id', currentRoundData.id)
     if (error) setError(error.message)
     else {
@@ -114,11 +121,10 @@ export default function CapturePage() {
     setError(null)
     try {
       // Save capture notes first
-      const merged = { ...notes, __free__: freeNote }
       const supabase = createClient()
       const { error: saveErr } = await supabase
         .from('deal_rounds')
-        .update({ capture_notes: merged, capture_speakers: speakers, seller_read: sellerReadToSave() })
+        .update(capturePayload())
         .eq('id', currentRoundData.id)
       if (saveErr) throw new Error(saveErr.message)
 
