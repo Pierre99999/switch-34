@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import type { DealRound } from '@/lib/types'
-import { LAYER_LABELS } from '@/lib/types'
 import { criteriaOfLayer } from '@/lib/lab-view'
 import type { Declaration } from '@/lib/voice-credit'
+
+const GATE_NAME: Record<number, string> = { 1: 'L’opportunité', 2: 'Gagner', 3: 'L’impact', 4: 'Momentum' }
 
 // What we know about this deal, and on whose word — the dashboard's criteria
 // reorganised as knowledge rather than as a grid.
@@ -94,7 +95,7 @@ export default function DealKnowledge({
                 onClick={() => setOpenLayer(o => o === layer ? null : layer)}
                 className="w-full flex items-center justify-between gap-2 px-5 py-3 hover:bg-neutral-50/70 transition-colors text-left"
               >
-                <span className="text-sm font-medium text-neutral-800">{LAYER_LABELS[layer]}</span>
+                <span className="text-sm font-medium text-neutral-800">{GATE_NAME[layer]}</span>
                 <span className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs text-neutral-400">{scored}/{criteria.length}</span>
                   <span className="text-neutral-300 text-xs">{open ? '▲' : '▼'}</span>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { type Deal, type DealRound, LAYER_LABELS } from '@/lib/types'
+import { type Deal, type DealRound } from '@/lib/types'
 import { computeDealState, prescriptions } from '@/lib/scoring'
 import { nextStep, roundState } from '@/lib/deal-rounds'
 import { normalizeSellerRead, readGap } from '@/lib/seller-read'
@@ -29,6 +29,15 @@ const GATE_STYLE: Record<number, { ring: string; bar: string; icon: string }> = 
   4: { ring: 'bg-blue-50 text-blue-600', bar: 'bg-blue-500', icon: '◇' },
 }
 
+// LAYER_LABELS in types.ts is the English internal name used in AI prompts.
+// The screen shows the method's own wording.
+const GATE_NAME: Record<number, string> = {
+  1: 'L’opportunité',
+  2: 'Gagner',
+  3: 'L’impact',
+  4: 'Momentum',
+}
+
 const STATUS_WORDING: Record<string, string> = {
   FRANCHIE: 'Franchie',
   PRETE: 'Prête, en attente',
@@ -49,7 +58,7 @@ function GateCard({ layer, score, status, sub }: { layer: number; score: number 
       <div className="flex items-center gap-2.5 mb-3">
         <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm ${st.ring}`}>{st.icon}</span>
         <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide leading-tight">
-          {LAYER_LABELS[layer]}
+          {GATE_NAME[layer]}
         </div>
       </div>
       <div className="text-2xl font-bold text-neutral-900 mb-2">
@@ -132,7 +141,7 @@ export default function LabDealPage() {
     const top = presc[0]
     return {
       title: blocked
-        ? `Lever ce qui bloque la ${LAYER_LABELS[dealState.activeGate]}.`
+        ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${GATE_NAME[dealState.activeGate]}.`
         : `Ouvrir le round ${step.round}.`,
       why: blocked
         ? `${blocked}. ${top ? `Le critère le plus faible attend encore ${top.kind === 'MANQUANT' ? 'une première preuve' : top.kind === 'CORROBORER' ? 'une corroboration' : 'une décision assumée'}.` : ''}`
