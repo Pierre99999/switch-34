@@ -1,8 +1,13 @@
+'use client'
+
 import LabSidebar from '@/components/lab/LabSidebar'
 import NewDealView from '@/components/deals/NewDealView'
 
 // Same creation flow as the live app, inside the lab's frame — and the new
 // deal opens on the lab's single screen rather than the context page.
+//
+// A client component on purpose: createdHref is a function, and a function
+// cannot cross the server/client boundary as a prop. Same reason /lab is one.
 export default function LabNewDeal() {
   return (
     <div className="flex">
