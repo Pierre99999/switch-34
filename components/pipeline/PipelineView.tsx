@@ -12,6 +12,8 @@ import { useRole } from '@/lib/role-context'
 import PlaybookWelcome from '@/components/ui/PlaybookWelcome'
 import { normalizePlaybook, playbookProgress } from '@/lib/playbook'
 import { nextStep, type NextStepKind } from '@/lib/deal-rounds'
+import { outcomeUpdate, reasonLabel, type DealOutcome } from '@/lib/deal-outcome'
+import OutcomeDialog from './OutcomeDialog'
 
 
 const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
@@ -145,6 +147,7 @@ export default function PipelineView({
   const [archivedDeals, setArchivedDeals] = useState<Deal[]>([])
   const [showArchived, setShowArchived] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [pendingClose, setPendingClose] = useState<{ deal: Deal; status: 'won' | 'lost' } | null>(null)
   const [stepFilter, setStepFilter] = useState<NextStepKind | 'all'>('all')
   const [showWelcome, setShowWelcome] = useState(false)
 
@@ -217,9 +220,14 @@ export default function PipelineView({
     try { window.localStorage.setItem(WELCOME_DISMISSED_KEY, '1') } catch { /* private mode */ }
   }
 
-  async function handleSetStatus(dealId: string, status: Deal['status']) {
+  // Closing a deal asks why first. Pausing and reactivating do not: a paused
+  // deal is not an outcome, it is a deal you have not decided about yet.
+  async function handleSetStatus(dealId: string, status: Deal['status'], outcome?: DealOutcome) {
     const supabase = createClient()
-    await supabase.from('deals').update({ status }).eq('id', dealId)
+    const update = (status === 'won' || status === 'lost') && outcome
+      ? outcomeUpdate(status, outcome)
+      : { status }
+    await supabase.from('deals').update(update).eq('id', dealId)
     if (status === 'active') {
       const deal = archivedDeals.find(d => d.id === dealId)
       if (deal) {
@@ -230,7 +238,7 @@ export default function PipelineView({
       const deal = deals.find(d => d.id === dealId)
       if (deal) {
         setDeals(d => d.filter(dd => dd.id !== dealId))
-        setArchivedDeals(a => [...a, { ...deal, status }])
+        setArchivedDeals(a => [...a, { ...deal, ...update, status } as Deal])
       }
     }
   }
@@ -416,8 +424,8 @@ export default function PipelineView({
                       <>
                         <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
                         <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-30 min-w-[180px]">
-                          <button onClick={() => { handleSetStatus(deal.id, 'won'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markWon')}</button>
-                          <button onClick={() => { handleSetStatus(deal.id, 'lost'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markLost')}</button>
+                          <button onClick={() => { setPendingClose({ deal, status: 'won' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markWon')}</button>
+                          <button onClick={() => { setPendingClose({ deal, status: 'lost' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markLost')}</button>
                           <button onClick={() => { handleSetStatus(deal.id, 'paused'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markPaused')}</button>
                         </div>
                       </>
@@ -538,10 +546,10 @@ export default function PipelineView({
                     <>
                       <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
                       <div className="absolute right-0 bottom-full mb-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-30 min-w-[180px]">
-                        <button onClick={() => { handleSetStatus(deal.id, 'won'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                        <button onClick={() => { setPendingClose({ deal, status: 'won' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
                           {t('pipeline.markWon')}
                         </button>
-                        <button onClick={() => { handleSetStatus(deal.id, 'lost'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
+                        <button onClick={() => { setPendingClose({ deal, status: 'lost' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
                           {t('pipeline.markLost')}
                         </button>
                         <button onClick={() => { handleSetStatus(deal.id, 'paused'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
@@ -557,6 +565,19 @@ export default function PipelineView({
         })}
         </div>
       </div>
+
+      {pendingClose && (
+        <OutcomeDialog
+          prospectName={pendingClose.deal.prospect_name}
+          status={pendingClose.status}
+          currentRound={pendingClose.deal.current_round}
+          onCancel={() => setPendingClose(null)}
+          onConfirm={outcome => {
+            handleSetStatus(pendingClose.deal.id, pendingClose.status, outcome)
+            setPendingClose(null)
+          }}
+        />
+      )}
 
       {/* Archived toggle */}
       <div className="mt-6 text-center">
@@ -579,9 +600,17 @@ export default function PipelineView({
             const statusColor = deal.status === 'won' ? 'bg-emerald-50 text-emerald-600' : deal.status === 'lost' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
             return (
               <div key={deal.id} className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-neutral-700">{deal.prospect_name}</span>
-                  <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${statusColor}`}>{statusLabel}</span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-neutral-700">{deal.prospect_name}</span>
+                    <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${statusColor}`}>{statusLabel}</span>
+                  </div>
+                  {reasonLabel(deal.close_reason) && (
+                    <div className="text-xs text-neutral-400 mt-0.5 truncate">
+                      {reasonLabel(deal.close_reason)}
+                      {deal.close_round ? ` · round ${deal.close_round}` : ''}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <Link href={dealHref(deal.id)} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">

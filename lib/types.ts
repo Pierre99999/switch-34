@@ -214,6 +214,12 @@ export type Deal = {
   prospect_dimensions: ProspectDimensions | null
   // How this deal reads against the Sales Playbook socle. See lib/playbook-fit.
   playbook_fit: unknown
+  // Recorded when the deal closes — see lib/deal-outcome. The one thing that
+  // cannot be reconstructed later, and the basis of any pattern work.
+  close_reason: string | null
+  close_round: number | null
+  closed_at: string | null
+  close_note: string | null
   created_at: string
   updated_at: string
 }
