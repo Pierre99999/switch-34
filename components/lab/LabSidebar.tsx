@@ -43,7 +43,7 @@ export default function LabSidebar() {
 
       <div className="px-4">
         <Link
-          href="/deals/new"
+          href="/lab/deals/new"
           className="flex items-center justify-center gap-2 w-full bg-blue-500 text-white py-2.5 text-sm font-semibold rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
         >
           + Nouveau deal
