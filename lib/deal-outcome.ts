@@ -55,14 +55,39 @@ export function reasonLabel(key: string | null | undefined): string | null {
   return [...LOST_REASONS, ...WON_REASONS].find(r => r.key === key)?.fr ?? null
 }
 
+export function reasonLabels(keys: readonly string[] | null | undefined): string[] {
+  return (keys ?? []).map(reasonLabel).filter((l): l is string => l !== null)
+}
+
+/**
+ * The reasons in the order of the list rather than the order they were
+ * clicked. A corpus is easier to read when the same pair always comes out the
+ * same way, and click order carries no meaning worth keeping.
+ */
+export function orderReasons(status: 'won' | 'lost', keys: readonly string[]): CloseReasonKey[] {
+  const order = reasonsFor(status).map(r => r.key)
+  return order.filter(k => keys.includes(k))
+}
+
 /** The gate a closed deal points at — the raw material of any later pattern. */
 export function reasonGate(key: string | null | undefined): number | null {
   if (!key) return null
   return [...LOST_REASONS, ...WON_REASONS].find(r => r.key === key)?.gate ?? null
 }
 
+/** The distinct gates a closed deal points at, lowest first. */
+export function reasonGates(keys: readonly string[] | null | undefined): number[] {
+  const gates = (keys ?? []).map(reasonGate).filter((g): g is number => g !== null)
+  return [...new Set(gates)].sort((a, b) => a - b)
+}
+
 export type DealOutcome = {
-  reason: CloseReasonKey
+  /**
+   * More than one, on purpose. A deal rarely dies of a single cause — "hors
+   * cadre" and "pas d'urgence" are usually the same story told twice, and
+   * forcing a choice between them loses half of what happened.
+   */
+  reasons: CloseReasonKey[]
   /** The round the deal died on, or was signed on. */
   round: number
   /** ISO date — the seller can correct it; a deal is often closed in the CRM late. */
@@ -78,7 +103,7 @@ export function isCloseReason(key: unknown): key is CloseReasonKey {
 export function outcomeUpdate(status: 'won' | 'lost', o: DealOutcome) {
   return {
     status,
-    close_reason: o.reason,
+    close_reasons: orderReasons(status, o.reasons),
     close_round: o.round,
     closed_at: o.closed_at,
     close_note: o.note?.trim() ? o.note.trim() : null,

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   LOST_REASONS, WON_REASONS, reasonsFor, reasonLabel, reasonGate,
-  isCloseReason, outcomeUpdate, todayISO,
+  isCloseReason, outcomeUpdate, todayISO, reasonGates, reasonLabels,
 } from './deal-outcome'
 
 test('every reason key is unique across both lists', () => {
@@ -42,15 +42,41 @@ test('only real keys are accepted', () => {
 
 test('the row written is flat and keeps an empty note as null', () => {
   const row = outcomeUpdate('lost', {
-    reason: 'budget', round: 3, closed_at: '2026-08-05', note: '   ',
+    reasons: ['budget'], round: 3, closed_at: '2026-08-05', note: '   ',
   })
   assert.deepEqual(row, {
-    status: 'lost', close_reason: 'budget', close_round: 3,
+    status: 'lost', close_reasons: ['budget'], close_round: 3,
     closed_at: '2026-08-05', close_note: null,
   })
   assert.equal(outcomeUpdate('won', {
-    reason: 'champion', round: 2, closed_at: '2026-08-05', note: ' Henri ',
+    reasons: ['champion'], round: 2, closed_at: '2026-08-05', note: ' Henri ',
   }).close_note, 'Henri')
+})
+
+test('several reasons can be true at once', () => {
+  const row = outcomeUpdate('lost', {
+    reasons: ['no_urgency', 'bad_fit'], round: 2, closed_at: '2026-08-05', note: null,
+  })
+  // Stored in list order, not click order: 'bad_fit' comes first in the list.
+  assert.deepEqual(row.close_reasons, ['bad_fit', 'no_urgency'])
+})
+
+test('a reason from the other list is dropped rather than stored', () => {
+  const row = outcomeUpdate('lost', {
+    reasons: ['budget', 'champion' as never], round: 1, closed_at: '2026-08-05', note: null,
+  })
+  assert.deepEqual(row.close_reasons, ['budget'])
+})
+
+test('the gates a deal points at are distinct and ordered', () => {
+  assert.deepEqual(reasonGates(['no_urgency', 'bad_fit', 'wrong_people']), [1, 2])
+  assert.deepEqual(reasonGates(['other']), [])
+  assert.deepEqual(reasonGates(null), [])
+})
+
+test('labels resolve for a list, and unknown keys drop out', () => {
+  assert.equal(reasonLabels(['budget', 'nonsense']).length, 1)
+  assert.deepEqual(reasonLabels(null), [])
 })
 
 test('todayISO is local, not UTC', () => {

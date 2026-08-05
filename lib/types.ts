@@ -216,7 +216,7 @@ export type Deal = {
   playbook_fit: unknown
   // Recorded when the deal closes — see lib/deal-outcome. The one thing that
   // cannot be reconstructed later, and the basis of any pattern work.
-  close_reason: string | null
+  close_reasons: string[] | null
   close_round: number | null
   closed_at: string | null
   close_note: string | null

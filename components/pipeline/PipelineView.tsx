@@ -12,7 +12,7 @@ import { useRole } from '@/lib/role-context'
 import PlaybookWelcome from '@/components/ui/PlaybookWelcome'
 import { normalizePlaybook, playbookProgress } from '@/lib/playbook'
 import { nextStep, type NextStepKind } from '@/lib/deal-rounds'
-import { outcomeUpdate, reasonLabel, type DealOutcome } from '@/lib/deal-outcome'
+import { outcomeUpdate, reasonLabels, type DealOutcome } from '@/lib/deal-outcome'
 import OutcomeDialog from './OutcomeDialog'
 
 
@@ -605,9 +605,9 @@ export default function PipelineView({
                     <span className="text-sm font-medium text-neutral-700">{deal.prospect_name}</span>
                     <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full ${statusColor}`}>{statusLabel}</span>
                   </div>
-                  {reasonLabel(deal.close_reason) && (
+                  {reasonLabels(deal.close_reasons).length > 0 && (
                     <div className="text-xs text-neutral-400 mt-0.5 truncate">
-                      {reasonLabel(deal.close_reason)}
+                      {reasonLabels(deal.close_reasons).join(' · ')}
                       {deal.close_round ? ` · round ${deal.close_round}` : ''}
                     </div>
                   )}

@@ -17,7 +17,10 @@ export default function OutcomeDialog({
   onCancel: () => void
   onConfirm: (outcome: DealOutcome) => void
 }) {
-  const [reason, setReason] = useState<CloseReasonKey | null>(null)
+  // A deal rarely dies of one cause. Several can be true at once.
+  const [reasons, setReasons] = useState<CloseReasonKey[]>([])
+  const toggle = (key: CloseReasonKey) =>
+    setReasons(rs => rs.includes(key) ? rs.filter(k => k !== key) : [...rs, key])
   const [round, setRound] = useState(Math.max(currentRound, 1))
   const [closedAt, setClosedAt] = useState(todayISO())
   const [note, setNote] = useState('')
@@ -29,6 +32,7 @@ export default function OutcomeDialog({
   const picked = won
     ? 'border-emerald-300 bg-emerald-50 text-neutral-900 font-medium'
     : 'border-rose-300 bg-rose-50 text-neutral-900 font-medium'
+  const check = won ? 'bg-emerald-500 border-emerald-500' : 'bg-rose-500 border-rose-500'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -40,19 +44,24 @@ export default function OutcomeDialog({
         <h2 className="text-xl font-bold text-neutral-900 mt-3">{prospectName}</h2>
         <p className="text-sm text-neutral-500 mt-1.5 leading-relaxed">
           {won
-            ? 'Qu’est-ce qui a emporté la décision ? C’est la seule chose qu’on ne pourra pas retrouver plus tard.'
-            : 'Qu’est-ce qui a cédé ? C’est la seule chose qu’on ne pourra pas retrouver plus tard.'}
+            ? 'Qu’est-ce qui a emporté la décision ? Plusieurs réponses possibles — c’est la seule chose qu’on ne pourra pas retrouver plus tard.'
+            : 'Qu’est-ce qui a cédé ? Plusieurs réponses possibles — c’est la seule chose qu’on ne pourra pas retrouver plus tard.'}
         </p>
 
         <div className="mt-5 space-y-1.5">
           {reasonsFor(status).map(r => (
             <button
               key={r.key}
-              onClick={() => setReason(r.key)}
-              className={`w-full text-left text-sm rounded-xl px-3.5 py-2.5 border transition-colors ${
-                reason === r.key ? picked : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+              onClick={() => toggle(r.key)}
+              className={`w-full flex items-start gap-2.5 text-left text-sm rounded-xl px-3.5 py-2.5 border transition-colors ${
+                reasons.includes(r.key) ? picked : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
               }`}
             >
+              <span className={`mt-[3px] w-4 h-4 flex-shrink-0 rounded-[5px] border flex items-center justify-center text-[10px] text-white ${
+                reasons.includes(r.key) ? check : 'border-neutral-300'
+              }`}>
+                {reasons.includes(r.key) ? '✓' : ''}
+              </span>
               {r.fr}
             </button>
           ))}
@@ -91,8 +100,8 @@ export default function OutcomeDialog({
             Annuler
           </button>
           <button
-            disabled={!reason}
-            onClick={() => reason && onConfirm({ reason, round, closed_at: closedAt, note: note || null })}
+            disabled={reasons.length === 0}
+            onClick={() => reasons.length > 0 && onConfirm({ reasons, round, closed_at: closedAt, note: note || null })}
             className="flex-1 bg-neutral-900 text-white text-sm font-semibold rounded-xl py-2.5 hover:bg-neutral-800 disabled:bg-neutral-200 disabled:text-neutral-400 transition-colors"
           >
             {won ? 'Enregistrer la victoire' : 'Enregistrer la perte'}
