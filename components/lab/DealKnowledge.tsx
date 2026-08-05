@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import type { DealRound } from '@/lib/types'
+import Link from 'next/link'
+import type { Deal, DealRound } from '@/lib/types'
+import { isLegacyDimensions } from '@/lib/types'
 import { criteriaOfLayer } from '@/lib/lab-view'
 import type { Declaration } from '@/lib/voice-credit'
 
@@ -38,15 +40,44 @@ const EVIDENCE_LABEL: Record<string, string> = {
   declared: 'Déclaré', corroborated: 'Corroboré', verified: 'Chiffré',
 }
 
+// What was extracted from the prospect's own material, before anyone spoke.
+// It belongs here rather than on a separate tab: it is knowledge about the
+// prospect, just gathered from a different source than the conversations.
+function prospectSections(deal: Deal): { label: string; fields: { label: string; value: string }[] }[] {
+  const d = deal.prospect_dimensions
+  if (!d) return []
+  if (isLegacyDimensions(d)) {
+    const legacy = d as unknown as Record<string, Record<string, string>>
+    return Object.entries(legacy)
+      .map(([section, fields]) => ({
+        label: section.replace(/_/g, ' '),
+        fields: Object.entries(fields ?? {})
+          .filter(([, v]) => typeof v === 'string' && v.trim())
+          .map(([k, v]) => ({ label: k.replace(/_/g, ' '), value: v })),
+      }))
+      .filter(s => s.fields.length > 0)
+  }
+  return (d.dimensions ?? [])
+    .map(dim => ({
+      label: dim.label,
+      fields: dim.fields.filter(f => (f.value ?? '').trim()).map(f => ({ label: f.label, value: f.value })),
+    }))
+    .filter(s => s.fields.length > 0)
+}
+
 export default function DealKnowledge({
-  round, declarations, onClose,
+  deal, round, declarations, onClose,
 }: {
+  deal: Deal
   round: DealRound | null
   declarations: Record<string, Declaration[]>
   onClose: () => void
 }) {
   const [openLayer, setOpenLayer] = useState<number | null>(1)
+  const [openContext, setOpenContext] = useState(false)
   const [query, setQuery] = useState('')
+  const context = prospectSections(deal)
+  const contextFields = context.reduce((n, s) => n + s.fields.length, 0)
 
   const layers = [1, 2, 3, 4].map(l => ({ layer: l, criteria: criteriaOfLayer(round, l) }))
 
@@ -92,6 +123,50 @@ export default function DealKnowledge({
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* The prospect's own material, before anyone spoke. */}
+        {contextFields > 0 && (
+          <div className="border-b border-neutral-100">
+            <button
+              onClick={() => setOpenContext(o => !o)}
+              className="w-full flex items-center justify-between gap-2 px-5 py-3.5 hover:bg-neutral-50/70 transition-colors text-left"
+            >
+              <span className="flex items-center gap-2.5 min-w-0">
+                <span className="w-7 h-7 rounded-full bg-sky-50 text-sky-500 flex items-center justify-center text-sm flex-shrink-0">◫</span>
+                <span className="text-sm font-medium text-neutral-800 truncate">Contexte prospect</span>
+              </span>
+              <span className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-neutral-400">{contextFields}</span>
+                <span className="text-neutral-300 text-xs">{openContext ? '▲' : '▼'}</span>
+              </span>
+            </button>
+
+            {openContext && (
+              <div className="px-5 pb-4 space-y-3">
+                {context.map((sec, i) => {
+                  const visible = sec.fields.filter(f => matches(`${sec.label} ${f.label} ${f.value}`))
+                  if (visible.length === 0) return null
+                  return (
+                    <div key={i} className="border border-neutral-200/80 rounded-xl p-3.5">
+                      <div className="text-xs font-semibold text-neutral-700 mb-2 capitalize">{sec.label}</div>
+                      <ul className="space-y-2">
+                        {visible.map((f, j) => (
+                          <li key={j}>
+                            <div className="text-[11px] text-neutral-400 uppercase tracking-wide">{f.label}</div>
+                            <p className="text-xs text-neutral-600 leading-relaxed">{f.value}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })}
+                <Link href={`/deals/${deal.id}/context`} className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600">
+                  Modifier le contexte →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
         {layers.map(({ layer, criteria }) => {
           const visible = criteria.filter(c => matches(`${c.label} ${c.rationale ?? ''}`))
           if (query.trim() && visible.length === 0) return null

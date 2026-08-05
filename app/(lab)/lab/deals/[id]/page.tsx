@@ -253,6 +253,7 @@ export default function LabDealPage() {
         {/* Knowledge panel */}
         {knowledgeOpen && (
           <DealKnowledge
+            deal={deal}
             round={current}
             declarations={(current?.declarations ?? {}) as Record<string, Declaration[]>}
             onClose={() => setKnowledgeOpen(false)}
