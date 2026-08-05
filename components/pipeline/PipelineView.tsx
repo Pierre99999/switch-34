@@ -14,6 +14,7 @@ import { normalizePlaybook, playbookProgress } from '@/lib/playbook'
 import { nextStep, type NextStepKind } from '@/lib/deal-rounds'
 import { outcomeUpdate, reasonLabels, type DealOutcome } from '@/lib/deal-outcome'
 import OutcomeDialog from './OutcomeDialog'
+import RowMenu from './RowMenu'
 
 
 const EVIDENCE_ORDER: EvidenceLevel[] = ['declared', 'corroborated', 'verified']
@@ -243,6 +244,13 @@ export default function PipelineView({
     }
   }
 
+  // One list of actions for both renderings of the row.
+  const statusItems = (deal: Deal) => [
+    { label: t('pipeline.markWon'), onClick: () => setPendingClose({ deal, status: 'won' as const }) },
+    { label: t('pipeline.markLost'), onClick: () => setPendingClose({ deal, status: 'lost' as const }) },
+    { label: t('pipeline.markPaused'), onClick: () => handleSetStatus(deal.id, 'paused') },
+  ]
+
   async function loadArchived() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -418,18 +426,13 @@ export default function PipelineView({
                       <div className="text-xs text-neutral-500 mt-1">{repNames[deal.user_id] || '—'}</div>
                     )}
                   </div>
-                  <div className="relative flex-shrink-0">
-                    <button onClick={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)} className="text-neutral-300 hover:text-neutral-500 transition-colors text-lg leading-none px-1">···</button>
-                    {openMenuId === deal.id && (
-                      <>
-                        <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
-                        <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-30 min-w-[180px]">
-                          <button onClick={() => { setPendingClose({ deal, status: 'won' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markWon')}</button>
-                          <button onClick={() => { setPendingClose({ deal, status: 'lost' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markLost')}</button>
-                          <button onClick={() => { handleSetStatus(deal.id, 'paused'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">{t('pipeline.markPaused')}</button>
-                        </div>
-                      </>
-                    )}
+                  <div className="flex-shrink-0">
+                    <RowMenu
+                      open={openMenuId === deal.id}
+                      onToggle={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)}
+                      onClose={() => setOpenMenuId(null)}
+                      items={statusItems(deal)}
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
@@ -540,25 +543,12 @@ export default function PipelineView({
                     {t('pipeline.dashboard')}
                   </Link>
                 )}
-                <div className="relative">
-                  <button onClick={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)} className="text-neutral-300 hover:text-neutral-500 transition-colors text-lg leading-none px-1">···</button>
-                  {openMenuId === deal.id && (
-                    <>
-                      <div className="fixed inset-0 z-20" onClick={() => setOpenMenuId(null)} />
-                      <div className="absolute right-0 bottom-full mb-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-30 min-w-[180px]">
-                        <button onClick={() => { setPendingClose({ deal, status: 'won' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                          {t('pipeline.markWon')}
-                        </button>
-                        <button onClick={() => { setPendingClose({ deal, status: 'lost' }); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                          {t('pipeline.markLost')}
-                        </button>
-                        <button onClick={() => { handleSetStatus(deal.id, 'paused'); setOpenMenuId(null) }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 transition-colors">
-                          {t('pipeline.markPaused')}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                <RowMenu
+                  open={openMenuId === deal.id}
+                  onToggle={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)}
+                  onClose={() => setOpenMenuId(null)}
+                  items={statusItems(deal)}
+                />
               </div>
             </div>
           )
