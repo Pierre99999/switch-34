@@ -22,6 +22,7 @@ import DealGreeting from '@/components/lab/DealGreeting'
 import GeneratingDialog from '@/components/lab/GeneratingDialog'
 import { useI18n } from '@/lib/i18n/context'
 import TranscriptImport from '@/components/lab/TranscriptImport'
+import ManualCapture from '@/components/lab/ManualCapture'
 import { normalizePlaybook } from '@/lib/playbook'
 import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
 
@@ -94,6 +95,7 @@ export default function LabDealPage() {
   // Which round's briefing is open — the timeline can reach an earlier one.
   const [briefingRound, setBriefingRound] = useState<number | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [showManual, setShowManual] = useState(false)
   const [coverage, setCoverage] = useState<ActorCoverage | null>(null)
   const [stakeholders, setStakeholders] = useState<DealContact[]>([])
 
@@ -295,6 +297,15 @@ export default function LabDealPage() {
           round={current}
           onDone={load}
           onClose={() => setShowImport(false)}
+          onManual={() => { setShowImport(false); setShowManual(true) }}
+        />
+      )}
+      {showManual && current && (
+        <ManualCapture
+          dealId={dealId}
+          round={current}
+          onDone={load}
+          onClose={() => setShowManual(false)}
         />
       )}
 

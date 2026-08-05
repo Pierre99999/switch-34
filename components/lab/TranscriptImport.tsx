@@ -14,12 +14,14 @@ import AIProgress from '@/components/ui/AIProgress'
 // the seller's memory and bias, a transcript carries the prospect's words.
 
 export default function TranscriptImport({
-  dealId, round, onDone, onClose,
+  dealId, round, onDone, onClose, onManual,
 }: {
   dealId: string
   round: DealRound
   onDone: () => void
   onClose: () => void
+  /** No transcript: the same round, written by hand. */
+  onManual: () => void
 }) {
   const [pasted, setPasted] = useState('')
   const [busy, setBusy] = useState(false)
@@ -160,9 +162,9 @@ export default function TranscriptImport({
               >
                 ✦ Analyser la conversation
               </button>
-              <a href={`/deals/${dealId}/capture`} className="text-xs text-neutral-400 hover:text-neutral-600">
+              <button onClick={onManual} className="text-xs text-neutral-400 hover:text-neutral-600">
                 Pas de transcript ? Saisir à la main →
-              </a>
+              </button>
             </div>
           </>
         )}
