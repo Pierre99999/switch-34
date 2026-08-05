@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type DealRound } from '@/lib/types'
-import { computeDealState, prescriptions } from '@/lib/scoring'
-import { nextStep, roundState } from '@/lib/deal-rounds'
+import { computeDealState } from '@/lib/scoring'
+import { roundState } from '@/lib/deal-rounds'
 import { normalizeSellerRead, readGap } from '@/lib/seller-read'
 import { normalizeFit } from '@/lib/playbook-fit'
 import type { Declaration } from '@/lib/voice-credit'
@@ -14,6 +14,9 @@ import LabSidebar from '@/components/lab/LabSidebar'
 import DealCopilot from '@/components/lab/DealCopilot'
 import DealKnowledge from '@/components/lab/DealKnowledge'
 import DealTimeline from '@/components/lab/DealTimeline'
+import NextFocus from '@/components/lab/NextFocus'
+import { normalizePlaybook } from '@/lib/playbook'
+import { actorCoverage, type ActorCoverage } from '@/lib/playbook-fit'
 
 // One screen per deal. The five tabs of the current app — context, dashboard,
 // briefing, conversation, analysis — become one page whose parts answer, in
@@ -84,15 +87,22 @@ export default function LabDealPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [knowledgeOpen, setKnowledgeOpen] = useState(true)
+  const [coverage, setCoverage] = useState<ActorCoverage | null>(null)
 
   const load = useCallback(async () => {
     const supabase = createClient()
-    const [{ data: d }, { data: r }] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser()
+    const [{ data: d }, { data: r }, { data: sh }, { data: v }] = await Promise.all([
       supabase.from('deals').select('*').eq('id', dealId).single(),
       supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
+      supabase.from('deal_stakeholders').select('name, actor_type, actor_types').eq('deal_id', dealId),
+      user
+        ? supabase.from('vendors').select('playbook, locale').eq('user_id', user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
     if (d) setDeal(d)
     setRounds(r ?? [])
+    setCoverage(v?.playbook ? actorCoverage(normalizePlaybook(v.playbook, v.locale ?? 'fr'), sh ?? []) : null)
     setSelectedRound(prev => prev ?? (d?.current_round ?? 0))
   }, [dealId])
 
@@ -110,45 +120,9 @@ export default function LabDealPage() {
   const shownRound = selectedRound ?? deal.current_round
   const current = rounds.find(r => r.round === shownRound) ?? null
   const dealState = computeDealState(rounds, shownRound)
-  const step = nextStep(deal, rounds)
   const sellerRead = normalizeSellerRead((current as unknown as { seller_read?: unknown } | null)?.seller_read)
   const gap = readGap(sellerRead, current)
   const fit = normalizeFit(deal.playbook_fit)
-  const presc = prescriptions(current)
-
-  // The objective, stated as a directive rather than a table to interpret.
-  const focus = (() => {
-    if (step.kind === 'closed') return { title: 'Ce deal est clos.', why: null, action: null }
-    if (step.kind === 'brief') {
-      return {
-        title: `Préparer la conversation du round ${step.round}.`,
-        why: rounds.length === 0
-          ? 'Aucune conversation n’a encore eu lieu : le briefing part de votre Sales Playbook et du contexte prospect.'
-          : 'Le round précédent est capturé et noté. Le briefing suivant s’appuiera sur ce qu’il a révélé.',
-        action: { label: '✦ Générer le briefing', run: 'brief' as const },
-      }
-    }
-    if (step.kind === 'capture') {
-      return {
-        title: `Mener la conversation, puis en importer le transcript.`,
-        why: 'Le briefing du round est prêt. Rien ne bouge tant que la conversation n’est pas capturée — les scores ne se déduisent que de ce qui a été dit.',
-        action: { label: '→ Aller capturer', run: 'capture' as const },
-      }
-    }
-    // next_round: name what is actually blocking, from the active gate.
-    const g = dealState.gates[dealState.activeGate]
-    const blocked = g?.lockMessage
-    const top = presc[0]
-    return {
-      title: blocked
-        ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${GATE_NAME[dealState.activeGate]}.`
-        : `Ouvrir le round ${step.round}.`,
-      why: blocked
-        ? `${blocked}. ${top ? `Le critère le plus faible attend encore ${top.kind === 'MANQUANT' ? 'une première preuve' : top.kind === 'CORROBORER' ? 'une corroboration' : 'une décision assumée'}.` : ''}`
-        : 'Le round est capturé et noté. La prochaine conversation peut être préparée.',
-      action: { label: `✦ Créer le briefing du round ${step.round}`, run: 'next_round' as const },
-    }
-  })()
 
   async function runAction(kind: 'brief' | 'capture' | 'next_round') {
     if (kind === 'capture') { router.push(`/deals/${dealId}/capture`); return }
@@ -240,58 +214,36 @@ export default function LabDealPage() {
             />
           </div>
 
-          {/* Next focus */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm mb-6">
-            <div className="text-[11px] font-semibold text-blue-500 uppercase tracking-wide mb-2">Prochain focus</div>
-            <div className="grid lg:grid-cols-[1fr_360px] gap-5">
-              <div>
-                <h2 className="text-xl font-bold text-neutral-900 leading-snug mb-4">{focus.title}</h2>
-                {focus.action && (
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => runAction(focus.action!.run)}
-                      disabled={!!busy}
-                      className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 disabled:opacity-40 transition-all"
-                    >
-                      {busy ? 'En cours…' : focus.action.label}
-                    </button>
-                    {current?.briefing_line && (
-                      <Link href={`/deals/${dealId}/briefing`} className="px-5 py-2.5 bg-white border border-neutral-200 text-neutral-700 text-sm font-medium rounded-xl hover:border-neutral-400 transition-all">
-                        Voir le briefing actuel
-                      </Link>
-                    )}
-                  </div>
-                )}
-                {error && <p className="text-sm text-rose-600 mt-3">{error}</p>}
-              </div>
+          <NextFocus
+            deal={deal}
+            rounds={rounds}
+            current={current}
+            dealState={dealState}
+            coverage={coverage}
+            busy={!!busy}
+            error={error}
+            onRun={runAction}
+            dealId={dealId}
+          />
 
-              {focus.why && (
-                <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-4">
-                  <div className="text-xs font-semibold text-blue-700 mb-1">Pourquoi cet objectif ?</div>
-                  <p className="text-sm text-neutral-600 leading-relaxed">{focus.why}</p>
-                </div>
-              )}
-            </div>
-
-            {/* The two parallel readings, when they have something to say. */}
-            {(gap && gap.kind !== 'aligned') && (
-              <p className={`mt-4 text-sm rounded-xl px-4 py-2.5 ${gap.kind === 'optimistic' ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-800'}`}>
-                {gap.kind === 'optimistic'
-                  ? 'Vous sentez ce deal mieux que les preuves ne le montrent.'
-                  : 'Les preuves sont meilleures que votre ressenti.'}
-              </p>
-            )}
-            {fit?.avoid_list_hit && (
-              <p className="mt-2 text-sm rounded-xl px-4 py-2.5 bg-rose-50 text-rose-800">
-                ⚠ Ce prospect ressemble à un segment que vous avez décidé de fuir.
-              </p>
-            )}
-          </div>
+          {/* The two parallel readings, when they have something to say. */}
+          {(gap && gap.kind !== 'aligned') && (
+            <p className={`mb-3 text-sm rounded-xl px-4 py-2.5 ${gap.kind === 'optimistic' ? 'bg-amber-50 text-amber-800' : 'bg-blue-50 text-blue-800'}`}>
+              {gap.kind === 'optimistic'
+                ? 'Vous sentez ce deal mieux que les preuves ne le montrent.'
+                : 'Les preuves sont meilleures que votre ressenti.'}
+            </p>
+          )}
+          {fit?.avoid_list_hit && (
+            <p className="mb-3 text-sm rounded-xl px-4 py-2.5 bg-rose-50 text-rose-800">
+              ⚠ Ce prospect ressemble à un segment que vous avez décidé de fuir.
+            </p>
+          )}
 
           {/* History + copilot */}
-          <div className="grid lg:grid-cols-[1fr_340px] gap-5">
-            <DealTimeline deal={deal} rounds={rounds} dealId={dealId} />
+          <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
             <DealCopilot dealId={dealId} onRan={load} />
+            <DealTimeline deal={deal} rounds={rounds} dealId={dealId} />
           </div>
         </main>
 
