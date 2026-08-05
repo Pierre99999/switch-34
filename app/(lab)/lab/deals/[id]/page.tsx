@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type DealRound } from '@/lib/types'
@@ -15,6 +15,8 @@ import DealCopilot from '@/components/lab/DealCopilot'
 import DealKnowledge from '@/components/lab/DealKnowledge'
 import DealTimeline from '@/components/lab/DealTimeline'
 import NextFocus from '@/components/lab/NextFocus'
+import BriefingLetter from '@/components/lab/BriefingLetter'
+import TranscriptImport from '@/components/lab/TranscriptImport'
 import { normalizePlaybook } from '@/lib/playbook'
 import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
 
@@ -81,7 +83,6 @@ function GateCard({ layer, score, status, sub }: { layer: number; score: number 
 
 export default function LabDealPage() {
   const params = useParams()
-  const router = useRouter()
   const dealId = params.id as string
 
   const [deal, setDeal] = useState<Deal | null>(null)
@@ -90,6 +91,8 @@ export default function LabDealPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [knowledgeOpen, setKnowledgeOpen] = useState(true)
+  const [showBriefing, setShowBriefing] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [coverage, setCoverage] = useState<ActorCoverage | null>(null)
   const [stakeholders, setStakeholders] = useState<DealContact[]>([])
 
@@ -130,7 +133,7 @@ export default function LabDealPage() {
   const fit = normalizeFit(deal.playbook_fit)
 
   async function runAction(kind: 'brief' | 'capture' | 'next_round') {
-    if (kind === 'capture') { router.push(`/deals/${dealId}/capture`); return }
+    if (kind === 'capture') { setShowImport(true); return }
     setBusy(kind); setError(null)
     try {
       const supabase = createClient()
@@ -228,7 +231,7 @@ export default function LabDealPage() {
             busy={!!busy}
             error={error}
             onRun={runAction}
-            dealId={dealId}
+            onOpenBriefing={() => setShowBriefing(true)}
           />
 
           {/* The two parallel readings, when they have something to say. */}
@@ -252,7 +255,19 @@ export default function LabDealPage() {
           </div>
         </main>
 
-        {/* Knowledge panel */}
+        {showBriefing && current && (
+        <BriefingLetter round={current} prospectName={deal.prospect_name} onClose={() => setShowBriefing(false)} />
+      )}
+      {showImport && current && (
+        <TranscriptImport
+          dealId={dealId}
+          round={current}
+          onDone={load}
+          onClose={() => setShowImport(false)}
+        />
+      )}
+
+      {/* Knowledge panel */}
         {knowledgeOpen && (
           <DealKnowledge
             deal={deal}

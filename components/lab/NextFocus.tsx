@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
 import type { Deal, DealRound } from '@/lib/types'
 import { criterionLabel } from '@/lib/lab-view'
@@ -25,7 +24,7 @@ type Item = { label: string; tag: string; hint: string; source: string; tint: st
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
 export default function NextFocus({
-  deal, rounds, current, dealState, coverage, busy, error, onRun, dealId,
+  deal, rounds, current, dealState, coverage, busy, error, onRun, onOpenBriefing,
 }: {
   deal: Deal
   rounds: DealRound[]
@@ -35,7 +34,7 @@ export default function NextFocus({
   busy: boolean
   error: string | null
   onRun: (kind: 'brief' | 'capture' | 'next_round') => void
-  dealId: string
+  onOpenBriefing: () => void
 }) {
   const [showAnalysis, setShowAnalysis] = useState(false)
   const step = nextStep(deal, rounds)
@@ -136,7 +135,7 @@ export default function NextFocus({
   const truncated = shortWhy.trim() !== fullWhy.trim()
 
   const action = step.kind === 'closed' ? null
-    : step.kind === 'capture' ? { label: '→ Aller capturer la conversation', run: 'capture' as const }
+    : step.kind === 'capture' ? { label: '📄 Importer le transcript', run: 'capture' as const }
       : step.kind === 'brief' ? { label: '✦ Générer le briefing', run: 'brief' as const }
         : { label: `✦ Créer le briefing du round ${step.round}`, run: 'next_round' as const }
 
@@ -182,10 +181,13 @@ export default function NextFocus({
                 >
                   {busy ? 'En cours…' : action.label}
                 </button>
-                {current?.briefing_line && (
-                  <Link href={`/deals/${dealId}/briefing`} className="px-5 py-3 bg-white border border-neutral-200 text-neutral-700 text-sm font-medium rounded-xl hover:border-neutral-400 transition-all">
-                    Voir le briefing actuel
-                  </Link>
+                {(current?.briefing_questions?.length ?? 0) > 0 && (
+                  <button
+                    onClick={onOpenBriefing}
+                    className="px-5 py-3 bg-white border border-neutral-200 text-neutral-700 text-sm font-medium rounded-xl hover:border-neutral-400 transition-all"
+                  >
+                    Lire le briefing
+                  </button>
                 )}
               </div>
             )}

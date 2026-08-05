@@ -53,7 +53,6 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
         at: r.created_at,
         icon: '✦', tint: 'bg-emerald-100 text-emerald-600',
         title: `Briefing du round ${r.round} généré`,
-        href: `/deals/${dealId}/briefing`, hrefLabel: 'Voir le briefing',
       })
     }
   }
