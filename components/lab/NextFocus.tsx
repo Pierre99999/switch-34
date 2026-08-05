@@ -6,6 +6,7 @@ import { criterionLabel } from '@/lib/lab-view'
 import { prescriptions, type DealState } from '@/lib/scoring'
 import { nextStep } from '@/lib/deal-rounds'
 import { normalizeFit, FIT_AXIS_LABELS, type ActorCoverage } from '@/lib/playbook-fit'
+import { firstSentences, isTruncated } from '@/lib/text'
 
 // The objective, stated as something to go and do, with what it would take.
 //
@@ -126,13 +127,10 @@ export default function NextFocus({
     return 'Le round est capturé et noté. La prochaine conversation peut être préparée.'
   })()
 
-  // One sentence on the card. Anything longer stops being read.
-  const shortWhy = (() => {
-    if (writtenWhy) return writtenWhy
-    const first = (fullWhy.match(/[^.!?]+[.!?]+/) ?? [fullWhy])[0].trim()
-    return first.length > 20 ? first : fullWhy.slice(0, 160)
-  })()
-  const truncated = shortWhy.trim() !== fullWhy.trim()
+  // A couple of sentences on the card — whole ones. Anything longer stops
+  // being read, and a fragment is worse than a short paragraph.
+  const shortWhy = writtenWhy || firstSentences(fullWhy, 200)
+  const truncated = !writtenWhy && isTruncated(fullWhy, 200)
 
   const action = step.kind === 'closed' ? null
     : step.kind === 'capture' ? { label: '📄 Importer le transcript', run: 'capture' as const }
