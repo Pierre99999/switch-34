@@ -16,7 +16,7 @@ import DealKnowledge from '@/components/lab/DealKnowledge'
 import DealTimeline from '@/components/lab/DealTimeline'
 import NextFocus from '@/components/lab/NextFocus'
 import { copilotSuggestions } from '@/lib/copilot-suggestions'
-import { gateName, gateQuestion } from '@/lib/lab-view'
+import { criterionLabel, gateName, gateQuestion } from '@/lib/lab-view'
 import BriefingLetter from '@/components/lab/BriefingLetter'
 import DealGreeting from '@/components/lab/DealGreeting'
 import TranscriptImport from '@/components/lab/TranscriptImport'
@@ -215,7 +215,7 @@ export default function LabDealPage() {
                 layer={l}
                 score={dealState.gates[l]?.score ?? null}
                 status={dealState.gates[l]?.status ?? 'EMPTY'}
-                sub={dealState.gates[l]?.lockMessage ?? null}
+                sub={dealState.gates[l]?.lockVariable ? criterionLabel(dealState.gates[l].lockVariable!) : null}
               />
             ))}
             <GateCard

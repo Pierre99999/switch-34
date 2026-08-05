@@ -76,11 +76,11 @@ export function copilotSuggestions(input: SuggestionInput): Suggestion[] {
   }
 
   // 2. What blocks the deal from moving at all.
-  if (gate?.lockMessage) {
+  if (gate?.lockVariable) {
     add({
       key: 'lock', tint: TINT.gate,
       label: 'Pourquoi cette porte est-elle bloquée ?',
-      hint: gate.lockMessage,
+      hint: `${criterionLabel(gate.lockVariable)} sous le seuil`,
       q: `Quelle porte est bloquée, par quel critère exactement, et qu’est-ce qui la débloquerait concrètement lors du prochain échange ?`,
     })
   }

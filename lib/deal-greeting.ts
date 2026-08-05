@@ -117,7 +117,7 @@ export function dealGreeting(input: GreetingInput): Greeting {
   const delta = progressOnActiveGate(rounds, dealState)
   if (delta !== null && delta >= 0.3) {
     return make('progress', 'good', 'Ça avance, et ça se voit.',
-      `${gateName(dealState.activeGate)} a gagné ${delta.toFixed(1)} point${delta >= 2 ? 's' : ''} depuis le round précédent. ${gate?.lockMessage ? 'Il reste un point dur, mais la direction est la bonne.' : 'Continuez comme ça.'}`)
+      `${gateName(dealState.activeGate)} a gagné ${delta.toFixed(1)} point${delta >= 2 ? 's' : ''} depuis le round précédent. ${gate?.lockVariable ? 'Il reste un point dur, mais la direction est la bonne.' : 'Continuez comme ça.'}`)
   }
 
   const missing = coverage?.missing?.[0]
@@ -128,7 +128,7 @@ export function dealGreeting(input: GreetingInput): Greeting {
 
   if (passed.length >= 1) {
     return make('one-gate', 'good', `${passed.length === 1 ? 'Une porte franchie' : `${passed.length} portes franchies`}, on y est presque.`,
-      `${gateName(dealState.activeGate)} est la prochaine. ${gate?.lockMessage ? 'Un point la retient encore.' : 'Rien ne la bloque, il faut juste de la matière.'}`)
+      `${gateName(dealState.activeGate)} est la prochaine. ${gate?.lockVariable ? 'Un point la retient encore.' : 'Rien ne la bloque, il faut juste de la matière.'}`)
   }
 
   return make('building', 'neutral', 'Le deal se construit.',

@@ -96,7 +96,7 @@ export default function NextFocus({
     if (step.kind === 'capture') return 'Mener la conversation, puis en importer le transcript.'
     if (rounds.length === 0) return 'Préparer la première conversation.'
     if (aims.length === 0) {
-      return gate?.lockMessage
+      return gate?.lockVariable
         ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${gateName(dealState.activeGate)}.`
         : `Préparer la conversation du round ${step.round}.`
     }
@@ -107,7 +107,7 @@ export default function NextFocus({
 
   const subtitle = step.kind === 'closed' ? null
     : step.kind === 'capture' ? `Le briefing du round ${step.round} est prêt`
-      : `Porte ${dealState.activeGate} · ${gateName(dealState.activeGate)}${gate?.lockMessage ? ` — ${gate.lockMessage}` : ''}`
+      : `Porte ${dealState.activeGate} · ${gateName(dealState.activeGate)}${gate?.lockVariable ? ` — ${criterionLabel(gate.lockVariable)}` : ''}`
 
   // The full engine read, and the short version shown on the card.
   const fullWhy = (() => {
@@ -119,7 +119,7 @@ export default function NextFocus({
     }
     const read = current?.briefing_read?.trim()
     if (read) return read
-    if (gate?.lockMessage) return `${gate.lockMessage}. Tant que ce critère reste sous le seuil, la porte ne se franchit pas et les suivantes restent en attente.`
+    if (gate?.lockVariable) return `${criterionLabel(gate.lockVariable)} reste sous le seuil. Tant que c’est le cas, la porte ne se franchit pas et les suivantes restent en attente.`
     return 'Le round est capturé et noté. La prochaine conversation peut être préparée.'
   })()
 

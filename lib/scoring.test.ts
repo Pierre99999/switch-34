@@ -92,7 +92,7 @@ test('gate 1: any criterion < 2 caps status at EN CONSTRUCTION', () => {
   )
   const info = gateInfo(round, 1, true)
   assert.equal(info.status, 'EN_CONSTRUCTION')
-  assert.equal(info.lockMessage, 'concerns_fit')
+  assert.equal(info.lockVariable, 'concerns_fit')
 })
 
 // Extra: legitimate-actor rule — declared by the natural owner caps at 4.0.

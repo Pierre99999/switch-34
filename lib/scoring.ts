@@ -119,18 +119,21 @@ export type GateStatus = 'EMPTY' | 'A_RISQUE' | 'EN_CONSTRUCTION' | 'FRANCHIE' |
 export type GateInfo = {
   score: number | null
   status: GateStatus
-  lockMessage: string | null   // e.g. "Bloquée — Raison impérieuse < 2"
+  // The criterion that holds the gate back, as a variable name — never a
+  // sentence. Screens label it through criterionLabel(); putting a raw name on
+  // screen ("concerns_fit") is exactly what this name is here to prevent.
+  lockVariable: string | null
   waitingForGate: number | null // set when status is PRETE
   urgencyProven: boolean        // gate 2 bonus badge
 }
 
 export function gateInfo(round: DealRound | null, gate: number, prevGatePassed: boolean): GateInfo {
   const score = gateScore(round, gate)
-  const none: GateInfo = { score, status: 'EMPTY', lockMessage: null, waitingForGate: null, urgencyProven: false }
+  const none: GateInfo = { score, status: 'EMPTY', lockVariable: null, waitingForGate: null, urgencyProven: false }
   if (score === null || !round) return none
 
   let status: GateStatus = score < 2.0 ? 'A_RISQUE' : score <= 3.5 ? 'EN_CONSTRUCTION' : 'FRANCHIE'
-  let lockMessage: string | null = null
+  let lockVariable: string | null = null
   let urgencyProven = false
 
   if (gate === 1) {
@@ -138,10 +141,10 @@ export function gateInfo(round: DealRound | null, gate: number, prevGatePassed: 
     const lows = Object.keys(GATE_WEIGHTS[1]).filter(v => (scoreOf(round, v) ?? 0) < 2.0)
     if (lows.length >= 2) {
       status = 'A_RISQUE'
-      lockMessage = lows[0]
+      lockVariable = lows[0]
     } else if (lows.length === 1) {
       if (status === 'FRANCHIE') status = 'EN_CONSTRUCTION'
-      lockMessage = lows[0]
+      lockVariable = lows[0]
     }
   }
   if (gate === 2) {
@@ -162,7 +165,7 @@ export function gateInfo(round: DealRound | null, gate: number, prevGatePassed: 
     waitingForGate = gate - 1
   }
 
-  return { score, status, lockMessage, waitingForGate, urgencyProven }
+  return { score, status, lockVariable, waitingForGate, urgencyProven }
 }
 
 // Simple per-layer status for dots and pipeline cells (no sequentiality,

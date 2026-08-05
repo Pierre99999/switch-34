@@ -194,9 +194,9 @@ function LayerCard({
       </div>
 
       {/* Gate lock / bonus / momentum alerts */}
-      {!isMomentum && gate?.lockMessage && status !== 'EMPTY' && (
+      {!isMomentum && gate?.lockVariable && status !== 'EMPTY' && (
         <div className="px-5 py-2 bg-rose-50 border-b border-rose-100 text-xs font-medium text-rose-600">
-          {t('gate.blocked' as never).replace('{var}', t(`var.${gate.lockMessage}` as any))}
+          {t('gate.blocked' as never).replace('{var}', t(`var.${gate.lockVariable}` as any))}
         </div>
       )}
       {layer === 2 && gate?.urgencyProven && (
