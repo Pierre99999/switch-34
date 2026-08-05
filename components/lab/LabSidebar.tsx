@@ -25,8 +25,8 @@ function Icon({ name, className }: { name: 'pipeline' | 'playbook' | 'admin'; cl
 // tab navigation this interface exists to remove.
 const ITEMS = [
   { href: '/lab', label: 'Pipeline', icon: 'pipeline' },
-  { href: '/playbook', label: 'Sales Playbook', icon: 'playbook' },
-  { href: '/admin', label: 'Admin', icon: 'admin' },
+  { href: '/lab/playbook', label: 'Sales Playbook', icon: 'playbook' },
+  { href: '/lab/admin', label: 'Admin', icon: 'admin' },
 ] as const
 
 export default function LabSidebar() {
@@ -52,7 +52,7 @@ export default function LabSidebar() {
 
       <nav className="px-3 mt-5 space-y-0.5">
         {ITEMS.map(item => {
-          const active = pathname === item.href || (item.href === '/lab' && pathname.startsWith('/lab'))
+          const active = pathname === item.href || (item.href === '/lab' && pathname.startsWith('/lab/deals'))
           return (
             <Link
               key={item.href}
