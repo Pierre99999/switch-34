@@ -179,7 +179,10 @@ export default function NextFocus({
                 >
                   {busy ? 'En cours…' : action.label}
                 </button>
-                {(current?.briefing_questions?.length ?? 0) > 0 && (
+                {/* Only while the conversation is still ahead. Once the round
+                    is captured, the briefing belongs to the past and the
+                    timeline is where you go back to it. */}
+                {step.kind === 'capture' && (current?.briefing_questions?.length ?? 0) > 0 && (
                   <button
                     onClick={onOpenBriefing}
                     className="px-5 py-3 bg-white border border-neutral-200 text-neutral-700 text-sm font-medium rounded-xl hover:border-neutral-400 transition-all"
