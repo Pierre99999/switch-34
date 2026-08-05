@@ -18,6 +18,7 @@ import NextFocus from '@/components/lab/NextFocus'
 import { copilotSuggestions } from '@/lib/copilot-suggestions'
 import { gateName, gateQuestion } from '@/lib/lab-view'
 import BriefingLetter from '@/components/lab/BriefingLetter'
+import DealGreeting from '@/components/lab/DealGreeting'
 import TranscriptImport from '@/components/lab/TranscriptImport'
 import { normalizePlaybook } from '@/lib/playbook'
 import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
@@ -170,6 +171,12 @@ export default function LabDealPage() {
   return (
     <div className="flex">
       <LabSidebar />
+
+      {/* Only on the current round: greeting a past round would comment on a
+          state the seller has already left behind. */}
+      {shownRound === deal.current_round && (
+        <DealGreeting dealId={dealId} input={{ deal, rounds, current, dealState, coverage }} />
+      )}
 
       <div className="flex-1 min-w-0 flex">
         <main className="flex-1 min-w-0 px-5 sm:px-8 py-7">
