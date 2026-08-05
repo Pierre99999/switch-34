@@ -15,6 +15,7 @@ import DealCopilot from '@/components/lab/DealCopilot'
 import DealKnowledge from '@/components/lab/DealKnowledge'
 import DealTimeline from '@/components/lab/DealTimeline'
 import NextFocus from '@/components/lab/NextFocus'
+import { copilotSuggestions } from '@/lib/copilot-suggestions'
 import BriefingLetter from '@/components/lab/BriefingLetter'
 import TranscriptImport from '@/components/lab/TranscriptImport'
 import { normalizePlaybook } from '@/lib/playbook'
@@ -250,7 +251,11 @@ export default function LabDealPage() {
 
           {/* History + copilot */}
           <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
-            <DealCopilot dealId={dealId} onRan={load} />
+            <DealCopilot
+              dealId={dealId}
+              suggestions={copilotSuggestions({ deal, rounds, current, dealState, coverage })}
+              onRan={load}
+            />
             <DealTimeline deal={deal} rounds={rounds} dealId={dealId} />
           </div>
         </main>

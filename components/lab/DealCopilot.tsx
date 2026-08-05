@@ -1,17 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import type { Suggestion } from '@/lib/copilot-suggestions'
 
 // One input, not two. The suggestions are shortcuts into the same box, so
-// there is never a question of which field to type in.
-const SUGGESTIONS = [
-  { icon: '◎', tint: 'bg-emerald-50 text-emerald-500', label: 'Pourquoi cette porte est-elle bloquée ?', hint: 'Le critère qui bloque, et ce qui le débloquerait', q: 'Quelle porte est bloquée aujourd’hui, par quel critère exactement, et qu’est-ce qui la débloquerait ?' },
-  { icon: '◈', tint: 'bg-amber-50 text-amber-500', label: 'Que sait-on vraiment, et sur quelle preuve ?', hint: 'Ce qui est corroboré, ce qui n’est que déclaré', q: 'Résume ce qui est établi sur ce deal en distinguant ce qui est corroboré de ce qui n’est que déclaré, et par qui.' },
-  { icon: '◆', tint: 'bg-violet-50 text-violet-500', label: 'Qui manque autour de la table ?', hint: 'Les rôles absents et le risque associé', q: 'Qui a parlé jusqu’ici, quel poids a sa voix, et quels rôles manquent encore dans ce deal ?' },
-  { icon: '◇', tint: 'bg-blue-50 text-blue-500', label: 'Pourquoi le momentum est-il faible ?', hint: 'Ce qui stagne d’un round à l’autre', q: 'Pourquoi le momentum est-il à ce niveau, et qu’est-ce qui n’a pas bougé entre les rounds ?' },
-]
+// there is never a question of which field to type in — and they come from
+// the deal's state, so they change as it moves.
 
-export default function DealCopilot({ dealId, onRan }: { dealId: string; onRan?: () => void }) {
+export default function DealCopilot({
+  dealId, suggestions, onRan,
+}: {
+  dealId: string
+  suggestions: Suggestion[]
+  onRan?: () => void
+}) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string | null>(null)
   const [asked, setAsked] = useState<string | null>(null)
@@ -39,15 +41,18 @@ export default function DealCopilot({ dealId, onRan }: { dealId: string; onRan?:
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-5 flex flex-col min-h-[420px]">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-sm">✦</span>
-        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em]">Copilote</span>
+    <div className="bg-white rounded-2xl border-2 border-blue-400/60 ring-4 ring-blue-500/10 shadow-[0_2px_12px_rgba(59,130,246,0.10)] p-5 flex flex-col min-h-[420px]">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm">✦</span>
+        <span className="text-sm font-bold text-neutral-900">Copilote</span>
       </div>
+      <p className="text-xs text-neutral-400 mb-4">
+        Les questions changent avec l’état du deal.
+      </p>
 
       {!asked && (
         <ul className="space-y-2 mb-4">
-          {SUGGESTIONS.map(s => (
+          {suggestions.map(s => (
             <li key={s.label}>
               <button
                 onClick={() => ask(s.q)}
@@ -55,7 +60,7 @@ export default function DealCopilot({ dealId, onRan }: { dealId: string; onRan?:
                 className="w-full text-left px-3 py-3 rounded-xl border border-neutral-200/80 hover:border-blue-300 hover:bg-blue-50/40 transition-all disabled:opacity-50"
               >
                 <div className="flex items-start gap-3">
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${s.tint}`}>{s.icon}</span>
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${s.tint}`}>◆</span>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-neutral-800 leading-snug">{s.label}</div>
                     <div className="text-[11px] text-neutral-400 mt-0.5">{s.hint}</div>
