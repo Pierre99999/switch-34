@@ -15,7 +15,6 @@ type Entry = {
   tint: string
   title: string
   detail?: string
-  quote?: string
   href?: string
   hrefLabel?: string
 }
@@ -41,18 +40,11 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
       const notes = (r.capture_notes ?? {}) as Record<string, string>
       const speakers = ((r as unknown as { capture_speakers?: { name: string; side: string }[] }).capture_speakers ?? [])
         .filter(s => s.side !== 'seller').map(s => s.name)
-      const firstQuote = Object.entries(notes)
-        .filter(([k, v]) => k !== '__free__' && typeof v === 'string' && v.trim())
-        .map(([, v]) => v.trim())[0]
       out.push({
         at: r.updated_at ?? r.created_at,
         icon: '🎧', tint: 'bg-violet-100 text-violet-600',
-        title: `Conversation du round ${r.round}${speakers.length ? ` avec ${speakers.join(', ')}` : ''}`,
-        detail: [
-          `${Object.values(notes).filter(v => typeof v === 'string' && v.trim()).length} réponses capturées`,
-          (r as unknown as { seller_read?: unknown }).seller_read ? 'lecture du vendeur renseignée' : null,
-        ].filter(Boolean).join(' · '),
-        quote: firstQuote ? `« ${firstQuote.slice(0, 140)}${firstQuote.length > 140 ? '…' : ''} »` : undefined,
+        title: `Conversation du round ${r.round}${speakers.length ? ` · ${speakers.join(', ')}` : ''}`,
+        detail: `${Object.values(notes).filter(v => typeof v === 'string' && v.trim()).length} réponses capturées`,
         href: `/deals/${dealId}/capture`, hrefLabel: 'Voir la capture',
       })
     }
@@ -61,7 +53,6 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
         at: r.created_at,
         icon: '✦', tint: 'bg-emerald-100 text-emerald-600',
         title: `Briefing du round ${r.round} généré`,
-        detail: r.briefing_angle ? r.briefing_angle.slice(0, 110) : undefined,
         href: `/deals/${dealId}/briefing`, hrefLabel: 'Voir le briefing',
       })
     }
@@ -76,7 +67,7 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
       at: deal.created_at,
       icon: '◫', tint: 'bg-blue-100 text-blue-600',
       title: 'Contexte prospect enrichi',
-      detail: `${filled} éléments extraits${deal.prospect_url ? ` depuis ${deal.prospect_url}` : ''}`,
+      detail: `${filled} éléments extraits`,
       href: `/deals/${dealId}/context`, hrefLabel: 'Voir le contexte',
     })
   }
@@ -85,7 +76,6 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
     at: deal.created_at,
     icon: '◐', tint: 'bg-neutral-100 text-neutral-500',
     title: 'Deal créé',
-    detail: deal.contact_name ? `Contact principal : ${deal.contact_name}` : undefined,
   })
 
   return out.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
@@ -97,7 +87,7 @@ export default function DealTimeline({ deal, rounds, dealId }: { deal: Deal; rou
 
   const all = buildEntries(deal, rounds, dealId)
   const filtered = query.trim()
-    ? all.filter(e => `${e.title} ${e.detail ?? ''} ${e.quote ?? ''}`.toLowerCase().includes(query.toLowerCase()))
+    ? all.filter(e => `${e.title} ${e.detail ?? ''}`.toLowerCase().includes(query.toLowerCase()))
     : all
   const shown = showAll || query.trim() ? filtered : filtered.slice(0, 4)
 
@@ -131,7 +121,6 @@ export default function DealTimeline({ deal, rounds, dealId }: { deal: Deal; rou
                 </div>
                 <div className="text-sm font-semibold text-neutral-800 mt-0.5">{e.title}</div>
                 {e.detail && <div className="text-xs text-neutral-500 mt-0.5">{e.detail}</div>}
-                {e.quote && <p className="text-sm text-neutral-600 italic mt-1.5">{e.quote}</p>}
                 {e.href && (
                   <Link href={e.href} className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600 mt-1.5">
                     {e.hrefLabel} →

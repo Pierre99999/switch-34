@@ -19,7 +19,7 @@ const GATE_NAME: Record<number, string> = {
   1: 'L’opportunité', 2: 'Gagner', 3: 'L’impact', 4: 'Momentum',
 }
 
-type Item = { text: string; source: string; tint: string }
+type Item = { label: string; tag: string; hint: string; source: string; tint: string }
 
 // Lowercase the first letter so a criterion label reads inside a sentence.
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
@@ -39,6 +39,11 @@ export default function NextFocus({
 }) {
   const [showAnalysis, setShowAnalysis] = useState(false)
   const step = nextStep(deal, rounds)
+  // Written by the engine right after it analysed the conversation: an
+  // objective, then one line of reason. Composing it from the prescriptions
+  // gave mechanical phrasing, so that is only the fallback.
+  const written = ((current as unknown as { focus_objective?: string } | null)?.focus_objective ?? '').trim()
+  const [writtenObjective, writtenWhy] = written ? written.split('\n').map(x => x.trim()) : [null, null]
   const gate = dealState.gates[dealState.activeGate]
   const fit = normalizeFit(deal.playbook_fit)
 
@@ -50,13 +55,15 @@ export default function NextFocus({
   for (const p of prescriptions(current).slice(0, 3)) {
     const label = criterionLabel(p.variable)
     items.push({
+      label,
       source: `Porte ${dealState.activeGate}`,
-      tint: 'bg-neutral-100 text-neutral-500',
-      text: p.kind === 'MANQUANT'
-        ? `${label} — rien n’a encore été dit là-dessus. C’est une zone aveugle, pas un score bas.`
+      tint: p.kind === 'NEGATIF' ? 'bg-rose-50 text-rose-600' : 'bg-neutral-100 text-neutral-500',
+      tag: p.kind === 'MANQUANT' ? 'zone aveugle' : p.kind === 'CORROBORER' ? 'à corroborer' : 'à trancher',
+      hint: p.kind === 'MANQUANT'
+        ? 'Rien n’a encore été dit là-dessus — c’est une zone aveugle, pas un score bas.'
         : p.kind === 'CORROBORER'
-          ? `${label} — une seule voix pour l’instant. Qui d’autre peut le confirmer, et quel chiffre le prouverait ?`
-          : `${label} — le signal est défavorable et corroboré. Il faut trancher, ou partir.`,
+          ? 'Une seule voix pour l’instant. Qui d’autre peut le confirmer, et quel chiffre le prouverait ?'
+          : 'Le signal est défavorable et corroboré. Il faut trancher, ou partir.',
     })
     aims.push(
       p.kind === 'MANQUANT' ? `ouvrir ${lower(label)}`
@@ -67,24 +74,29 @@ export default function NextFocus({
 
   for (const m of (coverage?.missing ?? []).slice(0, 2)) {
     items.push({
+      label: m.label,
       source: 'Playbook A5',
       tint: 'bg-amber-50 text-amber-600',
-      text: `${m.label} — absent de ce deal.${m.risk ? ` ${m.risk}` : ' Ouvrir un chemin vers cette personne.'}`,
+      tag: 'absent',
+      hint: m.risk || 'Ouvrir un chemin vers cette personne.',
     })
     aims.push(`faire entrer ${lower(m.label)} dans la boucle`)
   }
 
   for (const a of (fit?.axes ?? []).filter(x => x.verdict === 'mismatch' || x.verdict === 'unknown').slice(0, 2)) {
     items.push({
-      source: `Adéquation · ${FIT_AXIS_LABELS[a.key].fr}`,
+      label: FIT_AXIS_LABELS[a.key].fr,
+      source: 'Adéquation playbook',
       tint: 'bg-violet-50 text-violet-600',
-      text: a.gap?.trim() || a.reason?.trim() || 'À trancher lors du prochain échange.',
+      tag: a.verdict === 'mismatch' ? 'hors cadre' : 'inconnu',
+      hint: a.gap?.trim() || a.reason?.trim() || 'À trancher lors du prochain échange.',
     })
   }
 
   // An objective reads better as an action than as a state.
   const title = (() => {
     if (step.kind === 'closed') return 'Ce deal est clos.'
+    if (step.kind !== 'capture' && writtenObjective) return writtenObjective
     if (step.kind === 'capture') return 'Mener la conversation, puis en importer le transcript.'
     if (rounds.length === 0) return 'Préparer la première conversation.'
     if (aims.length === 0) {
@@ -115,13 +127,13 @@ export default function NextFocus({
     return 'Le round est capturé et noté. La prochaine conversation peut être préparée.'
   })()
 
-  // First two sentences, so the card stays a glance rather than a page.
+  // One sentence on the card. Anything longer stops being read.
   const shortWhy = (() => {
-    const sentences = fullWhy.match(/[^.!?]+[.!?]+/g) ?? [fullWhy]
-    const head = sentences.slice(0, 2).join(' ').trim()
-    return head.length > 20 ? head : fullWhy.slice(0, 220)
+    if (writtenWhy) return writtenWhy
+    const first = (fullWhy.match(/[^.!?]+[.!?]+/) ?? [fullWhy])[0].trim()
+    return first.length > 20 ? first : fullWhy.slice(0, 160)
   })()
-  const truncated = shortWhy.length < fullWhy.trim().length
+  const truncated = shortWhy.trim() !== fullWhy.trim()
 
   const action = step.kind === 'closed' ? null
     : step.kind === 'capture' ? { label: '→ Aller capturer la conversation', run: 'capture' as const }
@@ -147,16 +159,14 @@ export default function NextFocus({
                 <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em] mt-5 mb-3">
                   Ce que cette conversation doit établir
                 </div>
-                <ul className="space-y-3">
+                <ul className="space-y-2.5">
                   {items.map((it, i) => (
-                    <li key={i} className="flex gap-3">
-                      <span className={`w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5 ${it.tint}`}>
+                    <li key={i} className="flex items-center gap-3" title={`${it.hint} · ${it.source}`}>
+                      <span className={`w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center flex-shrink-0 ${it.tint}`}>
                         {i + 1}
                       </span>
-                      <div className="min-w-0">
-                        <p className="text-[15px] text-neutral-700 leading-relaxed">{it.text}</p>
-                        <span className="text-[11px] text-neutral-400">{it.source}</span>
-                      </div>
+                      <span className="text-[15px] text-neutral-800 truncate">{it.label}</span>
+                      <span className="text-[11px] text-neutral-400 flex-shrink-0">{it.tag}</span>
                     </li>
                   ))}
                 </ul>

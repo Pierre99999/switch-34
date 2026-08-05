@@ -252,6 +252,8 @@ export type DealRound = {
   // The seller's subjective read. See lib/seller-read.ts — never a score.
   seller_read: unknown
   briefing_line: string | null
+  // The next conversation's objective, written by the engine with the read.
+  focus_objective: string | null
   briefing_read: string | null
   briefing_angle: string | null
   briefing_questions: BriefingQuestion[]

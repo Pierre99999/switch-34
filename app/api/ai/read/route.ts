@@ -51,7 +51,9 @@ export async function POST(req: NextRequest) {
 - Speak in the present, post-conversation tense: what this round revealed, what the scores now say, what is confirmed, what is still a blind spot.
 - Never say "nothing is scored yet" — the round has been scored. Reference the actual scores and gate statuses.
 - Name the first gate that is not yet passed (currently Gate ${activeGate}) and what stands between the deal and passing it.
-- Be honest and specific: use the real prospect details, the real scores, the real capture notes. 3–5 sentences. No generic coaching.` + localeInstruction(locale),
+- Be honest and specific: use the real prospect details, the real scores, the real capture notes. 3–5 sentences. No generic coaching.
+
+You also write the OBJECTIVE of the next conversation. It is the sentence the seller reads before picking up the phone, so it must name what to go and DO — not what a score is. "Faire qualifier le scénario décisionnel et identifier le vrai champion" is an objective; "Corroborer l'adéquation des préoccupations" is a score restated. Never mention gates, scores or criterion names in it.` + localeInstruction(locale),
       tools: [
         {
           name: 'save_read',
@@ -61,8 +63,10 @@ export async function POST(req: NextRequest) {
             properties: {
               line: { type: 'string', description: 'One sentence: the single most important thing this round revealed about the deal.' },
               read: { type: 'string', description: 'Where the deal stands now, after this conversation and its scoring. What the scores reveal, what is confirmed, what remains a blind spot. 3–5 sentences.' },
+              next_objective: { type: 'string', description: 'The objective of the NEXT conversation, as one short imperative sentence of at most fifteen words. Something to go and do, in the seller\'s language. No gate, no score, no criterion name.' },
+              why: { type: 'string', description: 'Why that objective, in ONE sentence of at most twenty-five words. The single reason it matters now — not a summary of the read.' },
             },
-            required: ['line', 'read'],
+            required: ['line', 'read', 'next_objective', 'why'],
           },
         },
       ],
@@ -79,11 +83,13 @@ export async function POST(req: NextRequest) {
     if (!toolUse || toolUse.type !== 'tool_use') {
       return NextResponse.json({ error: 'No structured response from AI' }, { status: 500 })
     }
-    const input = toolUse.input as { line: string; read: string }
+    const input = toolUse.input as { line: string; read: string; next_objective?: string; why?: string }
 
+    const objective = [input.next_objective?.trim(), input.why?.trim()].filter(Boolean).join('\n')
     await supabase.from('deal_rounds').update({
       briefing_line: input.line,
       briefing_read: input.read,
+      ...(objective ? { focus_objective: objective } : {}),
     }).eq('id', roundId)
 
     return NextResponse.json({ ok: true, read: input.read, line: input.line })
