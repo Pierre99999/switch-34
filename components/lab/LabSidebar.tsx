@@ -7,16 +7,12 @@ import { usePathname } from 'next/navigation'
 // screen — putting Dashboard / Briefing / Conversation here would rebuild the
 // tab navigation this interface exists to remove.
 const ITEMS = [
-  { href: '/lab', label: 'Deals', icon: '◎' },
+  { href: '/lab', label: 'Pipeline', icon: '◎' },
   { href: '/playbook', label: 'Sales Playbook', icon: '📘' },
   { href: '/admin', label: 'Admin', icon: '⚙' },
 ]
 
-export default function LabSidebar({
-  counts,
-}: {
-  counts?: { active: number; nearClose: number; atRisk: number; archived: number }
-}) {
+export default function LabSidebar() {
   const pathname = usePathname()
 
   return (
@@ -55,25 +51,6 @@ export default function LabSidebar({
         })}
       </nav>
 
-      {counts && (
-        <div className="px-5 mt-8">
-          <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wide mb-2">Mon pipeline</div>
-          <ul className="space-y-1.5">
-            {[
-              { label: 'Actifs', value: counts.active, dot: 'bg-blue-500' },
-              { label: 'Proches', value: counts.nearClose, dot: 'bg-emerald-500' },
-              { label: 'À risque', value: counts.atRisk, dot: 'bg-rose-500' },
-              { label: 'Archivés', value: counts.archived, dot: 'bg-neutral-300' },
-            ].map(row => (
-              <li key={row.label} className="flex items-center gap-2 text-sm">
-                <span className={`w-2 h-2 rounded-full ${row.dot}`} />
-                <span className="text-neutral-600">{row.label}</span>
-                <span className="ml-auto text-neutral-400">{row.value}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       <div className="mt-auto px-4 py-4 border-t border-neutral-100">
         <Link href="/pipeline" className="text-xs text-neutral-400 hover:text-neutral-600">
