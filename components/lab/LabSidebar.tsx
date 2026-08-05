@@ -3,14 +3,31 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+// Line icons drawn inline rather than pulled from a font or an emoji: a glyph
+// like "◎" or "📘" renders differently on every machine and carries its own
+// weight and colour. These inherit both from the link.
+function Icon({ name, className }: { name: 'pipeline' | 'playbook' | 'admin'; className?: string }) {
+  const paths = {
+    pipeline: <><path d="M4 6h16" /><path d="M4 12h11" /><path d="M4 18h6" /></>,
+    playbook: <><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v13a1.5 1.5 0 0 0-1.5-1.5H5.5A1.5 1.5 0 0 1 4 16z" /><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v13a1.5 1.5 0 0 1 1.5-1.5h5A1.5 1.5 0 0 0 20 16z" /></>,
+    admin: <><path d="M4 8h10" /><path d="M18 8h2" /><circle cx="16" cy="8" r="2" /><path d="M4 16h4" /><path d="M12 16h8" /><circle cx="10" cy="16" r="2" /></>,
+  }[name]
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className}>
+      {paths}
+    </svg>
+  )
+}
+
 // Deliberately short. Everything scoped to a deal lives inside the deal
 // screen — putting Dashboard / Briefing / Conversation here would rebuild the
 // tab navigation this interface exists to remove.
 const ITEMS = [
-  { href: '/lab', label: 'Pipeline', icon: '◎' },
-  { href: '/playbook', label: 'Sales Playbook', icon: '📘' },
-  { href: '/admin', label: 'Admin', icon: '⚙' },
-]
+  { href: '/lab', label: 'Pipeline', icon: 'pipeline' },
+  { href: '/playbook', label: 'Sales Playbook', icon: 'playbook' },
+  { href: '/admin', label: 'Admin', icon: 'admin' },
+] as const
 
 export default function LabSidebar() {
   const pathname = usePathname()
@@ -44,7 +61,7 @@ export default function LabSidebar() {
                 active ? 'bg-blue-50 text-blue-700' : 'text-neutral-600 hover:bg-neutral-50'
               }`}
             >
-              <span className="text-neutral-400">{item.icon}</span>
+              <Icon name={item.icon} className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-blue-500' : 'text-neutral-400'}`} />
               {item.label}
             </Link>
           )
