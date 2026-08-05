@@ -82,6 +82,7 @@ function prospectSections(deal: Deal): { label: string; fields: { label: string;
 
 export default function DealKnowledge({
   deal, round, declarations, contacts, fit, coverage, onClose,
+  openContextInitially = false,
 }: {
   deal: Deal
   round: DealRound | null
@@ -90,9 +91,11 @@ export default function DealKnowledge({
   fit: PlaybookFit | null
   coverage: ActorCoverage | null
   onClose: () => void
+  /** Opened on arrival from the creation flow, where it is what was just built. */
+  openContextInitially?: boolean
 }) {
   const [openLayer, setOpenLayer] = useState<number | null>(1)
-  const [openContext, setOpenContext] = useState(false)
+  const [openContext, setOpenContext] = useState(openContextInitially)
   const [openFit, setOpenFit] = useState(false)
   const [query, setQuery] = useState('')
   const context = prospectSections(deal)

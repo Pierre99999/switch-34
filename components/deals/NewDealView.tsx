@@ -27,7 +27,14 @@ const ACTOR_KEYS: { value: ActorType; key: string }[] = [
 // created deal opens: the multi-screen context page, or the lab's one screen.
 export default function NewDealView({
   createdHref = (id: string) => `/deals/${id}/context`,
-}: { createdHref?: (id: string) => string } = {}) {
+  contextLocation,
+}: {
+  createdHref?: (id: string) => string
+  /** Where the analysis will be found afterwards. Differs between the two
+   *  interfaces, and telling the seller the wrong place is worse than saying
+   *  nothing. */
+  contextLocation?: string
+} = {}) {
   const router = useRouter()
   const { t, locale } = useI18n()
   const [step, setStep] = useState(0)
@@ -256,9 +263,17 @@ export default function NewDealView({
             <div className="bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-xl">
               <p className="text-sm text-emerald-700 font-medium">{t('newDeal.contextFetched')}</p>
               <p className="text-xs text-emerald-600/80 mt-0.5">
-                {analyzedSource
-                  ? (locale === 'fr' ? `Analysé depuis ${analyzedSource}. Vous pourrez ajuster le détail sur la page Contexte.` : `Analyzed from ${analyzedSource}. You can adjust the details on the Context page.`)
-                  : (locale === 'fr' ? 'Vous pourrez consulter et ajuster le détail sur la page Contexte.' : 'You can review and adjust the details on the Context page.')}
+                {(() => {
+                  const where = contextLocation ?? (locale === 'fr' ? 'sur la page Contexte' : 'on the Context page')
+                  if (analyzedSource) {
+                    return locale === 'fr'
+                      ? `Analysé depuis ${analyzedSource}. Vous retrouverez le détail ${where}.`
+                      : `Analyzed from ${analyzedSource}. You will find the details ${where}.`
+                  }
+                  return locale === 'fr'
+                    ? `Vous retrouverez le détail ${where}.`
+                    : `You will find the details ${where}.`
+                })()}
               </p>
             </div>
           )}

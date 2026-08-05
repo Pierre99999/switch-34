@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type DealRound } from '@/lib/types'
@@ -85,6 +85,9 @@ export default function LabDealPage() {
   const params = useParams()
   const dealId = params.id as string
   const { t } = useI18n()
+  // Set by the creation flow: the prospect analysis has just run, and the
+  // seller has never seen this screen before.
+  const justCreated = useSearchParams().get('new') === '1'
 
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
@@ -96,6 +99,7 @@ export default function LabDealPage() {
   const [briefingRound, setBriefingRound] = useState<number | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showManual, setShowManual] = useState(false)
+  const [welcomeOpen, setWelcomeOpen] = useState(true)
   const [coverage, setCoverage] = useState<ActorCoverage | null>(null)
   const [stakeholders, setStakeholders] = useState<DealContact[]>([])
 
@@ -196,12 +200,31 @@ export default function LabDealPage() {
 
       {/* Only on the current round: greeting a past round would comment on a
           state the seller has already left behind. */}
-      {shownRound === deal.current_round && (
+      {shownRound === deal.current_round && !(justCreated && welcomeOpen) && (
         <DealGreeting dealId={dealId} input={{ deal, rounds, current, dealState, coverage }} />
       )}
 
       <div className="flex-1 min-w-0 flex">
         <main className="flex-1 min-w-0 px-5 sm:px-8 py-7">
+          {justCreated && welcomeOpen && (
+            <div className="mb-5 flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3.5">
+              <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">✓</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-emerald-900">L’analyse du prospect est faite.</p>
+                <p className="text-sm text-emerald-700/90 mt-0.5 leading-relaxed">
+                  Vous êtes sur la page de votre deal — tout s’y passe. L’analyse se retrouve à droite, dans <strong>Contexte prospect</strong>.
+                </p>
+                <button
+                  onClick={() => { setKnowledgeOpen(true); setWelcomeOpen(false) }}
+                  className="mt-2.5 text-sm font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2"
+                >
+                  Voir le contexte prospect →
+                </button>
+              </div>
+              <button onClick={() => setWelcomeOpen(false)} className="text-emerald-600/60 hover:text-emerald-800 text-lg leading-none px-1">✕</button>
+            </div>
+          )}
+
           {/* Header */}
           <Link href="/lab" className="text-sm text-neutral-400 hover:text-blue-500 transition-colors">← Retour au pipeline</Link>
           <div className="flex items-start justify-between gap-4 mt-2 mb-6 flex-wrap">
@@ -319,6 +342,7 @@ export default function LabDealPage() {
             coverage={coverage}
             declarations={(current?.declarations ?? {}) as Record<string, Declaration[]>}
             onClose={() => setKnowledgeOpen(false)}
+            openContextInitially={justCreated}
           />
         )}
         {!knowledgeOpen && (

@@ -13,7 +13,10 @@ export default function LabNewDeal() {
     <div className="flex">
       <LabSidebar />
       <div className="flex-1 min-w-0">
-        <NewDealView createdHref={id => `/lab/deals/${id}`} />
+        <NewDealView
+          createdHref={id => `/lab/deals/${id}?new=1`}
+          contextLocation="dans « Contexte prospect », à droite de la page du deal"
+        />
       </div>
     </div>
   )
