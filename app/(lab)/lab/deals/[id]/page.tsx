@@ -16,6 +16,7 @@ import DealKnowledge from '@/components/lab/DealKnowledge'
 import DealTimeline from '@/components/lab/DealTimeline'
 import NextFocus from '@/components/lab/NextFocus'
 import { copilotSuggestions } from '@/lib/copilot-suggestions'
+import { gateName, gateQuestion } from '@/lib/lab-view'
 import BriefingLetter from '@/components/lab/BriefingLetter'
 import TranscriptImport from '@/components/lab/TranscriptImport'
 import { normalizePlaybook } from '@/lib/playbook'
@@ -38,15 +39,6 @@ const GATE_STYLE: Record<number, { ring: string; bar: string; track: string; ico
   4: { ring: 'bg-blue-50 text-blue-500', bar: 'bg-blue-500', track: 'bg-blue-100', icon: '◇' },
 }
 
-// LAYER_LABELS in types.ts is the English internal name used in AI prompts.
-// The screen shows the method's own wording.
-const GATE_NAME: Record<number, string> = {
-  1: 'L’opportunité',
-  2: 'Gagner',
-  3: 'L’impact',
-  4: 'Momentum',
-}
-
 const STATUS_WORDING: Record<string, string> = {
   FRANCHIE: 'Franchie',
   PRETE: 'Prête, en attente',
@@ -66,8 +58,11 @@ function GateCard({ layer, score, status, sub }: { layer: number; score: number 
     <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-2.5 mb-4">
         <span className={`w-9 h-9 rounded-full flex items-center justify-center text-base ${st.ring}`}>{st.icon}</span>
-        <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em] leading-tight">
-          {GATE_NAME[layer]}
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em] leading-tight">
+            {gateName(layer)}
+          </div>
+          <div className="text-[11px] text-neutral-400 leading-tight mt-0.5">{gateQuestion(layer)}</div>
         </div>
       </div>
       <div className="text-[28px] leading-none font-bold text-neutral-900 mb-3">

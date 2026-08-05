@@ -12,6 +12,18 @@ export function criterionLabel(variable: string, locale = 'fr'): string {
   return VARIABLE_LABELS[variable] ?? variable
 }
 
+// The gate's name and its question, both from the translation table. They
+// were copied into three components; a rename has to happen once.
+export function gateName(layer: number, locale = 'fr'): string {
+  const e = (translations as Record<string, { fr: string; en: string } | undefined>)[`layer.${layer}`]
+  return e ? (locale === 'fr' ? e.fr : e.en) : String(layer)
+}
+
+export function gateQuestion(layer: number, locale = 'fr'): string {
+  const e = (translations as Record<string, { fr: string; en: string } | undefined>)[`layer.q${layer}`]
+  return e ? (locale === 'fr' ? e.fr : e.en) : ''
+}
+
 // The dashboard's criteria, reorganised for the knowledge panel: what we know
 // about each criterion, and on whose word.
 //

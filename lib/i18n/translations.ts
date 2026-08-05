@@ -157,7 +157,7 @@ export const translations = {
 
   // ── Layer labels ──
   'layer.1': { en: 'The opportunity', fr: 'L’opportunité' },
-  'layer.2': { en: 'Winning', fr: 'Gagner' },
+  'layer.2': { en: 'The ability to win', fr: 'La capacité à gagner' },
   'layer.3': { en: 'The impact', fr: 'L’impact' },
   'layer.4': { en: 'Momentum', fr: 'Momentum' },
   'layer.q1': { en: '« Do I stay? »', fr: '« Est-ce que je reste ? »' },

@@ -4,14 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { Deal, DealRound } from '@/lib/types'
 import { isLegacyDimensions } from '@/lib/types'
-import { criteriaOfLayer } from '@/lib/lab-view'
+import { criteriaOfLayer, gateName } from '@/lib/lab-view'
 import type { Declaration } from '@/lib/voice-credit'
 import {
   type PlaybookFit, type FitVerdict, type ActorCoverage, type DealContact,
   FIT_AXIS_LABELS, FIT_AXIS_SOURCE,
 } from '@/lib/playbook-fit'
 
-const GATE_NAME: Record<number, string> = { 1: 'L’opportunité', 2: 'Gagner', 3: 'L’impact', 4: 'Momentum' }
 // Same hue per gate as the cards above, so the eye connects the two.
 const GATE_TINT: Record<number, string> = {
   1: 'bg-emerald-50 text-emerald-500',
@@ -312,7 +311,7 @@ export default function DealKnowledge({
               >
                 <span className="flex items-center gap-2.5 min-w-0">
                   <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${GATE_TINT[layer]}`}>{GATE_ICON[layer]}</span>
-                  <span className="text-sm font-medium text-neutral-800 truncate">{GATE_NAME[layer]}</span>
+                  <span className="text-sm font-medium text-neutral-800 truncate">{gateName(layer)}</span>
                 </span>
                 <span className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs text-neutral-400">{scored}/{criteria.length}</span>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { Deal, DealRound } from '@/lib/types'
-import { criterionLabel } from '@/lib/lab-view'
+import { criterionLabel, gateName } from '@/lib/lab-view'
 import { prescriptions, type DealState } from '@/lib/scoring'
 import { nextStep } from '@/lib/deal-rounds'
 import { normalizeFit, FIT_AXIS_LABELS, type ActorCoverage } from '@/lib/playbook-fit'
@@ -14,10 +14,6 @@ import { firstSentences, isTruncated } from '@/lib/text'
 // lock, the playbook fit, the post-conversation read. What was missing was
 // saying it in one place, as an instruction rather than as four panels to
 // cross-reference.
-
-const GATE_NAME: Record<number, string> = {
-  1: 'L’opportunité', 2: 'Gagner', 3: 'L’impact', 4: 'Momentum',
-}
 
 type Item = { label: string; tag: string; hint: string; source: string; tint: string }
 
@@ -101,7 +97,7 @@ export default function NextFocus({
     if (rounds.length === 0) return 'Préparer la première conversation.'
     if (aims.length === 0) {
       return gate?.lockMessage
-        ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${GATE_NAME[dealState.activeGate]}.`
+        ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${gateName(dealState.activeGate)}.`
         : `Préparer la conversation du round ${step.round}.`
     }
     const [a, b] = aims
@@ -111,7 +107,7 @@ export default function NextFocus({
 
   const subtitle = step.kind === 'closed' ? null
     : step.kind === 'capture' ? `Le briefing du round ${step.round} est prêt`
-      : `Porte ${dealState.activeGate} · ${GATE_NAME[dealState.activeGate]}${gate?.lockMessage ? ` — ${gate.lockMessage}` : ''}`
+      : `Porte ${dealState.activeGate} · ${gateName(dealState.activeGate)}${gate?.lockMessage ? ` — ${gate.lockMessage}` : ''}`
 
   // The full engine read, and the short version shown on the card.
   const fullWhy = (() => {
