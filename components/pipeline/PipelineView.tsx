@@ -114,14 +114,24 @@ type SortDir = 'asc' | 'desc'
 // this screen, not a fact about the account.
 const WELCOME_DISMISSED_KEY = 'switch.playbookWelcomeDismissed'
 
-// The pipeline, shared by the live app and the lab. Only the destination of a
-// deal changes between them, so that is the one thing passed in — duplicating
-// this table would be the "two documents that diverge in six months" trap,
-// applied to a screen.
+// The pipeline, shared by the live app and the lab. What changes between them
+// is where a deal opens and how much of the diagnostic the list repeats —
+// duplicating this table would be the "two documents that diverge in six
+// months" trap, applied to a screen.
+//
+// In the lab the four gate scores and the dashboard link are dropped: the deal
+// screen shows both, one click away, and a list that answers "how is this deal
+// doing?" competes with the one question the pipeline should answer — what do
+// I do next.
 export default function PipelineView({
   dealHref = (id: string) => `/deals/${id}/dashboard`,
+  showScores = true,
+  stepHref,
 }: {
   dealHref?: (id: string) => string
+  showScores?: boolean
+  /** Where the next-step button goes; defaults to the live app's per-step routes. */
+  stepHref?: (id: string) => string
 } = {}) {
   const { t, locale } = useI18n()
   const { role } = useRole()
@@ -270,6 +280,11 @@ export default function PipelineView({
   const sortIndicator = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
 
   const stepFor = (deal: Deal) => nextStep(deal, rounds.filter(r => r.deal_id === deal.id))
+  const hrefForStep = (deal: Deal, kind: NextStepKind) =>
+    stepHref ? stepHref(deal.id) : NEXT_STEP[kind].href(deal.id)
+  const gridCols = showScores
+    ? (isDirector ? '2.2fr 1.2fr 0.6fr 0.9fr 3.2fr 2.2fr 0.9fr' : '2.6fr 0.6fr 0.9fr 4fr 2.2fr 0.9fr')
+    : (isDirector ? '2.6fr 1.4fr 0.6fr 1fr 2.4fr 0.6fr' : '3.2fr 0.6fr 1fr 2.4fr 0.6fr')
   const stepCount = (kind: NextStepKind) => deals.filter(d => stepFor(d).kind === kind).length
 
   const filteredDeals = stepFilter === 'all' ? deals : deals.filter(d => stepFor(d).kind === stepFilter)
@@ -413,12 +428,14 @@ export default function PipelineView({
                   <span className="font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
                   <span className="font-semibold text-neutral-700">{deal.potential_revenue ? fmtRevenue(deal.potential_revenue) : '—'}</span>
                 </div>
-                <div className="grid grid-cols-4 gap-2 pt-1 border-t border-neutral-100 min-w-0">
-                  <ScoreCell round={r} layer={1} label="L1" />
-                  <ScoreCell round={r} layer={2} label="L2" />
-                  <ScoreCell round={r} layer={3} label="L3" />
-                  <ScoreCell round={r} layer={4} label="L4" />
-                </div>
+                {showScores && (
+                  <div className="grid grid-cols-4 gap-2 pt-1 border-t border-neutral-100 min-w-0">
+                    <ScoreCell round={r} layer={1} label="L1" />
+                    <ScoreCell round={r} layer={2} label="L2" />
+                    <ScoreCell round={r} layer={3} label="L3" />
+                    <ScoreCell round={r} layer={4} label="L4" />
+                  </div>
+                )}
                 {(() => {
                   const step = stepFor(deal)
                   const cfg = NEXT_STEP[step.kind]
@@ -428,14 +445,16 @@ export default function PipelineView({
                         {locale === 'fr' ? 'Prochaine étape' : 'Next step'} · R{step.round}
                       </div>
                       <Link
-                        href={cfg.href(deal.id)}
+                        href={hrefForStep(deal, step.kind)}
                         className={`block text-center text-sm font-medium rounded-xl py-2.5 transition-all ${cfg.button}`}
                       >
                         {cfg.label[locale === 'fr' ? 'fr' : 'en']}
                       </Link>
-                      <Link href={dealHref(deal.id)} className="block text-center text-xs text-neutral-400 hover:text-blue-500">
-                        {t('pipeline.dashboard')}
-                      </Link>
+                      {showScores && (
+                        <Link href={dealHref(deal.id)} className="block text-center text-xs text-neutral-400 hover:text-blue-500">
+                          {t('pipeline.dashboard')}
+                        </Link>
+                      )}
                     </div>
                   )
                 })()}
@@ -449,12 +468,12 @@ export default function PipelineView({
       <div className="hidden md:block bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-x-auto">
         <div className="min-w-[900px]">
         {/* Table header */}
-        <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: isDirector ? '2.2fr 1.2fr 0.6fr 0.9fr 3.2fr 2.2fr 0.9fr' : '2.6fr 0.6fr 0.9fr 4fr 2.2fr 0.9fr' }}>
+        <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: gridCols }}>
           <button onClick={() => toggleSort('prospect')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.prospect')}{sortIndicator('prospect')}</button>
           {isDirector && <button onClick={() => toggleSort('rep')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.rep')}{sortIndicator('rep')}</button>}
           <button onClick={() => toggleSort('round')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.round')}{sortIndicator('round')}</button>
           <button onClick={() => toggleSort('revenue')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.revenue')}{sortIndicator('revenue')}</button>
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>
+          {showScores && <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>}
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{locale === 'fr' ? 'Prochaine étape' : 'Next step'}</div>
           <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
         </div>
@@ -462,7 +481,7 @@ export default function PipelineView({
         {sortedDeals.map((deal: Deal) => {
           const r = latestRound(deal.id)
           return (
-            <div key={deal.id} className="grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors" style={{ gridTemplateColumns: isDirector ? '2.2fr 1.2fr 0.6fr 0.9fr 3.2fr 2.2fr 0.9fr' : '2.6fr 0.6fr 0.9fr 4fr 2.2fr 0.9fr' }}>
+            <div key={deal.id} className="grid gap-3 px-5 py-4 border-b border-neutral-100 items-center hover:bg-neutral-50/50 transition-colors" style={{ gridTemplateColumns: gridCols }}>
               <div>
                 <EditableProspectName
                   dealId={deal.id}
@@ -483,19 +502,21 @@ export default function PipelineView({
               <div className="text-right">
                 <span className="text-sm font-semibold text-neutral-700">{deal.potential_revenue ? fmtRevenue(deal.potential_revenue) : '—'}</span>
               </div>
-              <div className="grid grid-cols-4 gap-3">
-                <ScoreCell round={r} layer={1} label={t('layer.1')} />
-                <ScoreCell round={r} layer={2} label={t('layer.2')} />
-                <ScoreCell round={r} layer={3} label={t('layer.3')} />
-                <ScoreCell round={r} layer={4} label={t('layer.4')} />
-              </div>
+              {showScores && (
+                <div className="grid grid-cols-4 gap-3">
+                  <ScoreCell round={r} layer={1} label={t('layer.1')} />
+                  <ScoreCell round={r} layer={2} label={t('layer.2')} />
+                  <ScoreCell round={r} layer={3} label={t('layer.3')} />
+                  <ScoreCell round={r} layer={4} label={t('layer.4')} />
+                </div>
+              )}
               {(() => {
                 const step = stepFor(deal)
                 const cfg = NEXT_STEP[step.kind]
                 return (
                   <div className="flex items-center min-w-0">
                     <Link
-                      href={cfg.href(deal.id)}
+                      href={hrefForStep(deal, step.kind)}
                       className={`text-xs font-medium rounded-lg px-3 py-2 transition-all truncate ${cfg.button}`}
                       title={`${cfg.label[locale === 'fr' ? 'fr' : 'en']} — R${step.round}`}
                     >
@@ -506,9 +527,11 @@ export default function PipelineView({
                 )
               })()}
               <div className="flex items-center justify-end gap-2">
-                <Link href={dealHref(deal.id)} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
-                  {t('pipeline.dashboard')}
-                </Link>
+                {showScores && (
+                  <Link href={dealHref(deal.id)} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
+                    {t('pipeline.dashboard')}
+                  </Link>
+                )}
                 <div className="relative">
                   <button onClick={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)} className="text-neutral-300 hover:text-neutral-500 transition-colors text-lg leading-none px-1">···</button>
                   {openMenuId === deal.id && (
@@ -562,7 +585,7 @@ export default function PipelineView({
                 </div>
                 <div className="flex items-center gap-3">
                   <Link href={dealHref(deal.id)} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
-                    {t('pipeline.dashboard')}
+                    {showScores ? t('pipeline.dashboard') : (locale === 'fr' ? 'ouvrir →' : 'open →')}
                   </Link>
                   <button onClick={() => handleSetStatus(deal.id, 'active')} className="text-xs text-neutral-400 hover:text-blue-500 transition-colors">
                     {t('pipeline.markActive')}
