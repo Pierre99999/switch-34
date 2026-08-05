@@ -19,6 +19,8 @@ import { copilotSuggestions } from '@/lib/copilot-suggestions'
 import { criterionLabel, gateName, gateQuestion } from '@/lib/lab-view'
 import BriefingLetter from '@/components/lab/BriefingLetter'
 import DealGreeting from '@/components/lab/DealGreeting'
+import GeneratingDialog from '@/components/lab/GeneratingDialog'
+import { useI18n } from '@/lib/i18n/context'
 import TranscriptImport from '@/components/lab/TranscriptImport'
 import { normalizePlaybook } from '@/lib/playbook'
 import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
@@ -81,6 +83,7 @@ function GateCard({ layer, score, status, sub }: { layer: number; score: number 
 export default function LabDealPage() {
   const params = useParams()
   const dealId = params.id as string
+  const { t } = useI18n()
 
   const [deal, setDeal] = useState<Deal | null>(null)
   const [rounds, setRounds] = useState<DealRound[]>([])
@@ -160,10 +163,12 @@ export default function LabDealPage() {
       if (!res.ok) throw new Error(data.error ?? `Échec (${res.status})`)
       await load()
       setSelectedRound(null)
+      setBusy(null)
     } catch (e) {
+      // busy stays set: the dialog turns into the error, so a failure is not
+      // something you discover by noticing a button came back.
       setError(e instanceof Error ? e.message : 'Action impossible')
     }
-    setBusy(null)
   }
 
   const fmtRevenue = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k€` : `${n}€`
@@ -171,6 +176,21 @@ export default function LabDealPage() {
   return (
     <div className="flex">
       <LabSidebar />
+
+      {busy && (
+        <GeneratingDialog
+          title={busy === 'next_round' ? `Ouverture du round ${deal.current_round + 1}` : `Création du briefing du round ${Math.max(deal.current_round, 1)}`}
+          steps={[
+            t('ai.step.profile' as never),
+            t('ai.step.context' as never),
+            t('ai.step.scores' as never),
+            t('ai.step.questions' as never),
+            t('ai.step.finalize' as never),
+          ]}
+          error={error}
+          onDismiss={() => { setBusy(null); setError(null) }}
+        />
+      )}
 
       {/* Only on the current round: greeting a past round would comment on a
           state the seller has already left behind. */}
