@@ -17,6 +17,8 @@ type Entry = {
   detail?: string
   href?: string
   hrefLabel?: string
+  /** Opens the briefing letter for that round, in place. */
+  briefingRound?: number
 }
 
 function fmt(iso: string) {
@@ -53,6 +55,7 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
         at: r.created_at,
         icon: '✦', tint: 'bg-emerald-100 text-emerald-600',
         title: `Briefing du round ${r.round} généré`,
+        briefingRound: r.round,
       })
     }
   }
@@ -80,7 +83,14 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
   return out.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
 }
 
-export default function DealTimeline({ deal, rounds, dealId }: { deal: Deal; rounds: DealRound[]; dealId: string }) {
+export default function DealTimeline({
+  deal, rounds, dealId, onOpenBriefing,
+}: {
+  deal: Deal
+  rounds: DealRound[]
+  dealId: string
+  onOpenBriefing: (round: number) => void
+}) {
   const [showAll, setShowAll] = useState(false)
   const [query, setQuery] = useState('')
 
@@ -124,6 +134,14 @@ export default function DealTimeline({ deal, rounds, dealId }: { deal: Deal; rou
                   <Link href={e.href} className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600 mt-1.5">
                     {e.hrefLabel} →
                   </Link>
+                )}
+                {e.briefingRound !== undefined && (
+                  <button
+                    onClick={() => onOpenBriefing(e.briefingRound!)}
+                    className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600 mt-1.5"
+                  >
+                    Voir le briefing →
+                  </button>
                 )}
               </div>
             </li>

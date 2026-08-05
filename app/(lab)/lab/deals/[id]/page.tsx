@@ -92,7 +92,8 @@ export default function LabDealPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [knowledgeOpen, setKnowledgeOpen] = useState(true)
-  const [showBriefing, setShowBriefing] = useState(false)
+  // Which round's briefing is open — the timeline can reach an earlier one.
+  const [briefingRound, setBriefingRound] = useState<number | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [coverage, setCoverage] = useState<ActorCoverage | null>(null)
   const [stakeholders, setStakeholders] = useState<DealContact[]>([])
@@ -232,7 +233,7 @@ export default function LabDealPage() {
             busy={!!busy}
             error={error}
             onRun={runAction}
-            onOpenBriefing={() => setShowBriefing(true)}
+            onOpenBriefing={() => setBriefingRound(shownRound)}
           />
 
           {/* The two parallel readings, when they have something to say. */}
@@ -256,13 +257,16 @@ export default function LabDealPage() {
               suggestions={copilotSuggestions({ deal, rounds, current, dealState, coverage })}
               onRan={load}
             />
-            <DealTimeline deal={deal} rounds={rounds} dealId={dealId} />
+            <DealTimeline deal={deal} rounds={rounds} dealId={dealId} onOpenBriefing={setBriefingRound} />
           </div>
         </main>
 
-        {showBriefing && current && (
-        <BriefingLetter round={current} prospectName={deal.prospect_name} onClose={() => setShowBriefing(false)} />
-      )}
+        {briefingRound !== null && (() => {
+        const r = rounds.find(x => x.round === briefingRound)
+        return r ? (
+          <BriefingLetter round={r} prospectName={deal.prospect_name} onClose={() => setBriefingRound(null)} />
+        ) : null
+      })()}
       {showImport && current && (
         <TranscriptImport
           dealId={dealId}
