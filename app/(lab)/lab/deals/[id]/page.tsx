@@ -16,7 +16,7 @@ import DealKnowledge from '@/components/lab/DealKnowledge'
 import DealTimeline from '@/components/lab/DealTimeline'
 import NextFocus from '@/components/lab/NextFocus'
 import { normalizePlaybook } from '@/lib/playbook'
-import { actorCoverage, type ActorCoverage } from '@/lib/playbook-fit'
+import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
 
 // One screen per deal. The five tabs of the current app — context, dashboard,
 // briefing, conversation, analysis — become one page whose parts answer, in
@@ -91,6 +91,7 @@ export default function LabDealPage() {
   const [error, setError] = useState<string | null>(null)
   const [knowledgeOpen, setKnowledgeOpen] = useState(true)
   const [coverage, setCoverage] = useState<ActorCoverage | null>(null)
+  const [stakeholders, setStakeholders] = useState<DealContact[]>([])
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -98,13 +99,14 @@ export default function LabDealPage() {
     const [{ data: d }, { data: r }, { data: sh }, { data: v }] = await Promise.all([
       supabase.from('deals').select('*').eq('id', dealId).single(),
       supabase.from('deal_rounds').select('*').eq('deal_id', dealId).order('round', { ascending: true }),
-      supabase.from('deal_stakeholders').select('name, actor_type, actor_types').eq('deal_id', dealId),
+      supabase.from('deal_stakeholders').select('name, role, actor_type, actor_types').eq('deal_id', dealId),
       user
         ? supabase.from('vendors').select('playbook, locale').eq('user_id', user.id).maybeSingle()
         : Promise.resolve({ data: null }),
     ])
     if (d) setDeal(d)
     setRounds(r ?? [])
+    setStakeholders((sh ?? []) as DealContact[])
     setCoverage(v?.playbook ? actorCoverage(normalizePlaybook(v.playbook, v.locale ?? 'fr'), sh ?? []) : null)
     setSelectedRound(prev => prev ?? (d?.current_round ?? 0))
   }, [dealId])
@@ -255,6 +257,9 @@ export default function LabDealPage() {
           <DealKnowledge
             deal={deal}
             round={current}
+            contacts={stakeholders}
+            fit={fit}
+            coverage={coverage}
             declarations={(current?.declarations ?? {}) as Record<string, Declaration[]>}
             onClose={() => setKnowledgeOpen(false)}
           />

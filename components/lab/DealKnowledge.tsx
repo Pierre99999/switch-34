@@ -6,6 +6,10 @@ import type { Deal, DealRound } from '@/lib/types'
 import { isLegacyDimensions } from '@/lib/types'
 import { criteriaOfLayer } from '@/lib/lab-view'
 import type { Declaration } from '@/lib/voice-credit'
+import {
+  type PlaybookFit, type FitVerdict, type ActorCoverage, type DealContact,
+  FIT_AXIS_LABELS, FIT_AXIS_SOURCE,
+} from '@/lib/playbook-fit'
 
 const GATE_NAME: Record<number, string> = { 1: 'L’opportunité', 2: 'Gagner', 3: 'L’impact', 4: 'Momentum' }
 // Same hue per gate as the cards above, so the eye connects the two.
@@ -40,6 +44,18 @@ const EVIDENCE_LABEL: Record<string, string> = {
   declared: 'Déclaré', corroborated: 'Corroboré', verified: 'Chiffré',
 }
 
+const ACTOR_LABEL: Record<string, string> = {
+  decision_maker: 'Décideur', champion: 'Champion', reviewer: 'Décideur technique',
+  budget_guardian: 'Gardien du budget', user: 'Utilisateur', blocker: 'Bloqueur',
+}
+
+const VERDICT: Record<FitVerdict, { dot: string; text: string; label: string }> = {
+  aligned: { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Aligné' },
+  partial: { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Partiel' },
+  mismatch: { dot: 'bg-rose-500', text: 'text-rose-700', label: 'Hors cadre' },
+  unknown: { dot: 'bg-neutral-300', text: 'text-neutral-500', label: 'Inconnu' },
+}
+
 // What was extracted from the prospect's own material, before anyone spoke.
 // It belongs here rather than on a separate tab: it is knowledge about the
 // prospect, just gathered from a different source than the conversations.
@@ -66,15 +82,19 @@ function prospectSections(deal: Deal): { label: string; fields: { label: string;
 }
 
 export default function DealKnowledge({
-  deal, round, declarations, onClose,
+  deal, round, declarations, contacts, fit, coverage, onClose,
 }: {
   deal: Deal
   round: DealRound | null
   declarations: Record<string, Declaration[]>
+  contacts: DealContact[]
+  fit: PlaybookFit | null
+  coverage: ActorCoverage | null
   onClose: () => void
 }) {
   const [openLayer, setOpenLayer] = useState<number | null>(1)
   const [openContext, setOpenContext] = useState(false)
+  const [openFit, setOpenFit] = useState(false)
   const [query, setQuery] = useState('')
   const context = prospectSections(deal)
   const contextFields = context.reduce((n, s) => n + s.fields.length, 0)
@@ -142,6 +162,35 @@ export default function DealKnowledge({
 
             {openContext && (
               <div className="px-5 pb-4 space-y-3">
+                {contacts.length > 0 && (
+                  <div className="border border-neutral-200/80 rounded-xl p-3.5">
+                    <div className="text-xs font-semibold text-neutral-700 mb-2">Contacts</div>
+                    <ul className="space-y-2">
+                      {contacts.filter(c => matches(`${c.name} ${(c as { role?: string }).role ?? ''}`)).map((c, i) => {
+                        const types = (c.actor_types?.length ? c.actor_types : [c.actor_type ?? 'unknown'])
+                          .filter(t => t && t !== 'unknown')
+                        return (
+                          <li key={i}>
+                            <div className="text-xs font-medium text-neutral-800">
+                              {c.name}
+                              {(c as { role?: string }).role && <span className="text-neutral-400 font-normal"> · {(c as { role?: string }).role}</span>}
+                            </div>
+                            {types.length > 0 && (
+                              <div className="flex gap-1 flex-wrap mt-1">
+                                {types.map(t => (
+                                  <span key={t} className="text-[10px] font-medium text-blue-600 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5">
+                                    {ACTOR_LABEL[t] ?? t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
+                )}
+
                 {context.map((sec, i) => {
                   const visible = sec.fields.filter(f => matches(`${sec.label} ${f.label} ${f.value}`))
                   if (visible.length === 0) return null
@@ -162,6 +211,89 @@ export default function DealKnowledge({
                 <Link href={`/deals/${deal.id}/context`} className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600">
                   Modifier le contexte →
                 </Link>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* How this deal reads against the socle — the second reading, kept
+            beside the gates and never inside them. */}
+        {(fit || coverage?.applicable) && (
+          <div className="border-b border-neutral-100">
+            <button
+              onClick={() => setOpenFit(o => !o)}
+              className="w-full flex items-center justify-between gap-2 px-5 py-3.5 hover:bg-neutral-50/70 transition-colors text-left"
+            >
+              <span className="flex items-center gap-2.5 min-w-0">
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${fit?.avoid_list_hit ? 'bg-rose-50 text-rose-500' : 'bg-indigo-50 text-indigo-500'}`}>◈</span>
+                <span className="text-sm font-medium text-neutral-800 truncate">Adéquation au playbook</span>
+              </span>
+              <span className="flex items-center gap-2 flex-shrink-0">
+                {fit && (
+                  <span className="flex gap-1">
+                    {fit.axes.map(a => <span key={a.key} className={`w-1.5 h-1.5 rounded-full ${VERDICT[a.verdict].dot}`} />)}
+                  </span>
+                )}
+                <span className="text-neutral-300 text-xs">{openFit ? '▲' : '▼'}</span>
+              </span>
+            </button>
+
+            {openFit && (
+              <div className="px-5 pb-4 space-y-3">
+                {fit?.avoid_list_hit && (
+                  <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 leading-relaxed">
+                    ⚠ Ce prospect ressemble à un segment que vous avez décidé de fuir.
+                  </p>
+                )}
+
+                {fit && (
+                  <p className="text-[11px] text-neutral-400">
+                    {fit.basis === 'context' ? 'Hypothèse, avant conversation' : 'Confirmé en conversation'}
+                  </p>
+                )}
+
+                {(fit?.axes ?? []).filter(a => matches(`${FIT_AXIS_LABELS[a.key].fr} ${a.summary} ${a.reason ?? ''}`)).map(a => (
+                  <div key={a.key} className="border border-neutral-200/80 rounded-xl p-3.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`w-2 h-2 rounded-full ${VERDICT[a.verdict].dot}`} />
+                      <span className="text-xs font-semibold text-neutral-800">{FIT_AXIS_LABELS[a.key].fr}</span>
+                      <span className="text-[10px] text-neutral-400">{FIT_AXIS_SOURCE[a.key]}</span>
+                      <span className={`text-[11px] font-medium ${VERDICT[a.verdict].text}`}>{VERDICT[a.verdict].label}</span>
+                    </div>
+                    {a.summary && <p className="text-xs text-neutral-600 leading-relaxed mt-1.5">{a.summary}</p>}
+                    {a.reason && <p className={`text-xs leading-relaxed mt-1 ${VERDICT[a.verdict].text}`}>{a.reason}</p>}
+                    {a.playbook_ref && (
+                      <p className="text-[11px] text-neutral-500 italic mt-1.5 pl-2 border-l-2 border-neutral-200">{a.playbook_ref}</p>
+                    )}
+                  </div>
+                ))}
+
+                {coverage?.applicable && (
+                  <div className="border border-neutral-200/80 rounded-xl p-3.5">
+                    <div className="text-xs font-semibold text-neutral-700 mb-2">
+                      Acteurs nécessaires <span className="text-neutral-400 font-normal">A5 · {coverage.covered}/{coverage.total}</span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {coverage.requirements.filter(r => r.actor).map((r, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs">
+                          <span className={`mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] flex-shrink-0 ${r.covered ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
+                            {r.covered ? '✓' : '!'}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="font-medium text-neutral-700">{r.label}</span>
+                            <span className="text-neutral-400">{r.covered ? ` — ${r.coveredBy.join(', ')}` : ' — absent'}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {!fit && (
+                  <p className="text-xs text-neutral-400">
+                    Les cinq axes n’ont pas encore été évalués. Lancez l’évaluation depuis le tableau de bord.
+                  </p>
+                )}
               </div>
             )}
           </div>
