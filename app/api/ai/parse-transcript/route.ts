@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { localeInstruction } from '@/lib/ai-locale'
 import { LAYER_VARIABLES, VARIABLE_LABELS } from '@/lib/types'
+import { parseTranscriptFile, parseTranscriptText } from '@/lib/transcript-formats'
 
 const client = new Anthropic()
 
@@ -74,8 +75,23 @@ ${questionList}`
       { type: 'text', text: instruction },
     ]
   } else {
-    const text = (buffer ? buffer.toString('utf-8') : pasted).slice(0, 60000)
-    userContent = `${instruction}\n\nTranscript:\n${text}`
+    // Every recording tool exports a different container around the same
+    // thing. Normalizing here rather than in the prompt keeps a VTT's
+    // timestamps out of the context window, and stops a .docx — a ZIP — from
+    // being sent as binary noise.
+    const parsed = file && buffer
+      ? parseTranscriptFile(file.name, buffer)
+      : parseTranscriptText(pasted)
+
+    if (!parsed.text.trim()) {
+      return NextResponse.json({
+        error: file
+          ? `Impossible de lire « ${file.name} ». Formats acceptés : .txt, .md, .vtt, .srt, .json, .csv, .docx, .pdf — ou collez le texte directement.`
+          : 'Transcript vide.',
+      }, { status: 400 })
+    }
+
+    userContent = `${instruction}\n\nTranscript:\n${parsed.text.slice(0, 120000)}`
   }
 
   const toolProperties: Record<string, { type: string; description: string }> = {}

@@ -125,10 +125,10 @@ export default function TranscriptImport({
           <>
             <label className="flex items-center justify-center gap-2 border-2 border-dashed border-neutral-300 rounded-xl px-4 py-6 cursor-pointer hover:border-violet-400 hover:bg-violet-50/40 transition-all">
               <span>📄</span>
-              <span className="text-sm font-medium text-neutral-600">Choisir un fichier — .txt, .pdf, .vtt, .srt</span>
+              <span className="text-sm font-medium text-neutral-600">Choisir un fichier — Gong, Fireflies, Granola, Otter, Teams, Zoom…</span>
               <input
                 type="file"
-                accept=".txt,.atxt,.pdf,.md,.vtt,.srt,.docx"
+                accept=".txt,.atxt,.md,.vtt,.srt,.json,.csv,.tsv,.docx,.pdf"
                 className="hidden"
                 onChange={e => {
                   const f = e.target.files?.[0]

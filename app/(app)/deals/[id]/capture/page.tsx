@@ -333,7 +333,7 @@ export default function CapturePage() {
             <span>{parsingTranscript ? t('capture.parsing') : t('capture.importTranscript')}</span>
             <input
               type="file"
-              accept=".txt,.atxt,.pdf,.md,.vtt,.srt,.docx"
+              accept=".txt,.atxt,.md,.vtt,.srt,.json,.csv,.tsv,.docx,.pdf"
               className="hidden"
               onChange={handleImportTranscript}
               disabled={parsingTranscript}

@@ -51,7 +51,7 @@ export default function PastConversationImport({
           <span>{fr ? 'Importer un transcript' : 'Import a transcript'}</span>
           <input
             type="file"
-            accept=".txt,.atxt,.pdf,.md,.vtt,.srt,.docx"
+            accept=".txt,.atxt,.md,.vtt,.srt,.json,.csv,.tsv,.docx,.pdf"
             className="hidden"
             onChange={e => {
               const file = e.target.files?.[0]
