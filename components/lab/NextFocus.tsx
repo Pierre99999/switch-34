@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { Deal, DealRound } from '@/lib/types'
-import { VARIABLE_LABELS } from '@/lib/types'
+import { criterionLabel } from '@/lib/lab-view'
 import { prescriptions, type DealState } from '@/lib/scoring'
 import { nextStep } from '@/lib/deal-rounds'
 import { normalizeFit, FIT_AXIS_LABELS, type ActorCoverage } from '@/lib/playbook-fit'
@@ -41,7 +41,7 @@ export default function NextFocus({
   const items: Item[] = []
 
   for (const p of prescriptions(current).slice(0, 3)) {
-    const label = VARIABLE_LABELS[p.variable] ?? p.variable
+    const label = criterionLabel(p.variable)
     items.push({
       source: `Porte ${dealState.activeGate}`,
       text: p.kind === 'MANQUANT'
@@ -99,7 +99,7 @@ export default function NextFocus({
         : { label: `✦ Créer le briefing du round ${step.round}`, run: 'next_round' as const }
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm mb-6">
+    <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] mb-6">
       <div className="text-[11px] font-semibold text-blue-500 uppercase tracking-wide mb-2">
         Prochain focus{step.kind !== 'closed' && <span className="text-neutral-300 font-normal normal-case ml-2">Round {step.round}</span>}
       </div>

@@ -1,6 +1,16 @@
 import { type DealRound, type EvidenceLevel, type SourceAuthority, LAYER_VARIABLES, VARIABLE_LABELS } from './types'
+import { translations } from './i18n/translations'
 import { criterionScore, DECISIVE_VARS } from './scoring'
 import type { Declaration } from './voice-credit'
+
+// VARIABLE_LABELS is the English internal wording the AI prompts use. Screens
+// take their labels from the translation table, which is the single place any
+// wording change has to happen.
+export function criterionLabel(variable: string, locale = 'fr'): string {
+  const entry = (translations as Record<string, { fr: string; en: string } | undefined>)[`var.${variable}`]
+  if (entry) return locale === 'fr' ? entry.fr : entry.en
+  return VARIABLE_LABELS[variable] ?? variable
+}
 
 // The dashboard's criteria, reorganised for the knowledge panel: what we know
 // about each criterion, and on whose word.
@@ -25,7 +35,7 @@ export function criteriaOfLayer(round: DealRound | null, layer: number): Criteri
   const authority = ((round as unknown as { authority_levels?: Record<string, SourceAuthority> } | null)?.authority_levels ?? {})
   return vars.map(v => ({
     variable: v,
-    label: VARIABLE_LABELS[v] ?? v,
+    label: criterionLabel(v),
     score: round ? criterionScore(v, round[v as keyof DealRound] as number | null, evidence[v], authority[v]) : null,
     evidence: evidence[v],
     rationale: rationales[v],

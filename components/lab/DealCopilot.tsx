@@ -5,10 +5,10 @@ import { useState } from 'react'
 // One input, not two. The suggestions are shortcuts into the same box, so
 // there is never a question of which field to type in.
 const SUGGESTIONS = [
-  { icon: '✦', label: 'Pourquoi cette porte est-elle bloquée ?', hint: 'Le critère qui bloque, et ce qui le débloquerait', q: 'Quelle porte est bloquée aujourd’hui, par quel critère exactement, et qu’est-ce qui la débloquerait ?' },
-  { icon: '◎', label: 'Que sait-on vraiment, et sur quelle preuve ?', hint: 'Ce qui est corroboré, ce qui n’est que déclaré', q: 'Résume ce qui est établi sur ce deal en distinguant ce qui est corroboré de ce qui n’est que déclaré, et par qui.' },
-  { icon: '◈', label: 'Qui manque autour de la table ?', hint: 'Les rôles absents et le risque associé', q: 'Qui a parlé jusqu’ici, quel poids a sa voix, et quels rôles manquent encore dans ce deal ?' },
-  { icon: '◇', label: 'Pourquoi le momentum est-il faible ?', hint: 'Ce qui stagne d’un round à l’autre', q: 'Pourquoi le momentum est-il à ce niveau, et qu’est-ce qui n’a pas bougé entre les rounds ?' },
+  { icon: '◎', tint: 'bg-emerald-50 text-emerald-500', label: 'Pourquoi cette porte est-elle bloquée ?', hint: 'Le critère qui bloque, et ce qui le débloquerait', q: 'Quelle porte est bloquée aujourd’hui, par quel critère exactement, et qu’est-ce qui la débloquerait ?' },
+  { icon: '◈', tint: 'bg-amber-50 text-amber-500', label: 'Que sait-on vraiment, et sur quelle preuve ?', hint: 'Ce qui est corroboré, ce qui n’est que déclaré', q: 'Résume ce qui est établi sur ce deal en distinguant ce qui est corroboré de ce qui n’est que déclaré, et par qui.' },
+  { icon: '◆', tint: 'bg-violet-50 text-violet-500', label: 'Qui manque autour de la table ?', hint: 'Les rôles absents et le risque associé', q: 'Qui a parlé jusqu’ici, quel poids a sa voix, et quels rôles manquent encore dans ce deal ?' },
+  { icon: '◇', tint: 'bg-blue-50 text-blue-500', label: 'Pourquoi le momentum est-il faible ?', hint: 'Ce qui stagne d’un round à l’autre', q: 'Pourquoi le momentum est-il à ce niveau, et qu’est-ce qui n’a pas bougé entre les rounds ?' },
 ]
 
 export default function DealCopilot({ dealId, onRan }: { dealId: string; onRan?: () => void }) {
@@ -39,20 +39,23 @@ export default function DealCopilot({ dealId, onRan }: { dealId: string; onRan?:
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5 flex flex-col">
-      <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide mb-3">✦ Copilote</div>
+    <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-5 flex flex-col min-h-[420px]">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-sm">✦</span>
+        <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em]">Copilote</span>
+      </div>
 
       {!asked && (
-        <ul className="space-y-1.5 mb-4">
+        <ul className="space-y-2 mb-4">
           {SUGGESTIONS.map(s => (
             <li key={s.label}>
               <button
                 onClick={() => ask(s.q)}
                 disabled={loading}
-                className="w-full text-left px-3 py-2.5 rounded-xl border border-neutral-200 hover:border-blue-300 hover:bg-blue-50/40 transition-all disabled:opacity-50"
+                className="w-full text-left px-3 py-3 rounded-xl border border-neutral-200/80 hover:border-blue-300 hover:bg-blue-50/40 transition-all disabled:opacity-50"
               >
-                <div className="flex items-start gap-2.5">
-                  <span className="text-neutral-400 text-sm mt-0.5">{s.icon}</span>
+                <div className="flex items-start gap-3">
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${s.tint}`}>{s.icon}</span>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-neutral-800 leading-snug">{s.label}</div>
                     <div className="text-[11px] text-neutral-400 mt-0.5">{s.hint}</div>

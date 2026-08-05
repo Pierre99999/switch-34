@@ -6,6 +6,14 @@ import { criteriaOfLayer } from '@/lib/lab-view'
 import type { Declaration } from '@/lib/voice-credit'
 
 const GATE_NAME: Record<number, string> = { 1: 'L’opportunité', 2: 'Gagner', 3: 'L’impact', 4: 'Momentum' }
+// Same hue per gate as the cards above, so the eye connects the two.
+const GATE_TINT: Record<number, string> = {
+  1: 'bg-emerald-50 text-emerald-500',
+  2: 'bg-amber-50 text-amber-500',
+  3: 'bg-violet-50 text-violet-500',
+  4: 'bg-blue-50 text-blue-500',
+}
+const GATE_ICON: Record<number, string> = { 1: '◎', 2: '◈', 3: '◆', 4: '◇' }
 
 // What we know about this deal, and on whose word — the dashboard's criteria
 // reorganised as knowledge rather than as a grid.
@@ -93,9 +101,12 @@ export default function DealKnowledge({
             <div key={layer} className="border-b border-neutral-100">
               <button
                 onClick={() => setOpenLayer(o => o === layer ? null : layer)}
-                className="w-full flex items-center justify-between gap-2 px-5 py-3 hover:bg-neutral-50/70 transition-colors text-left"
+                className="w-full flex items-center justify-between gap-2 px-5 py-3.5 hover:bg-neutral-50/70 transition-colors text-left"
               >
-                <span className="text-sm font-medium text-neutral-800">{GATE_NAME[layer]}</span>
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm flex-shrink-0 ${GATE_TINT[layer]}`}>{GATE_ICON[layer]}</span>
+                  <span className="text-sm font-medium text-neutral-800 truncate">{GATE_NAME[layer]}</span>
+                </span>
                 <span className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs text-neutral-400">{scored}/{criteria.length}</span>
                   <span className="text-neutral-300 text-xs">{open ? '▲' : '▼'}</span>
@@ -105,7 +116,7 @@ export default function DealKnowledge({
               {open && (
                 <div className="px-5 pb-4 space-y-3">
                   {visible.map(c => (
-                    <div key={c.variable} className="border border-neutral-200 rounded-xl p-3">
+                    <div key={c.variable} className="border border-neutral-200/80 rounded-xl p-3.5">
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium text-neutral-800 leading-snug">
                           {c.decisive && <span className="text-amber-500 mr-1" title="Critère décisif">⚡</span>}

@@ -102,7 +102,7 @@ export default function DealTimeline({ deal, rounds, dealId }: { deal: Deal; rou
   const shown = showAll || query.trim() ? filtered : filtered.slice(0, 4)
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
+    <div className="bg-white rounded-2xl border border-neutral-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-5">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide">Historique &amp; conversation</div>
         <input

@@ -25,11 +25,14 @@ import { actorCoverage, type ActorCoverage } from '@/lib/playbook-fit'
 //
 // Same engine, same database. Nothing here computes a score of its own.
 
-const GATE_STYLE: Record<number, { ring: string; bar: string; icon: string }> = {
-  1: { ring: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-500', icon: '◎' },
-  2: { ring: 'bg-amber-50 text-amber-600', bar: 'bg-amber-500', icon: '◈' },
-  3: { ring: 'bg-violet-50 text-violet-600', bar: 'bg-violet-500', icon: '◆' },
-  4: { ring: 'bg-blue-50 text-blue-600', bar: 'bg-blue-500', icon: '◇' },
+// One hue per gate, kept identical wherever that gate appears — the cards,
+// the knowledge panel, the focus. Colour is the fastest way to know which
+// gate you are looking at without reading.
+const GATE_STYLE: Record<number, { ring: string; bar: string; track: string; icon: string }> = {
+  1: { ring: 'bg-emerald-50 text-emerald-500', bar: 'bg-emerald-500', track: 'bg-emerald-100', icon: '◎' },
+  2: { ring: 'bg-amber-50 text-amber-500', bar: 'bg-amber-500', track: 'bg-amber-100', icon: '◈' },
+  3: { ring: 'bg-violet-50 text-violet-500', bar: 'bg-violet-500', track: 'bg-violet-100', icon: '◆' },
+  4: { ring: 'bg-blue-50 text-blue-500', bar: 'bg-blue-500', track: 'bg-blue-100', icon: '◇' },
 }
 
 // LAYER_LABELS in types.ts is the English internal name used in AI prompts.
@@ -57,21 +60,21 @@ function GateCard({ layer, score, status, sub }: { layer: number; score: number 
   const st = GATE_STYLE[layer]
   const pct = score !== null ? (score / 5) * 100 : 0
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm">
-      <div className="flex items-center gap-2.5 mb-3">
-        <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm ${st.ring}`}>{st.icon}</span>
-        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wide leading-tight">
+    <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center gap-2.5 mb-4">
+        <span className={`w-9 h-9 rounded-full flex items-center justify-center text-base ${st.ring}`}>{st.icon}</span>
+        <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em] leading-tight">
           {GATE_NAME[layer]}
         </div>
       </div>
-      <div className="text-2xl font-bold text-neutral-900 mb-2">
-        {score !== null ? score.toFixed(1) : '—'}<span className="text-sm font-medium text-neutral-400">/5</span>
+      <div className="text-[28px] leading-none font-bold text-neutral-900 mb-3">
+        {score !== null ? score.toFixed(1) : '—'}<span className="text-base font-medium text-neutral-300">/5</span>
       </div>
-      <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden mb-2">
-        <div className={`h-full rounded-full ${st.bar} transition-all`} style={{ width: `${pct}%` }} />
+      <div className={`h-1.5 rounded-full overflow-hidden mb-2.5 ${st.track}`}>
+        <div className={`h-full rounded-full ${st.bar} transition-all duration-500`} style={{ width: `${pct}%` }} />
       </div>
       <div className="text-xs text-neutral-500">{STATUS_WORDING[status] ?? status}</div>
-      {sub && <div className="text-[11px] text-rose-600 mt-1 leading-snug">{sub}</div>}
+      {sub && <div className="text-[11px] text-rose-500 mt-1 leading-snug">{sub}</div>}
     </div>
   )
 }
@@ -167,14 +170,14 @@ export default function LabDealPage() {
       <LabSidebar />
 
       <div className="flex-1 min-w-0 flex">
-        <main className="flex-1 min-w-0 px-5 sm:px-8 py-6">
+        <main className="flex-1 min-w-0 px-5 sm:px-8 py-7">
           {/* Header */}
           <Link href="/lab" className="text-sm text-neutral-400 hover:text-blue-500 transition-colors">← Retour au pipeline</Link>
           <div className="flex items-start justify-between gap-4 mt-2 mb-6 flex-wrap">
             <div>
-              <h1 className="text-3xl font-bold text-neutral-900">{deal.prospect_name}</h1>
-              <p className="text-sm text-neutral-500 mt-0.5">
-                {deal.contact_name ?? '—'}{deal.contact_title ? ` · ${deal.contact_title}` : ''}
+              <h1 className="text-[32px] leading-tight font-bold text-neutral-900">{deal.prospect_name}</h1>
+              <p className="text-sm text-neutral-400 mt-1">
+                {deal.contact_name ?? '—'}{deal.contact_title ? <span className="text-neutral-300"> · {deal.contact_title}</span> : null}
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -196,7 +199,7 @@ export default function LabDealPage() {
           </div>
 
           {/* The four gates */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
             {[1, 2, 3].map(l => (
               <GateCard
                 key={l}
