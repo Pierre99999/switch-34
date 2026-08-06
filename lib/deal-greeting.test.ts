@@ -45,17 +45,16 @@ function input(over: Partial<GreetingInput> & { rounds?: DealRound[] } = {}): Gr
   }
 }
 
-test('an untouched deal is not congratulated', () => {
-  const g = dealGreeting(input())
-  assert.equal(g.key, 'start')
-  assert.equal(g.tone, 'neutral')
+test('a deal with nothing captured says nothing at all', () => {
+  // The screen already shows four empty gates and a button asking for the
+  // transcript; a box repeating that is one you learn to dismiss unread.
+  assert.equal(dealGreeting(input()), null)
 })
 
 test('scores inherited without a capture do not count as work done', () => {
   // The round carries scores but nothing was ever captured — the greeting must
-  // not read that as progress.
-  const g = dealGreeting(input({ rounds: [round({ ...gate1Passed, capture_notes: {} })] }))
-  assert.equal(g.key, 'start')
+  // not read that as progress, and must not appear at all.
+  assert.equal(dealGreeting(input({ rounds: [round({ ...gate1Passed, capture_notes: {} })] })), null)
 })
 
 test('a playbook avoid-list hit outranks everything', () => {
@@ -64,7 +63,7 @@ test('a playbook avoid-list hit outranks everything', () => {
     axes: [{ key: 'segment', verdict: 'mismatch', summary: '', reason: '', playbook_ref: '' }],
     basis: 'conversation', computed_at: '', avoid_list_hit: true,
   }
-  const g = dealGreeting(i)
+  const g = dealGreeting(i)!
   assert.equal(g.key, 'avoid')
   assert.equal(g.tone, 'warn')
 })
@@ -76,7 +75,7 @@ test('a broken first gate is named, not softened', () => {
       real_business_problem: 1, compelling_reason: 1, concerns_fit: 3,
       stakeholder_map: 3, personal_pain_linkage: 3,
     })],
-  }))
+  }))!
   assert.equal(g.key, 'gate1-risk')
   assert.equal(g.tone, 'warn')
 })
@@ -84,7 +83,7 @@ test('a broken first gate is named, not softened', () => {
 test('praise arrives only when a gate is actually passed', () => {
   const g = dealGreeting(input({
     rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' } })],
-  }))
+  }))!
   assert.equal(g.tone, 'good')
   assert.ok(['one-gate', 'progress', 'all-passed'].includes(g.key), g.key)
 })
@@ -93,29 +92,29 @@ test('a stalled deal is told so after three conversations', () => {
   const scores = { value_momentum: 1, strategic_alignment: 1, internal_momentum: 1 }
   const rounds = [1, 2, 3, 4].map(n =>
     round({ round: n, capture_notes: { q: `c${n}` }, ...gate1Passed, ...scores }))
-  const g = dealGreeting(input({ rounds }))
+  const g = dealGreeting(input({ rounds }))!
   assert.equal(g.key, 'stalled')
 })
 
 test('the signature changes when the deal moves, and only then', () => {
-  const a = dealGreeting(input({ rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' } })] }))
-  const same = dealGreeting(input({ rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' } })] }))
+  const a = dealGreeting(input({ rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' } })] }))!
+  const same = dealGreeting(input({ rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' } })] }))!
   assert.equal(a.signature, same.signature, 'reopening an unchanged deal must not re-greet')
 
   const moved = dealGreeting(input({
     rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' }, credibility_perception: 4.5, evidence_levels: { ...gate1Passed.evidence_levels, credibility_perception: 'verified' } })],
-  }))
+  }))!
   assert.notEqual(a.signature, moved.signature)
 })
 
 test('every greeting says something, and carries the next move unless closed', () => {
   const cases = [
-    input(),
     input({ rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' } })] }),
     input({ rounds: [round({ capture_notes: { q: 'a' }, real_business_problem: 1, compelling_reason: 1 })] }),
   ]
   for (const c of cases) {
     const g = dealGreeting(c)
+    assert.ok(g, 'a captured deal always has something to say')
     assert.ok(g.headline.length > 10, g.key)
     assert.ok(g.body.length > 40, g.key)
     assert.ok(g.action && g.action.length > 0, `${g.key} must offer the next move`)
@@ -125,7 +124,7 @@ test('every greeting says something, and carries the next move unless closed', (
 test('a closed deal is not given a next move', () => {
   const i = input({ rounds: [round({ ...gate1Passed, capture_notes: { q: 'a' } })] })
   i.deal.status = 'won'
-  const g = dealGreeting(i)
+  const g = dealGreeting(i)!
   assert.equal(g.key, 'closed')
   assert.equal(g.action, null)
 })

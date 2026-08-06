@@ -60,7 +60,16 @@ function progressOnActiveGate(rounds: DealRound[], state: DealState): number | n
   return Math.round((now - before) * 10) / 10
 }
 
-export function dealGreeting(input: GreetingInput): Greeting {
+/**
+ * Null when there is nothing to say.
+ *
+ * Before the first capture, the greeting could only state the obvious — "rien
+ * n'a encore été capturé" — on a screen that already shows four empty gates
+ * and a button asking for the transcript. A box that says what the page says
+ * is the kind of message you learn to dismiss without reading, which then
+ * costs the ones that do carry something.
+ */
+export function dealGreeting(input: GreetingInput): Greeting | null {
   const { deal, rounds, current, dealState, coverage } = input
   const fit: PlaybookFit | null = normalizeFit(deal.playbook_fit)
   const step = nextStep(deal as { current_round: number; status?: string | null }, rounds)
@@ -87,11 +96,8 @@ export function dealGreeting(input: GreetingInput): Greeting {
       'Il reste consultable — les rounds, les preuves et ce qui a été dit sont intacts.')
   }
 
-  // Nothing yet. Say that plainly rather than pretend.
-  if (rounds.length === 0 || captured === 0) {
-    return make('start', 'neutral', 'On part d’une page blanche.',
-      'Rien n’a encore été capturé sur ce deal, donc rien n’est établi. La première conversation vaut plus que toutes les hypothèses qu’on pourrait faire d’ici là.')
-  }
+  // Nothing captured: the screen already says so, better than a box would.
+  if (rounds.length === 0 || captured === 0) return null
 
   // The cheapest decision available comes first, even if it is unwelcome.
   if (fit?.avoid_list_hit) {

@@ -18,18 +18,20 @@ const seenKey = (dealId: string) => `switch.greeting.${dealId}`
 
 export default function DealGreeting({ dealId, input }: { dealId: string; input: GreetingInput }) {
   const greeting = dealGreeting(input)
+  const signature = greeting?.signature ?? ''
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
+    if (!signature) return
     // localStorage rather than the database: this is a reading state, personal
     // to the browser, and losing it costs one extra box.
     let seen: string | null = null
     try { seen = window.localStorage.getItem(seenKey(dealId)) } catch { /* private mode */ }
-    if (seen !== greeting.signature) setOpen(true)
-  }, [dealId, greeting.signature])
+    if (seen !== signature) setOpen(true)
+  }, [dealId, signature])
 
   function close() {
-    try { window.localStorage.setItem(seenKey(dealId), greeting.signature) } catch { /* private mode */ }
+    try { window.localStorage.setItem(seenKey(dealId), signature) } catch { /* private mode */ }
     setOpen(false)
   }
 
@@ -40,7 +42,7 @@ export default function DealGreeting({ dealId, input }: { dealId: string; input:
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  if (!open) return null
+  if (!open || !greeting) return null
   const tone = TONE[greeting.tone]
 
   return (
