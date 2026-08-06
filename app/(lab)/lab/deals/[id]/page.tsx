@@ -183,19 +183,28 @@ export default function LabDealPage() {
         await supabase.from('deals').update({ current_round: nr.round }).eq('id', dealId)
         roundId = nr.id
       }
-      // Existing round: the room may have changed since it was opened.
-      await supabase.from('deal_rounds').update({ briefing_attendees: attendees }).eq('id', roundId)
+      // Existing round: the room may have changed since it was opened. The
+      // error is raised rather than swallowed — a write that fails quietly is
+      // how you end up looking for lost data that was never written.
+      const { error: attErr } = await supabase
+        .from('deal_rounds').update({ briefing_attendees: attendees }).eq('id', roundId)
+      if (attErr) {
+        throw new Error(/schema cache|does not exist/i.test(attErr.message)
+          ? 'La migration migration-briefing-attendees.sql n’a pas été passée sur la base.'
+          : attErr.message)
+      }
 
       // Someone met for the first time becomes a contact of the deal — that is
       // what the playbook's actor coverage reads.
       if (newContacts.length > 0) {
-        await supabase.from('deal_stakeholders').insert(newContacts.map(c => ({
+        const { error: contactErr } = await supabase.from('deal_stakeholders').insert(newContacts.map(c => ({
           deal_id: dealId,
           name: c.name,
           role: c.title ?? null,
           actor_type: c.actor_types[0] ?? 'unknown',
           actor_types: c.actor_types,
         })))
+        if (contactErr) throw new Error(`Contact non enregistré : ${contactErr.message}`)
       }
 
       const res = await fetch('/api/ai/briefing', {
