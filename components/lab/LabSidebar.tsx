@@ -84,10 +84,7 @@ export default function LabSidebar() {
         </nav>
 
 
-        <div className="mt-auto px-4 py-4 border-t border-neutral-100 space-y-2.5">
-          <Link href="/pipeline" className="block text-xs text-neutral-400 hover:text-neutral-600">
-            ← Revenir à l&apos;interface actuelle
-          </Link>
+        <div className="mt-auto px-4 py-4 border-t border-neutral-100">
           <button onClick={signOut} className="block text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
             Déconnexion
           </button>
