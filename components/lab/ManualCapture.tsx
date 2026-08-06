@@ -5,6 +5,8 @@ import type { DealRound, BriefingQuestion } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { scoreUpdateFromSuggestions, type ScoreSuggestion } from '@/lib/deal-rounds'
 import AIProgress from '@/components/ui/AIProgress'
+import SellerReadForm from '@/components/deal/SellerReadForm'
+import { normalizeSellerRead, type SellerRead } from '@/lib/seller-read'
 
 // Writing the conversation down by hand, when there is no transcript.
 //
@@ -38,6 +40,8 @@ export default function ManualCapture({
     return init
   })
   const [free, setFree] = useState(existing.__free__ ?? '')
+  const [sellerRead, setSellerRead] = useState<SellerRead>(
+    () => normalizeSellerRead((round as unknown as { seller_read?: unknown }).seller_read) ?? {})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,8 +55,14 @@ export default function ManualCapture({
       for (const [k, v] of Object.entries(notes)) if (v.trim()) capture[k] = v.trim()
       if (free.trim()) capture.__free__ = free.trim()
 
+      const read = normalizeSellerRead(sellerRead)
       const { error: saveErr } = await supabase
-        .from('deal_rounds').update({ capture_notes: capture }).eq('id', round.id)
+        .from('deal_rounds')
+        .update({
+          capture_notes: capture,
+          ...(read ? { seller_read: { ...read, at: new Date().toISOString() } } : {}),
+        })
+        .eq('id', round.id)
       if (saveErr) throw new Error(saveErr.message)
 
       const scoresRes = await fetch('/api/ai/suggest-scores', {
@@ -151,6 +161,10 @@ export default function ManualCapture({
                 className="mt-1.5 w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-violet-400 resize-none placeholder:text-neutral-300"
               />
             </label>
+
+            <div className="mt-5 border-t border-neutral-100 pt-4">
+              <SellerReadForm value={sellerRead} onChange={setSellerRead} locale="fr" />
+            </div>
 
             <button
               onClick={save}

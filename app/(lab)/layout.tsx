@@ -1,23 +1,25 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ADMIN_EMAIL } from '@/lib/admin-config'
 import ToastProvider from '@/components/ui/Toast'
+import FeedbackWidget from '@/components/ui/FeedbackWidget'
 
-// The lab: a second interface built beside the live one, on the same engine
-// and the same database. Nothing here changes the method — it is a different
-// surface over the same deals, rounds, criteria and evidence.
-//
-// Gated to the admin address, server-side: testers must keep working on the
-// current app without ever landing here by accident.
+// The interface. It was built beside the previous one, on the same engine and
+// the same database — same deals, same rounds, same criteria, same evidence —
+// and it is now the only one. What is left of the old route group is what the
+// lab does not yet replace: the prospect context editor it links to.
 export default async function LabLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
-  if ((user.email ?? '').toLowerCase() !== ADMIN_EMAIL) redirect('/pipeline')
+
+  const { data: vendor } = await supabase
+    .from('vendors').select('id').eq('user_id', user.id).single()
+  if (!vendor) redirect('/onboarding')
 
   return (
     <ToastProvider>
       <div className="min-h-screen bg-neutral-50">{children}</div>
+      <FeedbackWidget />
     </ToastProvider>
   )
 }

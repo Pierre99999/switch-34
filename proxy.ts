@@ -26,7 +26,7 @@ export async function proxy(request: NextRequest) {
 
   // Public routes
   if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-    if (user) return NextResponse.redirect(new URL('/pipeline', request.url))
+    if (user) return NextResponse.redirect(new URL('/lab', request.url))
     return supabaseResponse
   }
 

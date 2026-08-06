@@ -23,7 +23,7 @@ export default function LoginPage() {
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    router.push('/pipeline')
+    router.push('/lab')
     router.refresh()
   }
 

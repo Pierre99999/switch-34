@@ -49,28 +49,28 @@ const NEXT_STEP: Record<NextStepKind, {
     short: { fr: 'Briefing à créer', en: 'Briefing to create' },
     pill: 'bg-blue-50 text-blue-600 border-blue-200',
     button: 'bg-blue-500 text-white hover:bg-blue-600',
-    href: id => `/deals/${id}/dashboard`,
+    href: id => `/lab/deals/${id}`,
   },
   capture: {
     label: { fr: 'Capturer la conversation', en: 'Capture the conversation' },
     short: { fr: 'Conversation à capturer', en: 'Conversation to capture' },
     pill: 'bg-violet-50 text-violet-600 border-violet-200',
     button: 'bg-violet-500 text-white hover:bg-violet-600',
-    href: id => `/deals/${id}/capture`,
+    href: id => `/lab/deals/${id}`,
   },
   next_round: {
     label: { fr: 'Lancer le round suivant', en: 'Start the next round' },
     short: { fr: 'Round suivant', en: 'Next round' },
     pill: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     button: 'bg-emerald-500 text-white hover:bg-emerald-600',
-    href: id => `/deals/${id}/dashboard`,
+    href: id => `/lab/deals/${id}`,
   },
   closed: {
     label: { fr: 'Deal clos', en: 'Deal closed' },
     short: { fr: 'Clos', en: 'Closed' },
     pill: 'bg-neutral-100 text-neutral-500 border-neutral-200',
     button: 'bg-neutral-200 text-neutral-600 hover:bg-neutral-300',
-    href: id => `/deals/${id}/dashboard`,
+    href: id => `/lab/deals/${id}`,
   },
 }
 
@@ -128,7 +128,7 @@ const WELCOME_DISMISSED_KEY = 'switch.playbookWelcomeDismissed'
 // doing?" competes with the one question the pipeline should answer — what do
 // I do next.
 export default function PipelineView({
-  dealHref = (id: string) => `/deals/${id}/dashboard`,
+  dealHref = (id: string) => `/lab/deals/${id}`,
   showScores = true,
   stepHref,
 }: {
@@ -347,7 +347,7 @@ export default function PipelineView({
           </h1>
         </div>
         <Link
-          href="/deals/new"
+          href="/lab/deals/new"
           className="self-start sm:self-auto px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
         >
           {t('pipeline.newDeal')}
@@ -412,7 +412,7 @@ export default function PipelineView({
             <span className="text-2xl">+</span>
           </div>
           <p className="text-sm text-neutral-500 mb-4">{t('pipeline.noDeals')}</p>
-          <Link href="/deals/new" className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all">
+          <Link href="/lab/deals/new" className="px-5 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all">
             {t('pipeline.newDeal')}
           </Link>
         </div>

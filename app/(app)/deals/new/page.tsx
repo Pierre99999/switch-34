@@ -1,5 +1,6 @@
-import NewDealView from '@/components/deals/NewDealView'
+import { redirect } from 'next/navigation'
 
-export default function NewDealPage() {
-  return <NewDealView />
+// Superseded. Kept so old links, bookmarks and recorded feedback resolve.
+export default function Moved() {
+  redirect('/lab/deals/new')
 }

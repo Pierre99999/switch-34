@@ -1,5 +1,6 @@
-import PipelineView from '@/components/pipeline/PipelineView'
+import { redirect } from 'next/navigation'
 
-export default function PipelinePage() {
-  return <PipelineView />
+// Superseded. Kept so old links, bookmarks and recorded feedback resolve.
+export default function Moved() {
+  redirect('/lab')
 }

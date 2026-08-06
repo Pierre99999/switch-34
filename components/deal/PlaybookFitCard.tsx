@@ -47,7 +47,7 @@ export default function PlaybookFitCard({
           {fr
             ? 'Votre Sales Playbook est vide : Switch n’a rien à quoi comparer ce prospect.'
             : 'Your Sales Playbook is empty: Switch has nothing to compare this prospect against.'}{' '}
-          <Link href="/playbook" className="text-blue-500 hover:text-blue-600 font-medium">
+          <Link href="/lab/playbook" className="text-blue-500 hover:text-blue-600 font-medium">
             {fr ? 'Le compléter →' : 'Complete it →'}
           </Link>
         </p>
@@ -277,10 +277,10 @@ export default function PlaybookFitCard({
                       ? (fr ? 'Réévaluer l’adéquation' : 'Re-evaluate the fit')
                       : (fr ? '✦ Évaluer l’adéquation' : '✦ Evaluate the fit')}
                 </button>
-                <Link href="/playbook" className="text-sm font-medium text-blue-500 hover:text-blue-600">
+                <Link href="/lab/playbook" className="text-sm font-medium text-blue-500 hover:text-blue-600">
                   {fr ? 'Sales Playbook →' : 'Sales Playbook →'}
                 </Link>
-                <Link href={`/deals/${dealId}/context`} className="text-sm font-medium text-blue-500 hover:text-blue-600">
+                <Link href={`/lab/deals/${dealId}/context`} className="text-sm font-medium text-blue-500 hover:text-blue-600">
                   {fr ? 'Contacts du deal →' : 'Deal contacts →'}
                 </Link>
               </div>

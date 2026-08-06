@@ -1,5 +1,6 @@
-import TeamView from '@/components/team/TeamView'
+import { redirect } from 'next/navigation'
 
-export default function TeamPage() {
-  return <TeamView />
+// Superseded. Kept so old links, bookmarks and recorded feedback resolve.
+export default function Moved() {
+  redirect('/lab/team')
 }

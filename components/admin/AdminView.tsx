@@ -96,7 +96,7 @@ export default function AdminView() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user || (user.email ?? '').toLowerCase() !== ADMIN_EMAIL) {
-        router.replace('/pipeline')
+        router.replace('/lab')
         return
       }
       setSelfId(user.id)

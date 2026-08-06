@@ -79,7 +79,7 @@ export default function OnboardingPage() {
       })
       if (error) { setError(error.message); setLoading(false); return }
       await refreshRole()
-      router.push('/pipeline')
+      router.push('/lab')
       router.refresh()
       return
     }

@@ -231,7 +231,7 @@ export default function DealKnowledge({
                     </div>
                   )
                 })}
-                <Link href={`/deals/${deal.id}/context`} className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600">
+                <Link href={`/lab/deals/${deal.id}/context`} className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600">
                   Modifier le contexte →
                 </Link>
               </div>

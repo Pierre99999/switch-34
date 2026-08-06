@@ -31,7 +31,7 @@ export default function TeamView() {
   }, [organizationId, roleLoading])
 
   useEffect(() => {
-    if (!roleLoading && role !== 'director') { router.push('/pipeline'); return }
+    if (!roleLoading && role !== 'director') { router.push('/lab'); return }
     load()
   }, [load, role, roleLoading, router])
 

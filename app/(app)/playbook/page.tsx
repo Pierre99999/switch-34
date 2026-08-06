@@ -1,5 +1,6 @@
-import PlaybookView from '@/components/playbook/PlaybookView'
+import { redirect } from 'next/navigation'
 
-export default function PlaybookPage() {
-  return <PlaybookView />
+// Superseded. Kept so old links, bookmarks and recorded feedback resolve.
+export default function Moved() {
+  redirect('/lab/playbook')
 }

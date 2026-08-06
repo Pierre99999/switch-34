@@ -5,6 +5,8 @@ import type { DealRound, BriefingQuestion } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import { scoreUpdateFromSuggestions, type ScoreSuggestion } from '@/lib/deal-rounds'
 import AIProgress from '@/components/ui/AIProgress'
+import SellerReadForm from '@/components/deal/SellerReadForm'
+import { normalizeSellerRead, type SellerRead } from '@/lib/seller-read'
 
 // Capturing a conversation, in one step: hand over the transcript and the
 // engine does the rest — map it to the briefing questions, attribute who said
@@ -24,6 +26,10 @@ export default function TranscriptImport({
   onManual: () => void
 }) {
   const [pasted, setPasted] = useState('')
+  // Asked before the scores exist. A read given after seeing the diagnostic is
+  // the diagnostic read back, not the seller's own.
+  const [sellerRead, setSellerRead] = useState<SellerRead>(
+    () => normalizeSellerRead((round as unknown as { seller_read?: unknown }).seller_read) ?? {})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -62,9 +68,14 @@ export default function TranscriptImport({
         if (!v?.trim()) continue
         merged[k] = merged[k]?.trim() ? `${merged[k]}\n\n${v}` : v
       }
+      const read = normalizeSellerRead(sellerRead)
       const { error: saveErr } = await supabase
         .from('deal_rounds')
-        .update({ capture_notes: merged, capture_speakers: parsed.speakers ?? [] })
+        .update({
+          capture_notes: merged,
+          capture_speakers: parsed.speakers ?? [],
+          ...(read ? { seller_read: { ...read, at: new Date().toISOString() } } : {}),
+        })
         .eq('id', round.id)
       if (saveErr) throw new Error(saveErr.message)
 
@@ -153,6 +164,10 @@ export default function TranscriptImport({
               placeholder="Collez le transcript. Gardez les noms des intervenants : Switch pondère chaque propos selon le rôle de celui qui l’a dit."
               className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-violet-400 resize-none placeholder:text-neutral-300"
             />
+
+            <div className="mt-5 border-t border-neutral-100 pt-4">
+              <SellerReadForm value={sellerRead} onChange={setSellerRead} locale="fr" />
+            </div>
 
             <div className="flex items-center gap-3 mt-4">
               <button
