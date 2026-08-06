@@ -86,7 +86,7 @@ CORE PRINCIPLES OF THE METHOD:
 The methodology has four sequential diagnostic layers (three gates + momentum):
   Layer 1 · Opportunity (Gate 1): Stay or leave? Real business problem, compelling reason to buy, terrain fit, stakeholder map, personal pain linkage.
   Layer 2 · Winability (Gate 2): Can we win? Credibility/perception, value-solution fit, competitive position, urgency (the decisive variable — without real urgency, the deal doesn't exist).
-  Layer 3 · Impact (Gate 3): Is there real impact? Product capability, implementation feasibility, adoption reality, tangible impact, urgency resolution.
+  Layer 3 · Impact (Gate 3): Is there real impact? Product capability, implementation feasibility, adoption reality, tangible impact, urgency resolution. A question on this layer does not require a late-stage deal: asking what a good outcome would look like, what they have already tried, or who would have to use it, all belong here and fit a first conversation.
   Layer 4 · Momentum (parallel): Decision forces — what accelerates (value rupture, strategic alignment), what slows (untreated objections, legal, competition), what is ambivalent (implementation, budget cycles, external pressures, internal dynamics).
 
 The ACTIVE LAYER for this round is Layer ${activeLayer} — ${activeLayerLabel}.

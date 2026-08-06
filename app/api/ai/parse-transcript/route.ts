@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { localeInstruction } from '@/lib/ai-locale'
 import { LAYER_VARIABLES, VARIABLE_LABELS } from '@/lib/types'
+import { CRITERION_DEFINITIONS } from '@/lib/criterion-definitions'
 import { parseTranscriptFile, parseTranscriptText } from '@/lib/transcript-formats'
 
 const client = new Anthropic()
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       key: v,
       variable: v,
       text: VARIABLE_LABELS[v] ?? v,
-      intent: `Anything said that bears on "${VARIABLE_LABELS[v] ?? v}".`,
+      intent: CRITERION_DEFINITIONS[v] ?? `Anything said that bears on "${VARIABLE_LABELS[v] ?? v}".`,
     }))
 
   function sanitizeKey(k: string): string {

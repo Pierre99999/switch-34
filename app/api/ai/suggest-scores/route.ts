@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext, buildProspectContext, buildScoresContext, buildCaptureContext, hasCaptureContent } from '@/lib/ai-context'
-import { LAYER_VARIABLES, VARIABLE_LABELS, type EvidenceLevel } from '@/lib/types'
+import { LAYER_VARIABLES, type EvidenceLevel } from '@/lib/types'
 import { evidenceFromDeclarations, type Declaration } from '@/lib/voice-credit'
 import { ACTOR_TYPE_TO_ROLE, type ActorRole } from '@/lib/voice-weights'
+import { criterionDefinitionList } from '@/lib/criterion-definitions'
 import { localeInstruction } from '@/lib/ai-locale'
 import { recordUsage } from '@/lib/ai-usage'
 
@@ -100,7 +101,11 @@ export async function POST(req: NextRequest) {
     buildCaptureContext(allRounds ?? []),
   ].join('\n\n')
 
-  const variableList = allVars.map(v => `${v}: ${VARIABLE_LABELS[v]}`).join('\n')
+  // Definitions, not labels. "Product Capability" on its own reads as a
+  // post-sale question and the model skipped it round after round; each
+  // criterion now says what counts as evidence for it, including what an early
+  // conversation sounds like.
+  const variableList = criterionDefinitionList(allVars)
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -110,7 +115,7 @@ export async function POST(req: NextRequest) {
 METHODOLOGY CONTEXT:
 - Gate 1 (Opportunity): Does a real business problem exist? Is there personal pain? Does it fit our terrain?
 - Gate 2 (Winning): Do they see us as credible? Does our value fit? Is there REAL urgency?
-- Gate 3 (Impact): Can the product deliver? Is implementation feasible? Will users adopt?
+- Gate 3 (Impact): Can what we sell produce the effect they need, in their environment, with people actually using it? This gate is NOT reserved for late-stage deals: the first conversation usually contains signals about it — a referral, a reference, a constraint, a fear about adoption, a past tool that failed. Score them when they are there.
 - Momentum (parallel): Are decision forces converging or diverging?
 
 SIGNAL S — the score you give is the raw SIGNAL (0-5): is what was said favorable to the deal on this criterion?
@@ -133,6 +138,8 @@ COMPELLING REASON — a legitimate reason to act NOW: real problem + consequence
 
 RULES:
 - ONLY score criteria explicitly addressed in the capture notes. Omit the rest entirely.
+- "Addressed" does not mean "asked as a question". A criterion is addressed whenever something said bears on it, wherever it appears in the notes — including in [other], and including remarks made in passing. The briefing's questions cover the current gate; the conversation covers more than the briefing asked.
+- Do not skip a criterion because it belongs to a later gate. Gates are sequential for the VERDICT, never for the EVIDENCE: what was said about impact in round 1 is evidence from round 1. Withholding it does not protect the diagnostic, it hides what the prospect told us.
 - Report the raw signal S honestly — the engine applies evidence caps automatically.
 - It is BETTER to leave a criterion unscored than to guess.` + localeInstruction(locale),
     tools: [
