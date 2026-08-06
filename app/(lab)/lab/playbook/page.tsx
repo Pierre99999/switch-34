@@ -7,7 +7,7 @@ export default function LabPlaybook() {
   return (
     <div className="flex">
       <LabSidebar />
-      <div className="flex-1 min-w-0"><PlaybookView /></div>
+      <div className="flex-1 min-w-0 pt-14 lg:pt-0"><PlaybookView /></div>
     </div>
   )
 }

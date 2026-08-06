@@ -89,7 +89,7 @@ function SectionBreak() {
 
 export default function DealKnowledge({
   deal, round, rounds = [], declarations, contacts, fit, coverage, onClose,
-  openContextInitially = false,
+  openContextInitially = false, mobileOpen = false,
 }: {
   deal: Deal
   round: DealRound | null
@@ -102,6 +102,8 @@ export default function DealKnowledge({
   onClose: () => void
   /** Opened on arrival from the creation flow, where it is what was just built. */
   openContextInitially?: boolean
+  /** Below xl the panel has no room beside the deal, so it comes over it. */
+  mobileOpen?: boolean
 }) {
   const [openLayer, setOpenLayer] = useState<number | null>(1)
   const [openContext, setOpenContext] = useState(openContextInitially)
@@ -132,7 +134,9 @@ export default function DealKnowledge({
   const matches = (text: string) => !query.trim() || text.toLowerCase().includes(query.toLowerCase())
 
   return (
-    <aside className="hidden xl:flex flex-col w-[380px] flex-shrink-0 border-l border-neutral-200 bg-white min-h-screen">
+    <aside className={`flex-col bg-white ${
+      mobileOpen ? 'fixed inset-0 z-50 flex' : 'hidden'
+    } xl:static xl:z-auto xl:flex xl:w-[380px] xl:flex-shrink-0 xl:border-l xl:border-neutral-200 xl:min-h-screen`}>
       <div className="px-5 py-4 border-b border-neutral-100 flex items-center justify-between gap-2">
         <div className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wide">Connaissance du deal</div>
         <button onClick={onClose} className="text-neutral-300 hover:text-neutral-600 text-sm">✕</button>

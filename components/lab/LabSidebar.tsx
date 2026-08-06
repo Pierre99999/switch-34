@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -33,6 +34,7 @@ const ITEMS = [
 export default function LabSidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [open, setOpen] = useState(false)
 
   async function signOut() {
     await createClient().auth.signOut()
@@ -40,51 +42,95 @@ export default function LabSidebar() {
     router.refresh()
   }
 
+  const body = (
+    <>
+        <div className="px-5 py-5">
+          <Link href="/lab" className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-xl bg-blue-500 text-white font-bold flex items-center justify-center">S</span>
+            <span className="text-lg font-bold text-neutral-900">Switch</span>
+          </Link>
+        </div>
+
+        <div className="px-4">
+          <Link
+            href="/lab/deals/new"
+            className="flex items-center justify-center gap-2 w-full bg-blue-500 text-white py-2.5 text-sm font-semibold rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
+          >
+            + Nouveau deal
+          </Link>
+        </div>
+
+        <nav className="px-3 mt-5 space-y-0.5">
+          {ITEMS.map(item => {
+            const active = pathname === item.href || (item.href === '/lab' && pathname.startsWith('/lab/deals'))
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                  active ? 'bg-blue-50 text-blue-700' : 'text-neutral-600 hover:bg-neutral-50'
+                }`}
+              >
+                <Icon name={item.icon} className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-blue-500' : 'text-neutral-400'}`} />
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+
+        <div className="mt-auto px-4 py-4 border-t border-neutral-100 space-y-2.5">
+          <Link href="/pipeline" className="block text-xs text-neutral-400 hover:text-neutral-600">
+            ← Revenir à l&apos;interface actuelle
+          </Link>
+          <button onClick={signOut} className="block text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
+            Déconnexion
+          </button>
+        </div>
+    </>
+  )
+
   return (
-    <aside className="w-60 flex-shrink-0 border-r border-neutral-200 bg-white min-h-screen hidden lg:flex flex-col">
-      <div className="px-5 py-5">
+    <>
+      {/* Desktop: the column. */}
+      <aside className="w-60 flex-shrink-0 border-r border-neutral-200 bg-white min-h-screen hidden lg:flex flex-col">
+        {body}
+      </aside>
+
+      {/* Mobile: a bar, and the same menu in a drawer. Below 1024px the column
+          used to simply vanish, leaving no way to reach the pipeline, the
+          playbook or the sign-out. */}
+      <div className="lg:hidden fixed inset-x-0 top-0 z-40 h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4">
         <Link href="/lab" className="flex items-center gap-2">
           <span className="w-8 h-8 rounded-xl bg-blue-500 text-white font-bold flex items-center justify-center">S</span>
-          <span className="text-lg font-bold text-neutral-900">Switch</span>
+          <span className="text-base font-bold text-neutral-900">Switch</span>
         </Link>
-      </div>
-
-      <div className="px-4">
-        <Link
-          href="/lab/deals/new"
-          className="flex items-center justify-center gap-2 w-full bg-blue-500 text-white py-2.5 text-sm font-semibold rounded-xl hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
+        <button
+          onClick={() => setOpen(o => !o)}
+          aria-label="Menu"
+          aria-expanded={open}
+          className="w-10 h-10 flex flex-col items-center justify-center gap-[5px]"
         >
-          + Nouveau deal
-        </Link>
-      </div>
-
-      <nav className="px-3 mt-5 space-y-0.5">
-        {ITEMS.map(item => {
-          const active = pathname === item.href || (item.href === '/lab' && pathname.startsWith('/lab/deals'))
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                active ? 'bg-blue-50 text-blue-700' : 'text-neutral-600 hover:bg-neutral-50'
-              }`}
-            >
-              <Icon name={item.icon} className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-blue-500' : 'text-neutral-400'}`} />
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
-
-
-      <div className="mt-auto px-4 py-4 border-t border-neutral-100 space-y-2.5">
-        <Link href="/pipeline" className="block text-xs text-neutral-400 hover:text-neutral-600">
-          ← Revenir à l&apos;interface actuelle
-        </Link>
-        <button onClick={signOut} className="block text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
-          Déconnexion
+          <span className="block w-5 h-[2px] bg-neutral-700 rounded-full" />
+          <span className="block w-5 h-[2px] bg-neutral-700 rounded-full" />
+          <span className="block w-5 h-[2px] bg-neutral-700 rounded-full" />
         </button>
       </div>
-    </aside>
+
+      {open && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-neutral-900/30" onClick={() => setOpen(false)} />
+          {/* Closing on any click inside: every control in here navigates or
+              signs out, and a menu that survives the tap covers the page you
+              just asked for. */}
+          <aside
+            className="relative w-72 max-w-[85%] bg-white h-full flex flex-col shadow-xl"
+            onClick={() => setOpen(false)}
+          >
+            {body}
+          </aside>
+        </div>
+      )}
+    </>
   )
 }

@@ -11,7 +11,7 @@ export default function LabPipeline() {
   return (
     <div className="flex">
       <LabSidebar />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pt-14 lg:pt-0">
         <PipelineView dealHref={id => `/lab/deals/${id}`} stepHref={id => `/lab/deals/${id}`} showScores={false} />
       </div>
     </div>

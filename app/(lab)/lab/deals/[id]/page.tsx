@@ -95,6 +95,9 @@ export default function LabDealPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [knowledgeOpen, setKnowledgeOpen] = useState(true)
+  // Separate from the desktop column: on a phone the panel is a full screen,
+  // so it must open on request and never by default.
+  const [mobileKnowledge, setMobileKnowledge] = useState(false)
   // Which round's briefing is open — the timeline can reach an earlier one.
   const [briefingRound, setBriefingRound] = useState<number | null>(null)
   const [showImport, setShowImport] = useState(false)
@@ -127,7 +130,7 @@ export default function LabDealPage() {
     return (
       <div className="flex">
         <LabSidebar />
-        <div className="flex-1 p-8 text-sm text-neutral-400">Chargement…</div>
+        <div className="flex-1 p-8 pt-20 lg:pt-8 text-sm text-neutral-400">Chargement…</div>
       </div>
     )
   }
@@ -212,7 +215,7 @@ export default function LabDealPage() {
         <DealGreeting dealId={dealId} input={{ deal, rounds, current, dealState, coverage }} />
       )}
 
-      <div className="flex-1 min-w-0 flex">
+      <div className="flex-1 min-w-0 flex pt-14 lg:pt-0">
         <main className="flex-1 min-w-0 px-5 sm:px-8 py-7">
           {justCreated && welcomeOpen && (
             <div className="mb-5 flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3.5">
@@ -259,6 +262,17 @@ export default function LabDealPage() {
               </select>
             </div>
           </div>
+
+          {/* Below xl the knowledge panel has nowhere to sit, so it needs its
+              own way in — otherwise the prospect context, the playbook fit and
+              the criteria simply do not exist on a phone. */}
+          <button
+            onClick={() => setMobileKnowledge(true)}
+            className="xl:hidden w-full mb-5 flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-2xl px-4 py-3 text-sm font-medium text-neutral-700 hover:border-neutral-400 transition-colors"
+          >
+            <span>Connaissance du deal</span>
+            <span className="text-neutral-300">→</span>
+          </button>
 
           {/* The four gates */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
@@ -341,7 +355,7 @@ export default function LabDealPage() {
       )}
 
       {/* Knowledge panel */}
-        {knowledgeOpen && (
+        {(knowledgeOpen || mobileKnowledge) && (
           <DealKnowledge
             deal={deal}
             round={current}
@@ -350,8 +364,9 @@ export default function LabDealPage() {
             fit={fit}
             coverage={coverage}
             declarations={(current?.declarations ?? {}) as Record<string, Declaration[]>}
-            onClose={() => setKnowledgeOpen(false)}
+            onClose={() => mobileKnowledge ? setMobileKnowledge(false) : setKnowledgeOpen(false)}
             openContextInitially={justCreated}
+            mobileOpen={mobileKnowledge}
           />
         )}
         {!knowledgeOpen && (
