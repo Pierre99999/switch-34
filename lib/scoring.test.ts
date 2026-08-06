@@ -2,7 +2,7 @@
 // Run: npm run test:scoring
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { gateInfo, gateScore, momentumInfo, criterionScore } from './scoring'
+import { gateInfo, gateScore, momentumInfo, criterionScore, dealScore } from './scoring'
 import type { DealRound, EvidenceLevel } from './types'
 
 // Build a minimal DealRound with given scores/evidence.
@@ -114,4 +114,16 @@ test('momentum: negative delta over 3 captures flags EN PANNE', () => {
   assert.ok(info.delta !== null && info.delta < 0)
   assert.equal(info.trend, '↓')
   assert.equal(info.stagnant, true)
+})
+
+test('the deal score averages the gates that have been opened', () => {
+  // Nothing captured at all: no number to show, not a zero.
+  assert.equal(dealScore(null), null)
+  assert.equal(dealScore(makeRound(1, {}, {})), null)
+
+  // Only gate 1 scored — the mean is gate 1, not gate 1 divided by four.
+  const scores = Object.fromEntries(GATE1_VARS.map(v => [v, 4]))
+  const evidence = Object.fromEntries(GATE1_VARS.map(v => [v, 'verified' as EvidenceLevel]))
+  const g1 = makeRound(1, scores, evidence)
+  assert.equal(dealScore(g1), gateScore(g1, 1))
 })

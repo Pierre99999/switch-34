@@ -112,6 +112,23 @@ export function gateScore(round: DealRound | null, gate: number): number | null 
   return Math.round(total * 10) / 10
 }
 
+/**
+ * One number for the whole deal: the mean of the four gate scores.
+ *
+ * Deliberately unweighted and deliberately not a probability. It is a summary
+ * for scanning a list, not a verdict — the gates are sequential, so a 3.5 made
+ * of a broken gate 1 and a strong gate 3 is not the same deal as a flat 3.5,
+ * and only the gates themselves say which one you are looking at.
+ *
+ * Gates with nothing captured are left out rather than counted as zero: an
+ * unopened gate is unknown, not bad.
+ */
+export function dealScore(round: DealRound | null): number | null {
+  const scores = [1, 2, 3, 4].map(g => gateScore(round, g)).filter((s): s is number => s !== null)
+  if (scores.length === 0) return null
+  return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+}
+
 // ── B3 · Gate status ─────────────────────────────────────────
 
 export type GateStatus = 'EMPTY' | 'A_RISQUE' | 'EN_CONSTRUCTION' | 'FRANCHIE' | 'PRETE'

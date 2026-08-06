@@ -12,6 +12,7 @@ import { useRole } from '@/lib/role-context'
 import PlaybookWelcome from '@/components/ui/PlaybookWelcome'
 import { normalizePlaybook, playbookProgress } from '@/lib/playbook'
 import { nextStep, type NextStepKind } from '@/lib/deal-rounds'
+import { dealScore } from '@/lib/scoring'
 import { outcomeUpdate, reasonLabels, type DealOutcome } from '@/lib/deal-outcome'
 import OutcomeDialog from './OutcomeDialog'
 import RowMenu from './RowMenu'
@@ -110,7 +111,7 @@ function ScoreCell({ round, layer, label }: { round: DealRound | null; layer: nu
   )
 }
 
-type SortKey = 'prospect' | 'rep' | 'round' | 'revenue' | null
+type SortKey = 'prospect' | 'rep' | 'round' | 'revenue' | 'score' | null
 type SortDir = 'asc' | 'desc'
 
 // Remembered per browser, not in the database: "later" is a preference about
@@ -289,18 +290,23 @@ export default function PipelineView({
       setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     } else {
       setSortKey(key)
-      setSortDir(key === 'revenue' ? 'desc' : 'asc')
+      setSortDir(key === 'revenue' || key === 'score' ? 'desc' : 'asc')
     }
   }
 
   const sortIndicator = (key: SortKey) => sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
 
+  // One number for the deal: the mean of the four gates. A summary for
+  // scanning the list — the gates themselves say what it is made of.
+  const scoreOf = (deal: Deal) => dealScore(latestRound(deal.id))
+
   const stepFor = (deal: Deal) => nextStep(deal, rounds.filter(r => r.deal_id === deal.id))
   const hrefForStep = (deal: Deal, kind: NextStepKind) =>
     stepHref ? stepHref(deal.id) : NEXT_STEP[kind].href(deal.id)
+  // prospect · [rep] · round · note · CA · [portes] · prochaine étape · actions
   const gridCols = showScores
-    ? (isDirector ? '2.2fr 1.2fr 0.6fr 0.9fr 3.2fr 2.2fr 0.9fr' : '2.6fr 0.6fr 0.9fr 4fr 2.2fr 0.9fr')
-    : (isDirector ? '2.6fr 1.4fr 0.6fr 1fr 2.4fr 0.6fr' : '3.2fr 0.6fr 1fr 2.4fr 0.6fr')
+    ? (isDirector ? '2.2fr 1.2fr 0.6fr 0.7fr 0.9fr 3.2fr 2.2fr 0.9fr' : '2.6fr 0.6fr 0.7fr 0.9fr 4fr 2.2fr 0.9fr')
+    : (isDirector ? '2.6fr 1.4fr 0.6fr 0.7fr 1fr 2.4fr 0.6fr' : '3.2fr 0.6fr 0.7fr 1fr 2.4fr 0.6fr')
   const stepCount = (kind: NextStepKind) => deals.filter(d => stepFor(d).kind === kind).length
 
   const filteredDeals = stepFilter === 'all' ? deals : deals.filter(d => stepFor(d).kind === stepFilter)
@@ -317,6 +323,9 @@ export default function PipelineView({
         return dir * (a.current_round - b.current_round)
       case 'revenue':
         return dir * ((a.potential_revenue ?? 0) - (b.potential_revenue ?? 0))
+      case 'score':
+        // An unscored deal sorts last either way: it is unknown, not zero.
+        return dir * ((scoreOf(a) ?? -1) - (scoreOf(b) ?? -1))
       default:
         return 0
     }
@@ -437,6 +446,9 @@ export default function PipelineView({
                 </div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
+                  <span className="font-bold text-neutral-800">
+                    {scoreOf(deal) !== null ? `${scoreOf(deal)!.toFixed(1)}/5` : '—/5'}
+                  </span>
                   <span className="font-semibold text-neutral-700">{deal.potential_revenue ? fmtRevenue(deal.potential_revenue) : '—'}</span>
                 </div>
                 {showScores && (
@@ -481,12 +493,13 @@ export default function PipelineView({
         {/* Table header */}
         <div className={`grid gap-3 px-5 py-3 border-b border-neutral-100 bg-neutral-50/50`} style={{ gridTemplateColumns: gridCols }}>
           <button onClick={() => toggleSort('prospect')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.prospect')}{sortIndicator('prospect')}</button>
-          {isDirector && <button onClick={() => toggleSort('rep')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.rep')}{sortIndicator('rep')}</button>}
-          <button onClick={() => toggleSort('round')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-left hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.round')}{sortIndicator('round')}</button>
-          <button onClick={() => toggleSort('revenue')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.revenue')}{sortIndicator('revenue')}</button>
-          {showScores && <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{t('pipeline.activity')}</div>}
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide">{locale === 'fr' ? 'Prochaine étape' : 'Next step'}</div>
-          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-right">{t('pipeline.actions')}</div>
+          {isDirector && <button onClick={() => toggleSort('rep')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-center hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.rep')}{sortIndicator('rep')}</button>}
+          <button onClick={() => toggleSort('round')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-center hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.round')}{sortIndicator('round')}</button>
+          <button onClick={() => toggleSort('score')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-center hover:text-neutral-600 transition-colors cursor-pointer">{locale === 'fr' ? 'Note' : 'Score'}{sortIndicator('score')}</button>
+          <button onClick={() => toggleSort('revenue')} className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-center hover:text-neutral-600 transition-colors cursor-pointer">{t('pipeline.revenue')}{sortIndicator('revenue')}</button>
+          {showScores && <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-center">{t('pipeline.activity')}</div>}
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-center">{locale === 'fr' ? 'Prochaine étape' : 'Next step'}</div>
+          <div className="text-xs font-medium text-neutral-400 uppercase tracking-wide text-center">{t('pipeline.actions')}</div>
         </div>
 
         {sortedDeals.map((deal: Deal) => {
@@ -503,14 +516,21 @@ export default function PipelineView({
                 )}
               </div>
               {isDirector && (
-                <div>
+                <div className="text-center">
                   <span className="text-xs font-medium text-neutral-600">{repNames[deal.user_id] || '—'}</span>
                 </div>
               )}
-              <div>
+              <div className="text-center">
                 <span className="text-xs font-medium text-neutral-500 bg-neutral-100 rounded-lg px-2 py-1">R{deal.current_round}</span>
               </div>
-              <div className="text-right">
+              <div className="text-center">
+                {scoreOf(deal) !== null ? (
+                  <span className="text-sm font-bold text-neutral-800">
+                    {scoreOf(deal)!.toFixed(1)}<span className="text-xs font-medium text-neutral-300">/5</span>
+                  </span>
+                ) : <span className="text-sm text-neutral-300">—</span>}
+              </div>
+              <div className="text-center">
                 <span className="text-sm font-semibold text-neutral-700">{deal.potential_revenue ? fmtRevenue(deal.potential_revenue) : '—'}</span>
               </div>
               {showScores && (
@@ -525,7 +545,7 @@ export default function PipelineView({
                 const step = stepFor(deal)
                 const cfg = NEXT_STEP[step.kind]
                 return (
-                  <div className="flex items-center min-w-0">
+                  <div className="flex items-center justify-center min-w-0">
                     <Link
                       href={hrefForStep(deal, step.kind)}
                       className={`text-xs font-medium rounded-lg px-3 py-2 transition-all truncate ${cfg.button}`}
@@ -537,7 +557,7 @@ export default function PipelineView({
                   </div>
                 )
               })()}
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex items-center justify-center gap-2">
                 {showScores && (
                   <Link href={dealHref(deal.id)} className="text-sm text-blue-500 hover:text-blue-600 font-medium transition-colors">
                     {t('pipeline.dashboard')}
