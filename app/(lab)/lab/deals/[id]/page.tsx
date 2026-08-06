@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { type Deal, type DealRound } from '@/lib/types'
 import { computeDealState } from '@/lib/scoring'
-import { roundState } from '@/lib/deal-rounds'
+import { inheritedRoundFields, roundState } from '@/lib/deal-rounds'
 import { normalizeSellerRead, readGap } from '@/lib/seller-read'
 import { normalizeFit } from '@/lib/playbook-fit'
 import type { Declaration } from '@/lib/voice-credit'
@@ -147,8 +147,16 @@ export default function LabDealPage() {
       let roundId = current?.id
       if (kind === 'next_round' || roundState(current) !== 'UNSTARTED') {
         if (kind === 'next_round') {
+          // A new round is not a new deal. What was established in the last
+          // conversation stays established — scores, evidence levels, sources
+          // and rationales are carried over, and the capture of the new round
+          // is what revises them. Starting from nothing would say the previous
+          // conversation never happened.
+          const previous = rounds.find(r => r.round === deal!.current_round) ?? null
           const { data: nr, error: e } = await supabase
-            .from('deal_rounds').insert({ deal_id: dealId, round: deal!.current_round + 1 }).select().single()
+            .from('deal_rounds')
+            .insert({ deal_id: dealId, round: deal!.current_round + 1, ...inheritedRoundFields(previous) })
+            .select().single()
           if (e || !nr) throw new Error(e?.message ?? 'Création du round impossible')
           await supabase.from('deals').update({ current_round: nr.round }).eq('id', dealId)
           roundId = nr.id
