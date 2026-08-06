@@ -194,8 +194,10 @@ export function buildPrescriptionsContext(round: DealRound): string {
       lines.push(`  ${label}: MISSING — no evidence at all. Prescribe the conversation to open this zone.`)
     } else if (it.kind === 'NEGATIF') {
       lines.push(`  ${label}: NEGATIVE and corroborated on a lock criterion${lockVars.has(it.variable) ? '' : ''} — flag the clean exit as an option.`)
-    } else {
+    } else if (it.kind === 'CORROBORER') {
       lines.push(`  ${label}: only DECLARED — prescribe corroboration: who else can confirm? what number proves it?`)
+    } else {
+      lines.push(`  ${label}: already corroborated but WEAK — do not ask for another witness, ask for precision: a figure, a date, a named consequence.`)
     }
   }
   return lines.join('\n')

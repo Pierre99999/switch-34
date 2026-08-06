@@ -2,7 +2,7 @@
 // Run: npm run test:scoring
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { gateInfo, gateScore, momentumInfo, criterionScore, dealScore } from './scoring'
+import { gateInfo, gateScore, momentumInfo, criterionScore, dealScore, prescriptions } from './scoring'
 import type { DealRound, EvidenceLevel } from './types'
 
 // Build a minimal DealRound with given scores/evidence.
@@ -126,4 +126,31 @@ test('the deal score averages the gates that have been opened', () => {
   const evidence = Object.fromEntries(GATE1_VARS.map(v => [v, 'verified' as EvidenceLevel]))
   const g1 = makeRound(1, scores, evidence)
   assert.equal(dealScore(g1), gateScore(g1, 1))
+})
+
+test('a corroborated but weak criterion is to be sharpened, not corroborated again', () => {
+  // The bug: the panel showed "Corroboré" while the focus said "à corroborer"
+  // — asking for a second voice on something that already had one.
+  const r = makeRound(1, { compelling_reason: 3 }, { compelling_reason: 'corroborated' })
+  const p = prescriptions(r).find(x => x.variable === 'compelling_reason')
+  assert.equal(p?.kind, 'PRECISER')
+})
+
+test('a single voice is still to be corroborated', () => {
+  const r = makeRound(1, { compelling_reason: 3 }, { compelling_reason: 'declared' })
+  assert.equal(prescriptions(r).find(x => x.variable === 'compelling_reason')?.kind, 'CORROBORER')
+})
+
+test('nothing said at all stays a blind spot', () => {
+  assert.equal(prescriptions(makeRound(1, {}, {})).find(x => x.variable === 'urgency')?.kind, 'MANQUANT')
+})
+
+test('an unfavourable decisive criterion is still to be settled', () => {
+  const r = makeRound(1, { compelling_reason: 1 }, { compelling_reason: 'verified' })
+  assert.equal(prescriptions(r).find(x => x.variable === 'compelling_reason')?.kind, 'NEGATIF')
+})
+
+test('a criterion at or above the threshold prescribes nothing', () => {
+  const r = makeRound(1, { compelling_reason: 5 }, { compelling_reason: 'verified' })
+  assert.equal(prescriptions(r).find(x => x.variable === 'compelling_reason'), undefined)
 })

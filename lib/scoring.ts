@@ -264,7 +264,16 @@ export function computeDealState(rounds: DealRound[], currentRoundNumber: number
 
 export type Prescription = {
   variable: string
-  kind: 'MANQUANT' | 'CORROBORER' | 'NEGATIF'
+  /**
+   * MANQUANT — nothing said at all: a blind spot, not a low score.
+   * CORROBORER — one voice only: it needs a second.
+   * PRECISER — already corroborated, but the signal stays weak: it needs a
+   *   figure, a date, a consequence. Asking for another witness here is asking
+   *   for something we already have, which is how "à corroborer" ended up
+   *   printed next to a criterion the panel showed as "Corroboré".
+   * NEGATIF — unfavourable and corroborated on a decisive criterion.
+   */
+  kind: 'MANQUANT' | 'CORROBORER' | 'PRECISER' | 'NEGATIF'
 }
 
 export function prescriptions(round: DealRound | null): Prescription[] {
@@ -283,7 +292,7 @@ export function prescriptions(round: DealRound | null): Prescription[] {
     } else if (s < 2.0 && lockVars.has(v)) {
       out.push({ variable: v, kind: 'NEGATIF' })
     } else {
-      out.push({ variable: v, kind: 'CORROBORER' })
+      out.push({ variable: v, kind: 'PRECISER' })
     }
   }
   return out

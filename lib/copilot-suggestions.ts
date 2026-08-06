@@ -182,6 +182,17 @@ export function copilotSuggestions(input: SuggestionInput): Suggestion[] {
     })
   }
 
+  const toSharpen = presc.find(p => p.kind === 'PRECISER')
+  if (toSharpen) {
+    const label = criterionLabel(toSharpen.variable)
+    add({
+      key: `prec:${toSharpen.variable}`, tint: TINT.gate,
+      label: `Comment chiffrer ${label.toLowerCase()} ?`,
+      hint: 'Corroboré, mais encore vague',
+      q: `"${label}" est corroboré mais reste vague. Quel chiffre, quelle date ou quelle conséquence nommée le rendrait solide, et à qui la demander ?`,
+    })
+  }
+
   // 8. The playbook reading.
   const offAxis = (fit?.axes ?? []).find(a => a.verdict === 'mismatch')
     ?? (fit?.axes ?? []).find(a => a.verdict === 'unknown')

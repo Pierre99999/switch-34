@@ -54,17 +54,22 @@ export default function NextFocus({
       label,
       source: `Porte ${dealState.activeGate}`,
       tint: p.kind === 'NEGATIF' ? 'bg-rose-50 text-rose-600' : 'bg-neutral-100 text-neutral-500',
-      tag: p.kind === 'MANQUANT' ? 'zone aveugle' : p.kind === 'CORROBORER' ? 'à corroborer' : 'à trancher',
+      tag: p.kind === 'MANQUANT' ? 'zone aveugle'
+        : p.kind === 'CORROBORER' ? 'à corroborer'
+          : p.kind === 'PRECISER' ? 'à préciser' : 'à trancher',
       hint: p.kind === 'MANQUANT'
         ? 'Rien n’a encore été dit là-dessus — c’est une zone aveugle, pas un score bas.'
         : p.kind === 'CORROBORER'
           ? 'Une seule voix pour l’instant. Qui d’autre peut le confirmer, et quel chiffre le prouverait ?'
-          : 'Le signal est défavorable et corroboré. Il faut trancher, ou partir.',
+          : p.kind === 'PRECISER'
+            ? 'Le fait est corroboré mais le signal reste vague — il manque un chiffre, une date, une conséquence.'
+            : 'Le signal est défavorable et corroboré. Il faut trancher, ou partir.',
     })
     aims.push(
       p.kind === 'MANQUANT' ? `ouvrir ${lower(label)}`
         : p.kind === 'CORROBORER' ? `corroborer ${lower(label)}`
-          : `trancher sur ${lower(label)}`,
+          : p.kind === 'PRECISER' ? `préciser ${lower(label)}`
+            : `trancher sur ${lower(label)}`,
     )
   }
 
