@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { DealRound } from '@/lib/types'
 import { briefingToText } from '@/lib/briefing-letter'
 import BriefingBody from '@/components/briefing/BriefingBody'
+import { normalizeAttendees, attendeesSummary } from '@/lib/attendees'
 
 // The briefing read as a letter, not filled in as a form. Same content as the
 // briefing page, rendered for someone about to pick up the phone.
@@ -56,7 +57,12 @@ export default function BriefingLetter({
         <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-neutral-100 px-6 py-4 flex items-start justify-between gap-4 rounded-t-2xl">
           <div>
             <h3 className="text-lg font-bold text-neutral-900">Briefing · {prospectName}</h3>
-            <p className="text-xs text-neutral-400 mt-0.5">Round {round.round} — à lire avant la conversation</p>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              Round {round.round} — à lire avant la conversation
+              {attendeesSummary(normalizeAttendees((round as unknown as { briefing_attendees?: unknown }).briefing_attendees))
+                ? ` · avec ${attendeesSummary(normalizeAttendees((round as unknown as { briefing_attendees?: unknown }).briefing_attendees))}`
+                : ''}
+            </p>
           </div>
           <button onClick={onClose} className="text-neutral-400 hover:text-neutral-700 text-xl leading-none px-1">✕</button>
         </div>

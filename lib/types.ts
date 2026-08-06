@@ -263,6 +263,8 @@ export type DealRound = {
   briefing_read: string | null
   briefing_angle: string | null
   briefing_questions: BriefingQuestion[]
+  // Who the seller expects in the room. See lib/attendees.
+  briefing_attendees: unknown
   briefing_do_not: string[]
   briefing_mirror: string[]
   briefing_objections: BriefingObjection[]

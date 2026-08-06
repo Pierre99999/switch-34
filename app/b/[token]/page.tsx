@@ -30,7 +30,7 @@ export default async function SharedBriefing({
   // scores, the evidence or what was said in past conversations.
   const { data: round } = await supabase
     .from('deal_rounds')
-    .select('id, round, deal_id, briefing_line, briefing_angle, briefing_questions, briefing_objections, briefing_do_not, briefing_win_condition')
+    .select('id, round, deal_id, briefing_line, briefing_angle, briefing_questions, briefing_objections, briefing_do_not, briefing_win_condition, briefing_attendees')
     .eq('briefing_share_token', token)
     .maybeSingle()
 

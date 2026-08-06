@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import type { DealRound } from '@/lib/types'
 import BriefingBody from './BriefingBody'
+import { normalizeAttendees, attendeesSummary } from '@/lib/attendees'
 
 // The briefing on its own page: one column, readable at arm's length on a
 // phone during the call, and printable as it stands.
@@ -34,6 +35,11 @@ export default function BriefingSheet({
           </p>
           <h1 className="text-2xl font-bold text-neutral-900 mt-1 leading-tight">{prospectName}</h1>
           <p className="text-xs text-neutral-400 mt-1">À lire avant la conversation.</p>
+          {attendeesSummary(normalizeAttendees((round as unknown as { briefing_attendees?: unknown }).briefing_attendees)) && (
+            <p className="text-sm text-neutral-500 mt-2">
+              Avec {attendeesSummary(normalizeAttendees((round as unknown as { briefing_attendees?: unknown }).briefing_attendees))}
+            </p>
+          )}
         </header>
 
         <BriefingBody round={round} />

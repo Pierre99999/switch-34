@@ -8,6 +8,7 @@ import { normalizePlaybook } from '@/lib/playbook'
 import { actorCoverage, normalizeFit } from '@/lib/playbook-fit'
 import { LAYER_LABELS, type DealRound } from '@/lib/types'
 import { computeDealState } from '@/lib/scoring'
+import { normalizeAttendees, buildAttendeesContext } from '@/lib/attendees'
 import { localeInstruction } from '@/lib/ai-locale'
 import { recordUsage } from '@/lib/ai-usage'
 
@@ -58,6 +59,8 @@ export async function POST(req: NextRequest) {
     const pressingSlots = Math.max(2, 4 - fitSlots)
 
     const context = [
+      // First: the room. Everything below is written for whoever is in it.
+      buildAttendeesContext(normalizeAttendees((round as Record<string, unknown>).briefing_attendees)),
       vendor ? buildVendorContext(vendor) : '',
       buildProspectContext(deal),
       buildFitContext(deal),
@@ -118,7 +121,9 @@ Question generation rules:
 - OBJECTIONS: when a known perception objection from A4 is plausibly alive on this deal, put it in the objections list using the team's OWN defusing line, adapted to this prospect. Do not invent objections that are not in A4 unless the capture notes show one.
 - When Layer 1 is active, focus on discovering the GAP between symptoms and root causes (the five whys technique).
 
-Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.` + localeInstruction(locale),
+Be specific — reference actual prospect details, actual scores, actual capture notes. No generic coaching advice.
+
+WHO IS IN THE ROOM comes first when it is given. The same criterion is probed differently depending on who can speak to it, and a question aimed at someone who cannot answer it from their own experience is a question wasted — and a small loss of credibility. When a decisive role is absent, do not build the conversation around what only they could settle; one question may instead aim at opening a path to them.` + localeInstruction(locale),
       tools: [
         {
           name: 'save_briefing',

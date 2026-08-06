@@ -20,6 +20,8 @@ import { criterionLabel, gateName, gateQuestion } from '@/lib/lab-view'
 import BriefingLetter from '@/components/lab/BriefingLetter'
 import DealGreeting from '@/components/lab/DealGreeting'
 import GeneratingDialog from '@/components/lab/GeneratingDialog'
+import AttendeesDialog from '@/components/lab/AttendeesDialog'
+import { normalizeAttendees, type Attendee } from '@/lib/attendees'
 import { useI18n } from '@/lib/i18n/context'
 import TranscriptImport from '@/components/lab/TranscriptImport'
 import ManualCapture from '@/components/lab/ManualCapture'
@@ -98,6 +100,9 @@ export default function LabDealPage() {
   // Separate from the desktop column: on a phone the panel is a full screen,
   // so it must open on request and never by default.
   const [mobileKnowledge, setMobileKnowledge] = useState(false)
+  // A briefing is written for a room. Asking who is in it is the first step of
+  // creating one, not an option beside it.
+  const [pendingBrief, setPendingBrief] = useState<'brief' | 'next_round' | null>(null)
   // Which round's briefing is open — the timeline can reach an earlier one.
   const [briefingRound, setBriefingRound] = useState<number | null>(null)
   const [showImport, setShowImport] = useState(false)
@@ -144,6 +149,10 @@ export default function LabDealPage() {
 
   async function runAction(kind: 'brief' | 'capture' | 'next_round') {
     if (kind === 'capture') { setShowImport(true); return }
+    setPendingBrief(kind)
+  }
+
+  async function generateBriefing(kind: 'brief' | 'next_round', attendees: Attendee[], newContacts: Attendee[]) {
     setBusy(kind); setError(null)
     try {
       const supabase = createClient()
@@ -158,7 +167,7 @@ export default function LabDealPage() {
           const previous = rounds.find(r => r.round === deal!.current_round) ?? null
           const { data: nr, error: e } = await supabase
             .from('deal_rounds')
-            .insert({ deal_id: dealId, round: deal!.current_round + 1, ...inheritedRoundFields(previous) })
+            .insert({ deal_id: dealId, round: deal!.current_round + 1, ...inheritedRoundFields(previous), briefing_attendees: attendees })
             .select().single()
           if (e || !nr) throw new Error(e?.message ?? 'Création du round impossible')
           await supabase.from('deals').update({ current_round: nr.round }).eq('id', dealId)
@@ -167,11 +176,28 @@ export default function LabDealPage() {
       }
       if (!roundId) {
         const { data: nr, error: e } = await supabase
-          .from('deal_rounds').insert({ deal_id: dealId, round: Math.max(deal!.current_round, 1) }).select().single()
+          .from('deal_rounds')
+          .insert({ deal_id: dealId, round: Math.max(deal!.current_round, 1), briefing_attendees: attendees })
+          .select().single()
         if (e || !nr) throw new Error(e?.message ?? 'Création du round impossible')
         await supabase.from('deals').update({ current_round: nr.round }).eq('id', dealId)
         roundId = nr.id
       }
+      // Existing round: the room may have changed since it was opened.
+      await supabase.from('deal_rounds').update({ briefing_attendees: attendees }).eq('id', roundId)
+
+      // Someone met for the first time becomes a contact of the deal — that is
+      // what the playbook's actor coverage reads.
+      if (newContacts.length > 0) {
+        await supabase.from('deal_stakeholders').insert(newContacts.map(c => ({
+          deal_id: dealId,
+          name: c.name,
+          role: c.title ?? null,
+          actor_type: c.actor_types[0] ?? 'unknown',
+          actor_types: c.actor_types,
+        })))
+      }
+
       const res = await fetch('/api/ai/briefing', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dealId, roundId, locale: 'fr' }),
@@ -193,6 +219,20 @@ export default function LabDealPage() {
   return (
     <div className="flex">
       <LabSidebar />
+
+      {pendingBrief && (
+        <AttendeesDialog
+          roundNumber={pendingBrief === 'next_round' ? deal.current_round + 1 : Math.max(deal.current_round, 1)}
+          contacts={stakeholders}
+          previous={normalizeAttendees((current as unknown as { briefing_attendees?: unknown } | null)?.briefing_attendees)}
+          onCancel={() => setPendingBrief(null)}
+          onConfirm={(attendees, newContacts) => {
+            const kind = pendingBrief
+            setPendingBrief(null)
+            generateBriefing(kind, attendees, newContacts)
+          }}
+        />
+      )}
 
       {busy && (
         <GeneratingDialog
