@@ -80,6 +80,12 @@ function prospectSections(deal: Deal): { label: string; fields: { label: string;
     .filter(s => s.fields.length > 0)
 }
 
+// Heavier than the rule between two rows, on purpose: it separates readings,
+// not items.
+function SectionBreak() {
+  return <div className="h-2.5 bg-neutral-50 border-y border-neutral-200/70" />
+}
+
 export default function DealKnowledge({
   deal, round, declarations, contacts, fit, coverage, onClose,
   openContextInitially = false,
@@ -100,6 +106,13 @@ export default function DealKnowledge({
   const [query, setQuery] = useState('')
   const context = prospectSections(deal)
   const contextFields = context.reduce((n, s) => n + s.fields.length, 0)
+
+  // The panel holds three readings, not eleven rows: what the prospect says of
+  // itself, how that reads against the socle, and what the conversations have
+  // established. The four gates belong together — the thin rules between them
+  // said "same family", but nothing said where one family ended.
+  const hasContext = contextFields > 0
+  const hasFit = !!(fit || coverage?.applicable)
 
   const layers = [1, 2, 3, 4].map(l => ({ layer: l, criteria: criteriaOfLayer(round, l) }))
 
@@ -146,7 +159,7 @@ export default function DealKnowledge({
 
       <div className="flex-1 overflow-y-auto">
         {/* The prospect's own material, before anyone spoke. */}
-        {contextFields > 0 && (
+        {hasContext && (
           <div className="border-b border-neutral-100">
             <button
               onClick={() => setOpenContext(o => !o)}
@@ -218,9 +231,11 @@ export default function DealKnowledge({
           </div>
         )}
 
+        {hasContext && hasFit && <SectionBreak />}
+
         {/* How this deal reads against the socle — the second reading, kept
             beside the gates and never inside them. */}
-        {(fit || coverage?.applicable) && (
+        {hasFit && (
           <div className="border-b border-neutral-100">
             <button
               onClick={() => setOpenFit(o => !o)}
@@ -300,6 +315,8 @@ export default function DealKnowledge({
             )}
           </div>
         )}
+
+        {(hasContext || hasFit) && <SectionBreak />}
 
         {layers.map(({ layer, criteria }) => {
           const visible = criteria.filter(c => matches(`${c.label} ${c.rationale ?? ''}`))
