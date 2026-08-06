@@ -175,7 +175,7 @@ export const translations = {
   // ── Variable labels ──
   'var.real_business_problem': { en: 'Real Business Problem', fr: 'Problème business réel' },
   'var.compelling_reason': { en: 'Compelling Reason', fr: 'Raison impérieuse' },
-  'var.concerns_fit': { en: 'Concerns Fit', fr: 'Adéquation des préoccupations' },
+  'var.concerns_fit': { en: 'Fit with our playing field', fr: 'Adéquation avec le terrain de jeu' },
   'var.stakeholder_map': { en: 'Stakeholder Map', fr: 'Carte des parties prenantes' },
   'var.personal_pain_linkage': { en: 'Personal Pain Linkage', fr: 'Lien douleur personnelle' },
   'var.credibility_perception': { en: 'Credibility & Perception', fr: 'Crédibilité et perception' },

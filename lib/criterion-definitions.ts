@@ -25,7 +25,7 @@ export const CRITERION_DEFINITIONS: Record<string, string> = {
   compelling_reason:
     'Is there a legitimate reason to act NOW rather than later? Evidence: a deadline, a contract end, a regulation, a board commitment, a consequence that grows with waiting.',
   concerns_fit:
-    'Do their concerns fall on our terrain — are the problems they care about ones we address? Evidence: what they spontaneously bring up, and whether it matches what we do.',
+    'Does what they care about fall on OUR playing field? This is a MATCH, not something the prospect says: compare the problem they stated and the compelling reason they gave against the Sales Playbook — A1 (what we do and the value we bring), A2 (who we are for, and who we avoid), A3 (our positioning against the alternatives). Score it as soon as they have described a problem or a reason to act: the evidence is their words, the judgement is ours. High when what they describe is squarely what we solve, for a target we serve; low when it is adjacent, out of scope, or on the avoid list. Attribute the declarations to whoever stated the problem.',
   stakeholder_map:
     'Do we know who decides, who influences, who pays, who uses? Evidence: names, roles, who they say they must convince, who was absent from the room.',
   personal_pain_linkage:

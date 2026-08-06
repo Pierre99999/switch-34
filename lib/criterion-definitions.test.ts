@@ -47,3 +47,14 @@ test('the list keeps the variable name the tool schema uses', () => {
 test('an unknown variable degrades to its own name rather than crashing', () => {
   assert.equal(criterionDefinitionList(['nonsense']), 'nonsense')
 })
+
+test('the criteria that are a judgement say so', () => {
+  // concerns_fit is the one nobody ever volunteers: the prospect states the
+  // problem, we decide whether it is on our playing field. Told only "do their
+  // concerns fall on our terrain", the model waited for a statement that never
+  // comes and left the criterion empty round after round.
+  const d = CRITERION_DEFINITIONS.concerns_fit
+  assert.match(d, /MATCH, not something the prospect says/)
+  assert.match(d, /Playbook/)
+  assert.match(d, /A1|A2|A3/)
+})

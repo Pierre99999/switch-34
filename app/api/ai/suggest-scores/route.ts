@@ -139,6 +139,7 @@ COMPELLING REASON — a legitimate reason to act NOW: real problem + consequence
 RULES:
 - ONLY score criteria explicitly addressed in the capture notes. Omit the rest entirely.
 - "Addressed" does not mean "asked as a question". A criterion is addressed whenever something said bears on it, wherever it appears in the notes — including in [other], and including remarks made in passing. The briefing's questions cover the current gate; the conversation covers more than the briefing asked.
+- Some criteria are a MATCH we make, not a statement the prospect volunteers — "concerns_fit" above all. Nobody ever says "your terrain fits my concerns". Score it by comparing what they described to the vendor's Sales Playbook, which is in the context below. If they have stated a problem or a reason to act, this criterion has material and must be scored; leaving it empty because they did not comment on our fit is the wrong reading of the rule above.
 - Do not skip a criterion because it belongs to a later gate. Gates are sequential for the VERDICT, never for the EVIDENCE: what was said about impact in round 1 is evidence from round 1. Withholding it does not protect the diagnostic, it hides what the prospect told us.
 - Report the raw signal S honestly — the engine applies evidence caps automatically.
 - It is BETTER to leave a criterion unscored than to guess.` + localeInstruction(locale),
