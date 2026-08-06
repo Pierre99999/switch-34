@@ -338,8 +338,10 @@ export default function ContextView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
         <div>
-          <button onClick={() => router.push('/lab')} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
-            {t('capture.backToPipeline')}
+          {/* Back where you came from: this screen is only ever reached from
+              the deal. Sending you to the pipeline costs a second trip. */}
+          <button onClick={() => router.push(`/lab/deals/${dealId}`)} className="text-sm text-neutral-400 hover:text-blue-500 transition-colors mb-1 block">
+            {t('context.backToDeal' as never)}
           </button>
           <h1 className="text-2xl font-bold text-neutral-900">
             {t('context.title')} · <span className="text-neutral-400 font-normal">{deal.prospect_name}</span>
