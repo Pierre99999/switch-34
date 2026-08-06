@@ -397,7 +397,9 @@ export const VARIABLE_LABELS: Record<string, string> = {
   stakeholder_map: 'Stakeholder Map',
   personal_pain_linkage: 'Personal Pain Linkage',
   credibility_perception: 'Credibility & Perception',
-  value_solution_fit: 'Value & Solution Fit',
+  // The column keeps its name; the question is whether what we do resolves
+  // their problem. What it is worth is gate 3's business, not this one's.
+  value_solution_fit: 'Problem–Solution Fit',
   competitive_position: 'Competitive Position',
   urgency: 'Urgency',
   product_capability: 'Product Capability',

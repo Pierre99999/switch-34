@@ -58,3 +58,12 @@ test('the criteria that are a judgement say so', () => {
   assert.match(d, /Playbook/)
   assert.match(d, /A1|A2|A3/)
 })
+
+test('gate 2 asks about fit, gate 3 about worth — and each says so', () => {
+  // Value was being weighed twice: once as "value & solution fit" on gate 2,
+  // once as impact on gate 3. Gate 2 only asks whether what we do resolves
+  // their problem.
+  assert.match(CRITERION_DEFINITIONS.value_solution_fit, /not what it is worth/)
+  assert.match(CRITERION_DEFINITIONS.value_solution_fit, /gate 3/)
+  assert.match(CRITERION_DEFINITIONS.impact, /tangible difference/)
+})

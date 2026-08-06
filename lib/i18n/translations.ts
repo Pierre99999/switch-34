@@ -179,7 +179,7 @@ export const translations = {
   'var.stakeholder_map': { en: 'Stakeholder Map', fr: 'Carte des parties prenantes' },
   'var.personal_pain_linkage': { en: 'Personal Pain Linkage', fr: 'Lien douleur personnelle' },
   'var.credibility_perception': { en: 'Credibility & Perception', fr: 'Crédibilité et perception' },
-  'var.value_solution_fit': { en: 'Value & Solution Fit', fr: 'Adéquation valeur/solution' },
+  'var.value_solution_fit': { en: 'Problem–Solution Fit', fr: 'Adéquation problème/solution' },
   'var.competitive_position': { en: 'Competitive Position', fr: 'Position concurrentielle' },
   'var.urgency': { en: 'Urgency', fr: 'Urgence' },
   'var.product_capability': { en: 'Product Capability', fr: 'Capacité produit' },

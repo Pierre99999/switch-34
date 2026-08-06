@@ -35,7 +35,7 @@ export const CRITERION_DEFINITIONS: Record<string, string> = {
   credibility_perception:
     'Do they see us as credible for this? Evidence: how they came to us, a referral, a reference they mention, what they say they have heard about us, the level at which they engage.',
   value_solution_fit:
-    'Does what we offer fit the problem as they describe it? Evidence: their reaction to what we do, the parts they pick up on, the gaps they point out.',
+    'Can what we do actually resolve the problem as THEY described it? Strictly a problem-to-solution match — not what it is worth, not the size of the gain: the value and the measurable impact belong to gate 3, and scoring them here counts the same thing twice. Evidence: their reaction to what we do, the parts they pick up on, the piece of their problem they say we would not cover, a requirement we cannot meet.',
   competitive_position:
     'Where do we stand against alternatives, including doing nothing? Evidence: competitors named, an incumbent, a comparison, a previous purchase in the category.',
   urgency:

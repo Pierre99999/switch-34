@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
 METHODOLOGY CONTEXT:
 - Gate 1 (Opportunity): Does a real business problem exist? Is there personal pain? Does it fit our terrain?
-- Gate 2 (Winning): Do they see us as credible? Does our value fit? Is there REAL urgency?
+- Gate 2 (The ability to win): Do they see us as credible? Does what we do actually resolve the problem they described? Where do we stand against the alternatives? Is there REAL urgency? Gate 2 asks whether our solution FITS the problem — what it is worth, and the impact it would produce, are gate 3.
 - Gate 3 (Impact): Can what we sell produce the effect they need, in their environment, with people actually using it? This gate is NOT reserved for late-stage deals: the first conversation usually contains signals about it — a referral, a reference, a constraint, a fear about adoption, a past tool that failed. Score them when they are there.
 - Momentum (parallel): Are decision forces converging or diverging?
 
