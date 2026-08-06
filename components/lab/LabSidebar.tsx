@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 // Line icons drawn inline rather than pulled from a font or an emoji: a glyph
 // like "◎" or "📘" renders differently on every machine and carries its own
@@ -31,6 +32,13 @@ const ITEMS = [
 
 export default function LabSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  async function signOut() {
+    await createClient().auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <aside className="w-60 flex-shrink-0 border-r border-neutral-200 bg-white min-h-screen hidden lg:flex flex-col">
@@ -69,10 +77,13 @@ export default function LabSidebar() {
       </nav>
 
 
-      <div className="mt-auto px-4 py-4 border-t border-neutral-100">
-        <Link href="/pipeline" className="text-xs text-neutral-400 hover:text-neutral-600">
+      <div className="mt-auto px-4 py-4 border-t border-neutral-100 space-y-2.5">
+        <Link href="/pipeline" className="block text-xs text-neutral-400 hover:text-neutral-600">
           ← Revenir à l&apos;interface actuelle
         </Link>
+        <button onClick={signOut} className="block text-xs font-medium text-neutral-400 hover:text-rose-600 transition-colors">
+          Déconnexion
+        </button>
       </div>
     </aside>
   )
