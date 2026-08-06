@@ -189,10 +189,13 @@ export const translations = {
   'var.urgency_resolution': { en: 'Urgency Resolution', fr: 'Résolution d\'urgence' },
   'var.value_momentum': { en: 'Value Momentum', fr: 'Momentum de valeur' },
   'var.strategic_alignment': { en: 'Strategic Alignment', fr: 'Alignement stratégique' },
-  'var.internal_momentum': { en: 'Internal Momentum', fr: 'Momentum interne' },
+  'var.internal_momentum': { en: 'Internal Momentum', fr: 'Dynamique interne' },
   'var.open_objections': { en: 'Open Objections', fr: 'Objections ouvertes' },
+  'var.budget': { en: 'Budget', fr: 'Budget' },
+  'var.competition': { en: 'Competition', fr: 'Concurrence' },
+  'var.external_friction': { en: 'External Pressure', fr: 'Pression externe' },
+  // Retired from the momentum layer; kept so historical rounds still label it.
   'var.process_drag': { en: 'Process Drag', fr: 'Frein de processus' },
-  'var.external_friction': { en: 'External Friction', fr: 'Friction externe' },
 
   // ── Briefing sections ──
   'briefing.readSubtitle': { en: 'Where the deal stands', fr: 'Où en est le deal' },

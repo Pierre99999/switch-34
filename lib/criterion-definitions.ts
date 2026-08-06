@@ -64,11 +64,13 @@ export const CRITERION_DEFINITIONS: Record<string, string> = {
   internal_momentum:
     'Is a decision being built on their side? Evidence: internal meetings organised, people brought in, a next step they propose, a process they describe.',
   open_objections:
-    'What objections are open and unresolved? A brake: a high score means objections are heavy or unanswered.',
-  process_drag:
-    'What in their own process slows the decision? A brake: procurement, legal, a committee, an approval cycle, holidays.',
+    'What objections are open and unresolved? A brake, scored as health: 5 = raised and settled, 0 = never explored. Evidence: what they push back on, what they keep returning to, what they leave hanging.',
+  budget:
+    'Is there money for this, and when? A brake, scored as health: 5 = the budget exists, is identified and its timing is known; 0 = never explored. Evidence: a budget line, an envelope, a fiscal year, an arbitration against another project, who signs. Not knowing is not the same as there being none — but it scores the same, because an unexplored budget stops a deal just as effectively.',
+  competition:
+    'Is a competitor shaping their decision, and how much? A brake, scored as health: 5 = the competitive situation is known and clean; 0 = never explored. This is NOT our standing against them — that is gate 2 (competitive position). Here the question is what the presence of alternatives does to the DECISION: a running RFP, a supplier already consulted, an incumbent renewal, a comparison they are told to make.',
   external_friction:
-    'What outside their control slows it? A brake: market conditions, a reorganisation, a hiring freeze, a supplier, a regulator.',
+    'What pressure from outside their control weighs on the decision? A brake, scored as health: 5 = known and clean, 0 = never explored. Evidence: market conditions, a reorganisation, a hiring freeze, a regulator, a client of theirs, a supplier.',
 }
 
 /** The variables, each with its definition, for a prompt. */

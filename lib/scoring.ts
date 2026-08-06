@@ -71,13 +71,16 @@ export const GATE_WEIGHTS: Record<number, Record<string, number>> = {
 // inverted health (5 = explored & clean, 0 = never explored).
 export const MOMENTUM_WEIGHTS: Record<string, number> = {
   value_momentum: 0.25,
-  internal_momentum: 0.25,
-  strategic_alignment: 0.20,
+  internal_momentum: 0.20,
+  strategic_alignment: 0.15,
+  // Money is the brake that most often decides, so it carries more than the
+  // other three put together would suggest.
+  budget: 0.15,
   open_objections: 0.10,
-  process_drag: 0.10,
-  external_friction: 0.10,
+  competition: 0.10,
+  external_friction: 0.05,
 }
-export const MOMENTUM_BRAKES = new Set(['open_objections', 'process_drag', 'external_friction'])
+export const MOMENTUM_BRAKES = new Set(['open_objections', 'budget', 'competition', 'external_friction'])
 
 // ⚡ Decisive criteria per gate; none on momentum.
 export const DECISIVE_VARS: Record<number, string[]> = {

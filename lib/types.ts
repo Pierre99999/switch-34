@@ -250,8 +250,11 @@ export type DealRound = {
   strategic_alignment: number | null
   internal_momentum: number | null
   open_objections: number | null
-  process_drag: number | null
+  budget: number | null
+  competition: number | null
   external_friction: number | null
+  /** Retired from the momentum layer; the column keeps past rounds intact. */
+  process_drag: number | null
   rationales: Record<string, string>
   capture_notes: Record<string, string>
   capture_speakers: TranscriptSpeaker[] | null
@@ -380,7 +383,7 @@ export const LAYER_VARIABLES = {
   1: ['real_business_problem', 'compelling_reason', 'concerns_fit', 'stakeholder_map', 'personal_pain_linkage'],
   2: ['credibility_perception', 'value_solution_fit', 'competitive_position', 'urgency'],
   3: ['product_capability', 'implementation_feasibility', 'adoption_reality', 'impact', 'urgency_resolution'],
-  4: ['value_momentum', 'strategic_alignment', 'internal_momentum', 'open_objections', 'process_drag', 'external_friction'],
+  4: ['value_momentum', 'strategic_alignment', 'internal_momentum', 'open_objections', 'budget', 'competition', 'external_friction'],
 } as const
 
 export const LAYER_LABELS: Record<number, string> = {
@@ -411,8 +414,10 @@ export const VARIABLE_LABELS: Record<string, string> = {
   strategic_alignment: 'Strategic Alignment',
   internal_momentum: 'Internal Momentum',
   open_objections: 'Open Objections',
+  budget: 'Budget',
+  competition: 'Competition',
+  external_friction: 'External Pressure',
   process_drag: 'Process Drag',
-  external_friction: 'External Friction',
 }
 
 // Gate averages and statuses live in lib/scoring.ts (gateScore, gateInfo,

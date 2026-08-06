@@ -2,7 +2,7 @@
 // Run: npm run test:scoring
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { gateInfo, gateScore, momentumInfo, criterionScore, dealScore, prescriptions } from './scoring'
+import { gateInfo, gateScore, momentumInfo, criterionScore, dealScore, prescriptions, MOMENTUM_WEIGHTS, MOMENTUM_BRAKES } from './scoring'
 import type { DealRound, EvidenceLevel } from './types'
 
 // Build a minimal DealRound with given scores/evidence.
@@ -70,7 +70,7 @@ test('C8: sequentiality — gate 2 ready but waiting for gate 1', () => {
 test('C9: unexplored brake counts zero in momentum', () => {
   const base = {
     value_momentum: 5, internal_momentum: 5, strategic_alignment: 5,
-    open_objections: 5, process_drag: 5,
+    open_objections: 5, budget: 5, competition: 5,
     // external_friction intentionally missing = never explored
   }
   const evidence: Record<string, EvidenceLevel> = Object.fromEntries(
@@ -78,8 +78,10 @@ test('C9: unexplored brake counts zero in momentum', () => {
   )
   const round = makeRound(1, base, evidence)
   const withMissing = gateScore(round, 4)
-  // All explored at 5 would be 5.0; missing external_friction (.10) drops it to 4.5.
-  assert.equal(withMissing, 4.5)
+  // All explored at 5 would be 5.0; the missing brake costs its own weight × 5,
+  // whatever that weight currently is.
+  const expected = Math.round((5 - MOMENTUM_WEIGHTS.external_friction * 5) * 10) / 10
+  assert.equal(withMissing, expected)
   const full = makeRound(1, { ...base, external_friction: 5 }, { ...evidence, external_friction: 'verified' })
   assert.equal(gateScore(full, 4), 5.0)
 })
@@ -153,4 +155,32 @@ test('an unfavourable decisive criterion is still to be settled', () => {
 test('a criterion at or above the threshold prescribes nothing', () => {
   const r = makeRound(1, { compelling_reason: 5 }, { compelling_reason: 'verified' })
   assert.equal(prescriptions(r).find(x => x.variable === 'compelling_reason'), undefined)
+})
+
+test('the momentum weights still sum to one', () => {
+  // Adding budget and competition without rebalancing would silently rescale
+  // every momentum score in the product.
+  const total = Object.values(MOMENTUM_WEIGHTS).reduce((a, b) => a + b, 0)
+  assert.ok(Math.abs(total - 1) < 1e-9, `momentum weights sum to ${total}`)
+})
+
+test('every momentum brake is weighed, and process drag is no longer either', () => {
+  for (const b of MOMENTUM_BRAKES) {
+    assert.ok(MOMENTUM_WEIGHTS[b] !== undefined, `${b} is a brake with no weight`)
+  }
+  assert.equal(MOMENTUM_WEIGHTS.process_drag, undefined)
+  assert.ok(!MOMENTUM_BRAKES.has('process_drag'))
+})
+
+test('an unexplored budget drags the momentum down', () => {
+  // Brakes count 0 when null: absence of information is not absence of a brake.
+  const explored = makeRound(1, {
+    value_momentum: 4, internal_momentum: 4, strategic_alignment: 4,
+    open_objections: 4, budget: 4, competition: 4, external_friction: 4,
+  }, {})
+  const notExplored = makeRound(1, {
+    value_momentum: 4, internal_momentum: 4, strategic_alignment: 4,
+    open_objections: 4, competition: 4, external_friction: 4,
+  }, {})
+  assert.ok(gateScore(notExplored, 4)! < gateScore(explored, 4)!)
 })

@@ -66,8 +66,10 @@ export const VOICE_WEIGHTS: Record<string, { '1.0': ActorRole[]; '0.7': ActorRol
   internal_momentum:          { '1.0': ['champion'], '0.7': [] }, // any internal actor → 0.4 default
   value_momentum:             { '1.0': ['decideur', 'champion'], '0.7': ['acheteur_technique'] },
   open_objections:            { '1.0': [], '0.7': ['champion'] },
-  process_drag:               { '1.0': [], '0.7': ['champion'] },
+  budget:                     { '1.0': ['gardien_du_budget'], '0.7': ['decideur', 'champion'] },
+  competition:                { '1.0': ['decideur'], '0.7': ['champion', 'acheteur_technique'] },
   external_friction:          { '1.0': [], '0.7': ['champion'] },
+  process_drag:               { '1.0': [], '0.7': ['champion'] },
 }
 
 // Criteria where the owner is the person speaking about themselves.
