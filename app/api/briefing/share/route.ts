@@ -25,7 +25,17 @@ export async function POST(req: NextRequest) {
     .eq('id', roundId)
     .single()
 
-  if (error || !round) return NextResponse.json({ error: 'Round introuvable' }, { status: 404 })
+  // A missing column and a missing row are different failures, and "Round
+  // introuvable" for the first one sends you looking in the wrong place.
+  if (error) {
+    const missingColumn = /column .*briefing_share_token.* does not exist|schema cache/i.test(error.message)
+    return NextResponse.json({
+      error: missingColumn
+        ? 'La migration migration-briefing-share.sql n’a pas encore été passée sur la base.'
+        : `Lecture du round impossible : ${error.message}`,
+    }, { status: missingColumn ? 503 : 500 })
+  }
+  if (!round) return NextResponse.json({ error: 'Round introuvable' }, { status: 404 })
   if (!round.briefing_line) {
     return NextResponse.json({ error: 'Ce round n’a pas encore de briefing.' }, { status: 400 })
   }
