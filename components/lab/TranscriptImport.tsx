@@ -43,6 +43,11 @@ export default function TranscriptImport({
   async function run(payload: { file?: File; text?: string }) {
     setBusy(true); setError(null)
     try {
+      const supabaseForContacts = createClient()
+      const { data: existing } = await supabaseForContacts
+        .from('deal_stakeholders').select('name').eq('deal_id', dealId)
+      const known = (existing ?? []).map(c => (c.name ?? '').trim()).filter(Boolean)
+
       const questions = ((round.briefing_questions ?? []) as BriefingQuestion[]).map(q => ({
         key: q.text, variable: q.variable, text: q.text, intent: q.intent,
       }))
@@ -78,6 +83,33 @@ export default function TranscriptImport({
         })
         .eq('id', round.id)
       if (saveErr) throw new Error(saveErr.message)
+
+      // A person who spoke in the conversation is a person on the deal.
+      // Until now the transcript's speakers were written on the round only, so
+      // they showed on that round's timeline entry and existed nowhere else:
+      // gone from the contacts the moment you looked at another round, and
+      // invisible to the playbook's actor coverage.
+      //
+      // Their role is left unqualified on purpose. The transcript says who
+      // spoke, not what weight their voice carries — and guessing that would
+      // corrupt the evidence levels the whole diagnostic rests on.
+      const speakers = (parsed.speakers ?? []) as { name?: string; title?: string; side?: string }[]
+      const newcomers = speakers.filter(sp =>
+        sp.side !== 'seller' &&
+        typeof sp.name === 'string' && sp.name.trim() &&
+        !known.some(k => k.toLowerCase() === sp.name!.trim().toLowerCase()))
+
+      if (newcomers.length > 0) {
+        const { error: contactErr } = await supabase.from('deal_stakeholders').insert(
+          newcomers.map(sp => ({
+            deal_id: dealId,
+            name: sp.name!.trim(),
+            role: sp.title?.trim() || null,
+            actor_type: 'unknown',
+            actor_types: ['unknown'],
+          })))
+        if (contactErr) throw new Error(`Intervenants non enregistrés : ${contactErr.message}`)
+      }
 
       const scoresRes = await fetch('/api/ai/suggest-scores', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
