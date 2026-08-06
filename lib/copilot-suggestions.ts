@@ -5,9 +5,15 @@
 // questions to offer would add a call, a wait and a source of drift for
 // something the diagnostic already knows.
 //
-// Ordered by what is most pressing. The four shown change as the deal moves,
-// which is the point: the same four questions on every deal would be a menu,
-// not a copilot.
+// Ordered by what is most pressing. Three of the four change as the deal
+// moves, which is the point: the same four questions on every deal would be a
+// menu, not a copilot.
+//
+// The first one never changes, and that is deliberate. "What is it now
+// important to understand?" is the question the method asks at every step —
+// what matters to understand is not the same at round 1 and at round 4, and
+// having it always in the same place makes it a reflex rather than something
+// you think to ask when you already know the answer.
 
 import type { DealRound } from './types'
 import { criterionLabel } from './lab-view'
@@ -55,7 +61,15 @@ export function copilotSuggestions(input: SuggestionInput): Suggestion[] {
   const out: Suggestion[] = []
   const add = (s: Suggestion) => { if (!out.some(x => x.key === s.key)) out.push(s) }
 
-  // 1. Walking away is the cheapest decision, so it comes first.
+  // 0. Always first, whatever the state of the deal.
+  add({
+    key: 'understand', tint: TINT.gate,
+    label: 'Qu’est-ce qu’il est important de comprendre maintenant ?',
+    hint: 'Ce que cette étape du deal demande d’éclaircir',
+    q: 'À ce stade précis du deal, qu’est-ce qu’il est le plus important de comprendre — et pourquoi maintenant plutôt qu’avant ou plus tard ? Appuie-toi sur ce qui est établi, sur ce qui ne l’est pas, et sur ce qui a changé depuis la dernière conversation.',
+  })
+
+  // 1. Then, by urgency. Walking away is the cheapest decision available.
   if (fit?.avoid_list_hit) {
     add({
       key: 'avoid', tint: TINT.alarm,
@@ -192,6 +206,18 @@ export function copilotSuggestions(input: SuggestionInput): Suggestion[] {
     label: 'Qui a parlé, et avec quel poids ?',
     hint: 'Les voix entendues et celles qui manquent',
     q: 'Qui s’est exprimé sur ce deal, quel poids a chaque voix selon son rôle, et de qui n’avons-nous rien entendu ?',
+  })
+  add({
+    key: 'assumption', tint: TINT.alarm,
+    label: 'Qu’est-ce que je tiens pour acquis sans preuve ?',
+    hint: 'Ce que je crois savoir et que personne n’a dit',
+    q: 'Sur ce deal, qu’est-ce qui est traité comme acquis alors que rien dans les conversations ne l’établit ? Distingue ce que le prospect a dit de ce que nous avons supposé à sa place.',
+  })
+  add({
+    key: 'premortem', tint: TINT.alarm,
+    label: 'Si je perds ce deal, ce sera pourquoi ?',
+    hint: 'La cause la plus probable, nommée à l’avance',
+    q: 'Imaginons ce deal perdu dans trois mois. D’après ce qui est établi aujourd’hui, quelle en serait la cause la plus probable, et qu’est-ce qui pourrait encore l’éviter ?',
   })
   add({
     key: 'risk', tint: TINT.alarm,

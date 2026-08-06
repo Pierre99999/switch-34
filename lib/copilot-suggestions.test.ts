@@ -54,8 +54,24 @@ test('a brand new deal is asked what is already known', () => {
   assert.ok(keys(input()).includes('start'))
 })
 
-test('the avoid list outranks everything else', () => {
-  // Walking away is the cheapest decision available, so it comes first.
+test('the anchor question is always first, whatever the deal is doing', () => {
+  // What matters to understand is not the same at round 1 and at round 4, so
+  // the question has to be asked at every step — and always in the same place,
+  // or it becomes something you ask when you already know the answer.
+  assert.equal(keys(input())[0], 'understand')
+
+  const busy = input({
+    rounds: [round({
+      briefing_line: 'x', capture_notes: { q: 'said' },
+      declarations: { urgency: [{ role: 'decideur', stance: 'contre', text: 'trop cher' }] },
+    })],
+  })
+  assert.equal(keys(busy)[0], 'understand')
+})
+
+test('the avoid list outranks everything else that varies', () => {
+  // Walking away is the cheapest decision available, so it comes first among
+  // the three state-driven slots.
   const i = input({
     rounds: [round({ briefing_line: 'x', capture_notes: { q: 'said' } })],
   })
@@ -63,7 +79,7 @@ test('the avoid list outranks everything else', () => {
     axes: [{ key: 'segment', verdict: 'mismatch', summary: '', reason: '', playbook_ref: '' }],
     basis: 'conversation', computed_at: '', avoid_list_hit: true,
   }
-  assert.equal(keys(i)[0], 'avoid')
+  assert.equal(keys(i)[1], 'avoid')
 })
 
 test('a missing necessary actor becomes a question', () => {
@@ -86,7 +102,7 @@ test('a stalled momentum is surfaced', () => {
   assert.ok(keys(input({ rounds })).includes('momentum'))
 })
 
-test('the questions change as the deal changes', () => {
+test('the three other questions change as the deal changes', () => {
   const before = keys(input())
   const after = keys(input({
     rounds: [round({
