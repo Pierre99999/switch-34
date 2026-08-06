@@ -89,29 +89,49 @@ export default function NextFocus({
     })
   }
 
-  // An objective reads better as an action than as a state.
-  const title = (() => {
-    if (step.kind === 'closed') return 'Ce deal est clos.'
-    if (step.kind !== 'capture' && writtenObjective) return writtenObjective
-    if (step.kind === 'capture') return 'Mener la conversation, puis en importer le transcript.'
-    if (rounds.length === 0) return 'Préparer la première conversation.'
-    if (aims.length === 0) {
-      return gate?.lockVariable
-        ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${gateName(dealState.activeGate)}.`
-        : `Préparer la conversation du round ${step.round}.`
-    }
+  // The objective of the conversation ahead, as an action.
+  //
+  // Once the briefing exists the state becomes 'capture', and this used to
+  // print two fixed sentences — "Mener la conversation" / "Le briefing est
+  // prêt" — on every deal, throwing away the prescriptions that had just been
+  // computed and the angle the briefing engine had just written. The objective
+  // does not become generic because a briefing was produced; that is the
+  // moment it is at its most precise.
+  const objectiveFromAims = (() => {
+    if (aims.length === 0) return null
     const [a, b] = aims
     const phrase = b ? `${a} et ${b}` : a
     return `${phrase.charAt(0).toUpperCase()}${phrase.slice(1)}.`
   })()
 
+  const title = (() => {
+    if (step.kind === 'closed') return 'Ce deal est clos.'
+    if (step.kind !== 'capture' && writtenObjective) return writtenObjective
+    if (rounds.length === 0 && step.kind !== 'capture') return 'Préparer la première conversation.'
+    if (objectiveFromAims) return objectiveFromAims
+    if (step.kind === 'capture') {
+      return current?.briefing_line?.trim() || 'Mener la conversation, puis en importer le transcript.'
+    }
+    return gate?.lockVariable
+      ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${gateName(dealState.activeGate)}.`
+      : `Préparer la conversation du round ${step.round}.`
+  })()
+
+  const gateLine = `Porte ${dealState.activeGate} · ${gateName(dealState.activeGate)}${gate?.lockVariable ? ` — ${criterionLabel(gate.lockVariable)}` : ''}`
   const subtitle = step.kind === 'closed' ? null
-    : step.kind === 'capture' ? `Le briefing du round ${step.round} est prêt`
-      : `Porte ${dealState.activeGate} · ${gateName(dealState.activeGate)}${gate?.lockVariable ? ` — ${criterionLabel(gate.lockVariable)}` : ''}`
+    : step.kind === 'capture' ? `${gateLine} · briefing du round ${step.round} prêt`
+      : gateLine
 
   // The full engine read, and the short version shown on the card.
   const fullWhy = (() => {
     if (step.kind === 'capture') {
+      // The angle is the briefing engine's own statement of what this
+      // conversation must resolve — written for this deal, this round, these
+      // people. It is the answer to "why this objective".
+      const angle = current?.briefing_angle?.trim()
+      const win = current?.briefing_win_condition?.trim()
+      if (angle) return win ? `${angle}\n\nCette conversation est réussie si : ${win}` : angle
+      if (win) return `Cette conversation est réussie si : ${win}`
       return 'Le briefing est prêt. Rien ne bouge tant que la conversation n’est pas capturée : les scores ne se déduisent que de ce qui a été dit, jamais de ce qu’on suppose.'
     }
     if (rounds.length === 0) {
@@ -216,9 +236,13 @@ export default function NextFocus({
           <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl my-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-neutral-100">
               <div>
-                <h3 className="text-lg font-bold text-neutral-900">L’analyse du round {current?.round ?? step.round}</h3>
+                <h3 className="text-lg font-bold text-neutral-900">
+                  {step.kind === 'capture' ? `L’objectif du round ${current?.round ?? step.round}` : `L’analyse du round ${current?.round ?? step.round}`}
+                </h3>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  Lecture produite après la conversation, à partir des scores et de ce qui a été dit.
+                  {step.kind === 'capture'
+                    ? 'Ce que cette conversation doit résoudre, écrit avec le briefing.'
+                    : 'Lecture produite après la conversation, à partir des scores et de ce qui a été dit.'}
                 </p>
               </div>
               <button onClick={() => setShowAnalysis(false)} className="text-neutral-400 hover:text-neutral-700 text-xl leading-none px-1">✕</button>
