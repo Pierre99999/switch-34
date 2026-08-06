@@ -57,20 +57,23 @@ export const CRITERION_DEFINITIONS: Record<string, string> = {
     'Does what we offer resolve the urgency they described, on their timeline? Evidence: whether they connect our solution to the deadline that pushes them, and whether the timing works.',
 
   // ── Momentum (parallel) ──
+  // Definitions given by Pierre. The four brakes are scored as HEALTH, not as
+  // severity: 5 = explored and clean, 0 = never explored. Absence of
+  // information is not absence of a brake.
   value_momentum:
-    'Is perceived value growing from one conversation to the next? Evidence: what they say now that they did not say before, engagement rising or cooling.',
+    'The significant and MEASURABLE impact of what we bring, compared with what they have today. Not the promise — the gap against the existing situation, and whether that gap is big enough to be worth moving for. Evidence: a before/after they state, a figure put on the current situation, what the status quo costs them, what they say would change. (Gate 3 asks whether an impact would be produced at all; here the question is whether the gap against today is wide enough to carry a decision.)',
   strategic_alignment:
-    'Is this connected to something the organisation has decided matters? Evidence: a stated priority, a programme, a budget line, an executive sponsor.',
+    'Is the problem we solve attached to a stated priority, a new vision, or an imperative on their side? Evidence: a company priority they name, a transformation programme, a new direction from the top, an objective they must hit, an imperative imposed on them. A problem that matters to one person but hangs off nothing scores low.',
   internal_momentum:
-    'Is a decision being built on their side? Evidence: internal meetings organised, people brought in, a next step they propose, a process they describe.',
+    'The strength of the champion: their access to the decision-maker, and the weight of the blockers against them. Evidence: whether the champion can actually reach the decision-maker, whether they carry the file themselves, who opposes them and how heavy that opposition is, what they have already obtained internally.',
   open_objections:
-    'What objections are open and unresolved? A brake, scored as health: 5 = raised and settled, 0 = never explored. Evidence: what they push back on, what they keep returning to, what they leave hanging.',
-  budget:
-    'Is there money for this, and when? A brake, scored as health: 5 = the budget exists, is identified and its timing is known; 0 = never explored. Evidence: a budget line, an envelope, a fiscal year, an arbitration against another project, who signs. Not knowing is not the same as there being none — but it scores the same, because an unexplored budget stops a deal just as effectively.',
+    'Have the things that could become a problem been listed? Legal, security, contractual, technical, political — anything. A brake, scored as health: 5 = they have been listed and settled, 0 = never explored. Evidence: what they push back on, what they keep returning to, what they leave hanging. The danger is not an objection that was raised; it is one nobody has looked for.',
   competition:
-    'Is a competitor shaping their decision, and how much? A brake, scored as health: 5 = the competitive situation is known and clean; 0 = never explored. This is NOT our standing against them — that is gate 2 (competitive position). Here the question is what the presence of alternatives does to the DECISION: a running RFP, a supplier already consulted, an incumbent renewal, a comparison they are told to make.',
+    'Is a competitor shaping the decision — displacing the criteria, breaking the price, or slowing their ability to decide? A brake, scored as health: 5 = the competitive situation is known and clean, 0 = never explored. This is NOT our standing against them, which is gate 2 (competitive position). Evidence: a running RFP, criteria that suddenly match someone else, a price used as a reference, an incumbent renewal, a comparison they are told to make.',
+  budget:
+    'Is the budget in a workable cycle? A brake, scored as health: 5 = it exists, it is identified and its timing works; 0 = never explored. Evidence: a budget line, an envelope, a fiscal year, an arbitration against another project, who signs. An unallocated budget is NOT fatal: when the problem being solved is important enough, budgets are usually found — so score how much the money question holds the decision back, not whether the money is already sitting there.',
   external_friction:
-    'What pressure from outside their control weighs on the decision? A brake, scored as health: 5 = known and clean, 0 = never explored. Evidence: market conditions, a reorganisation, a hiring freeze, a regulator, a client of theirs, a supplier.',
+    'What pressure from outside their control weighs on the decision? A brake, scored as health: 5 = known and clean, 0 = never explored. Evidence: regulation, an unforeseen shock (a war, a supply crisis), raw material prices, a market turning, a new class of competitor appearing — the kind now arriving on the back of AI.',
 }
 
 /** The variables, each with its definition, for a prompt. */

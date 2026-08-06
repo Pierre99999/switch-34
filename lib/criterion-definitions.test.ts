@@ -67,3 +67,19 @@ test('gate 2 asks about fit, gate 3 about worth — and each says so', () => {
   assert.match(CRITERION_DEFINITIONS.value_solution_fit, /gate 3/)
   assert.match(CRITERION_DEFINITIONS.impact, /tangible difference/)
 })
+
+test('the momentum brakes all state the health convention', () => {
+  // Scored as health, not severity: 5 = explored and clean, 0 = never
+  // explored. Getting this backwards would invert the whole momentum score.
+  for (const v of ['open_objections', 'budget', 'competition', 'external_friction']) {
+    assert.match(CRITERION_DEFINITIONS[v], /scored as health: 5 = /, v)
+    assert.match(CRITERION_DEFINITIONS[v], /0 = never explored/, v)
+  }
+})
+
+test('competition and budget say what they are not', () => {
+  // Both sit next to a criterion that asks a neighbouring question, and both
+  // were at risk of being counted twice.
+  assert.match(CRITERION_DEFINITIONS.competition, /NOT our standing against them/)
+  assert.match(CRITERION_DEFINITIONS.budget, /NOT fatal/)
+})
