@@ -345,6 +345,7 @@ export default function LabDealPage() {
           <DealKnowledge
             deal={deal}
             round={current}
+            rounds={rounds}
             contacts={stakeholders}
             fit={fit}
             coverage={coverage}

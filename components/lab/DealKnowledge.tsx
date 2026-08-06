@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Deal, DealRound } from '@/lib/types'
 import { isLegacyDimensions } from '@/lib/types'
 import { criteriaOfLayer, gateName } from '@/lib/lab-view'
+import { criterionHistory, readingSince } from '@/lib/criterion-history'
 import type { Declaration } from '@/lib/voice-credit'
 import {
   type PlaybookFit, type FitVerdict, type ActorCoverage, type DealContact,
@@ -87,11 +88,13 @@ function SectionBreak() {
 }
 
 export default function DealKnowledge({
-  deal, round, declarations, contacts, fit, coverage, onClose,
+  deal, round, rounds = [], declarations, contacts, fit, coverage, onClose,
   openContextInitially = false,
 }: {
   deal: Deal
   round: DealRound | null
+  /** Every round of the deal — a criterion's history is already in them. */
+  rounds?: DealRound[]
   declarations: Record<string, Declaration[]>
   contacts: DealContact[]
   fit: PlaybookFit | null
@@ -103,6 +106,7 @@ export default function DealKnowledge({
   const [openLayer, setOpenLayer] = useState<number | null>(1)
   const [openContext, setOpenContext] = useState(openContextInitially)
   const [openFit, setOpenFit] = useState(false)
+  const [openHistory, setOpenHistory] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const context = prospectSections(deal)
   const contextFields = context.reduce((n, s) => n + s.fields.length, 0)
@@ -361,6 +365,52 @@ export default function DealKnowledge({
 
                       {c.rationale && (
                         <p className="text-xs text-neutral-600 leading-relaxed mt-2">{c.rationale}</p>
+                      )}
+
+                      {(() => {
+                        const shown = round?.round ?? 0
+                        const since = readingSince(rounds, c.variable, shown)
+                        const history = criterionHistory(rounds, c.variable, shown)
+                        if (since === null) return null
+                        const stale = since < shown
+                        return (
+                          <div className="flex items-center gap-2 mt-2">
+                            <span
+                              className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${stale ? 'bg-amber-50 text-amber-600' : 'bg-neutral-100 text-neutral-500'}`}
+                              title={stale ? `Rien de neuf sur ce critère depuis le round ${since}` : 'Établi lors de ce round'}
+                            >
+                              {stale ? `inchangé depuis R${since}` : `R${since}`}
+                            </span>
+                            {history.length > 1 && (
+                              <button
+                                onClick={() => setOpenHistory(h => h === c.variable ? null : c.variable)}
+                                className="text-[10px] font-medium text-neutral-400 hover:text-neutral-700 transition-colors"
+                              >
+                                {openHistory === c.variable ? 'masquer l’historique' : 'historique →'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })()}
+
+                      {openHistory === c.variable && (
+                        <ul className="mt-2 pt-2 border-t border-neutral-100 space-y-2">
+                          {criterionHistory(rounds, c.variable, round?.round ?? 0).map(h => (
+                            <li key={h.round} className={h.changed ? '' : 'opacity-50'}>
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <span className="font-semibold text-neutral-600">R{h.round}</span>
+                                <span className="font-medium text-neutral-700">{h.score !== null ? h.score.toFixed(1) : '—'}</span>
+                                {h.evidence && (
+                                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${EVIDENCE_PILL[h.evidence]}`}>
+                                    {EVIDENCE_LABEL[h.evidence]}
+                                  </span>
+                                )}
+                                {!h.changed && <span className="text-[10px] text-neutral-400">inchangé</span>}
+                              </div>
+                              {h.rationale && <p className="text-[11px] text-neutral-500 leading-relaxed mt-0.5">{h.rationale}</p>}
+                            </li>
+                          ))}
+                        </ul>
                       )}
 
                       {c.declarations.length > 0 && (

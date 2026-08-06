@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:scoring": "tsx --test lib/scoring.test.ts lib/voice-credit.test.ts lib/playbook-fit.test.ts lib/deal-rounds.test.ts lib/seller-read.test.ts lib/copilot-suggestions.test.ts lib/text.test.ts lib/deal-greeting.test.ts lib/deal-outcome.test.ts lib/transcript-formats.test.ts"
+    "test:scoring": "tsx --test lib/scoring.test.ts lib/voice-credit.test.ts lib/playbook-fit.test.ts lib/deal-rounds.test.ts lib/seller-read.test.ts lib/copilot-suggestions.test.ts lib/text.test.ts lib/deal-greeting.test.ts lib/deal-outcome.test.ts lib/transcript-formats.test.ts lib/criterion-history.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
