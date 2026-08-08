@@ -131,6 +131,7 @@ WHO IS IN THE ROOM comes first when it is given. The same criterion is probed di
           input_schema: {
             type: 'object' as const,
             properties: {
+              hypothesis: { type: 'string', description: 'The bet this round is making, in ONE sentence, in the form "Si <fait précis à établir>, alors <conséquence pour le deal>." It must be falsifiable by the next conversation: name the person or the fact to be established, not a posture. Example: "Si Nelson reconnaît que son problème est un problème de gouvernance commerciale et non un problème d\'outil, alors notre proposition de valeur devient pertinente."' },
               line: { type: 'string', description: `One sentence framing the entire conversation — what the active layer (L${activeLayer}: ${activeLayerLabel}) needs to resolve.` },
               read: { type: 'string', description: 'Where the deal stands honestly. What you know, what is missing, what the scores reveal. 3–5 sentences.' },
               angle: { type: 'string', description: 'What needs to be accomplished in this conversation — the diagnostic objective stated plainly. Not a posture description but a clear statement of what must be resolved: "Establish whether X is true, confirm that Y exists, determine if Z is real." Include ONE reformulation hypothesis — a way to connect existing facts into a new understanding the prospect doesn\'t have yet (constructed data). 3–5 sentences.' },
@@ -174,7 +175,7 @@ WHO IS IN THE ROOM comes first when it is given. The same criterion is probed di
                 items: { type: 'string' },
               },
             },
-            required: ['line', 'read', 'angle', 'win_condition', 'questions', 'mirror', 'objections', 'do_not'],
+            required: ['hypothesis', 'line', 'read', 'angle', 'win_condition', 'questions', 'mirror', 'objections', 'do_not'],
           },
         },
       ],
@@ -195,6 +196,7 @@ WHO IS IN THE ROOM comes first when it is given. The same criterion is probed di
     const input = toolUse.input as Record<string, unknown>
 
     await supabase.from('deal_rounds').update({
+      briefing_hypothesis: input.hypothesis ?? null,
       briefing_line: input.line,
       briefing_read: input.read,
       briefing_angle: input.angle,

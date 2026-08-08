@@ -260,6 +260,8 @@ export type DealRound = {
   capture_speakers: TranscriptSpeaker[] | null
   // The seller's subjective read. See lib/seller-read.ts — never a score.
   seller_read: unknown
+  /** The bet this round makes: « Si …, alors … ». See the briefing route. */
+  briefing_hypothesis: string | null
   briefing_line: string | null
   // The next conversation's objective, written by the engine with the read.
   focus_objective: string | null

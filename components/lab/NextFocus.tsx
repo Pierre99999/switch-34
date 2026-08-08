@@ -122,6 +122,8 @@ export default function NextFocus({
       : `Préparer la conversation du round ${step.round}.`
   })()
 
+  const hypothesis = (current?.briefing_hypothesis ?? '').trim() || null
+
   const gateLine = `Porte ${dealState.activeGate} · ${gateName(dealState.activeGate)}${gate?.lockVariable ? ` — ${criterionLabel(gate.lockVariable)}` : ''}`
   const subtitle = step.kind === 'closed' ? null
     : step.kind === 'capture' ? `${gateLine} · briefing du round ${step.round} prêt`
@@ -163,25 +165,39 @@ export default function NextFocus({
       <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] mb-6">
         <div className="flex items-center gap-2 mb-3">
           <span className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-sm">◈</span>
-          <span className="text-[11px] font-semibold text-blue-500 uppercase tracking-[0.08em]">Prochain focus</span>
+          <span className="text-[11px] font-semibold text-blue-500 uppercase tracking-[0.08em]">L’hypothèse du round</span>
           {step.kind !== 'closed' && <span className="text-[11px] text-neutral-300">Round {step.round}</span>}
         </div>
 
         <div className="grid lg:grid-cols-[1fr_340px] gap-6">
           <div>
-            <h2 className="text-[26px] leading-[1.25] font-bold text-neutral-900 tracking-tight">{title}</h2>
-            {subtitle && <p className="text-sm text-neutral-400 mt-1.5">{subtitle}</p>}
+            {/* The bet the round is making. A round is not a list of
+                questions: it is something that can turn out to be false, and
+                saying so out loud is what makes the next capture decisive. */}
+            {hypothesis ? (
+              <>
+                <blockquote className="border-l-[3px] border-blue-400 pl-4 text-[22px] leading-[1.35] font-bold text-neutral-900 tracking-tight">
+                  {hypothesis}
+                </blockquote>
+                <p className="text-sm text-neutral-400 mt-2.5">{title}{subtitle ? ` · ${subtitle}` : ''}</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-[26px] leading-[1.25] font-bold text-neutral-900 tracking-tight">{title}</h2>
+                {subtitle && <p className="text-sm text-neutral-400 mt-1.5">{subtitle}</p>}
+              </>
+            )}
 
             {items.length > 0 && (
               <>
                 <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em] mt-5 mb-3">
-                  Ce que cette conversation doit établir
+                  Ce que cette conversation doit confirmer
                 </div>
                 <ul className="space-y-2.5">
                   {items.map((it, i) => (
                     <li key={i} className="flex items-center gap-3" title={`${it.hint} · ${it.source}`}>
                       <span className={`w-6 h-6 rounded-full text-[11px] font-semibold flex items-center justify-center flex-shrink-0 ${it.tint}`}>
-                        {i + 1}
+                        ✓
                       </span>
                       <span className="text-[15px] text-neutral-800 truncate">{it.label}</span>
                       <span className="text-[11px] text-neutral-400 flex-shrink-0">{it.tag}</span>

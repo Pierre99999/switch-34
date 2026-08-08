@@ -6,6 +6,8 @@ import type { Deal, DealRound } from '@/lib/types'
 import { isLegacyDimensions } from '@/lib/types'
 import { criteriaOfLayer, gateName } from '@/lib/lab-view'
 import { criterionHistory, readingSince } from '@/lib/criterion-history'
+import { roundChanges, topRisks, changeLabels } from '@/lib/round-changes'
+import { computeDealState } from '@/lib/scoring'
 import type { Declaration } from '@/lib/voice-credit'
 import {
   type PlaybookFit, type FitVerdict, type ActorCoverage, type DealContact,
@@ -117,6 +119,15 @@ export default function DealKnowledge({
   // itself, how that reads against the socle, and what the conversations have
   // established. The four gates belong together — the thin rules between them
   // said "same family", but nothing said where one family ended.
+  const changes = roundChanges(rounds, round?.round ?? 0)
+  const risks = topRisks({
+    dealState: computeDealState(rounds, round?.round ?? 0),
+    current: round,
+    coverage,
+    fit,
+    changes,
+  })
+
   const hasContext = contextFields > 0
   const hasFit = !!(fit || coverage?.applicable)
 
@@ -166,6 +177,60 @@ export default function DealKnowledge({
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* What the last conversation moved, and what is most dangerous now.
+            Both computed from what is already stored: the gate scores flatten
+            a round into four numbers, and neither of these shows up there. */}
+        {(changes.confirmed.length + changes.claims.length + changes.contradictions.length > 0 || risks.length > 0) && (
+          <div className="px-5 py-4 border-b border-neutral-100 space-y-4">
+            {(changes.confirmed.length + changes.claims.length + changes.contradictions.length > 0) && (
+              <div>
+                <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em] mb-2">
+                  Ce qui vient de changer
+                </div>
+                <ul className="space-y-1.5">
+                  {changes.confirmed.length > 0 && (
+                    <li className="text-xs text-neutral-600 leading-relaxed" title={changeLabels(changes.confirmed).join(', ')}>
+                      <span className="text-emerald-500">●</span>{' '}
+                      {changes.confirmed.length} fait{changes.confirmed.length > 1 ? 's' : ''} confirmé{changes.confirmed.length > 1 ? 's' : ''}
+                      <span className="text-neutral-400"> — {changeLabels(changes.confirmed).join(', ')}</span>
+                    </li>
+                  )}
+                  {changes.claims.length > 0 && (
+                    <li className="text-xs text-neutral-600 leading-relaxed">
+                      <span className="text-amber-500">●</span>{' '}
+                      {changes.claims.length} affirmation{changes.claims.length > 1 ? 's' : ''} à corroborer
+                      <span className="text-neutral-400"> — {changeLabels(changes.claims).join(', ')}</span>
+                    </li>
+                  )}
+                  {changes.contradictions.length > 0 && (
+                    <li className="text-xs text-neutral-600 leading-relaxed">
+                      <span className="text-rose-500">●</span>{' '}
+                      {changes.contradictions.length} contradiction{changes.contradictions.length > 1 ? 's' : ''}
+                      <span className="text-neutral-400"> — {changeLabels(changes.contradictions).join(', ')}</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
+            {risks.length > 0 && (
+              <div>
+                <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em] mb-2">
+                  Les plus gros risques
+                </div>
+                <ul className="space-y-1.5">
+                  {risks.map((r, i) => (
+                    <li key={i} className="text-xs text-neutral-600 leading-relaxed" title={r.why}>
+                      <span className="text-amber-500">⚠</span> {r.label}
+                      <span className="block text-neutral-400 pl-4">{r.why}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* The prospect's own material, before anyone spoke. */}
         {hasContext && (
           <div className="border-b border-neutral-100">
