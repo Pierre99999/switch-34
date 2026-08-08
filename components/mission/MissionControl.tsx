@@ -295,7 +295,7 @@ export default function MissionControl() {
           <SectionHead
             icon="map"
             label="Votre portefeuille en un coup d’œil"
-            hint="Chaque point est un deal : sa position dit les portes franchies et le momentum, sa taille le CA. Cliquez pour l’ouvrir."
+            hint="Chaque point est un deal : en abscisse la porte qu’il travaille (1, 2, 3), en ordonnée son momentum, en taille le CA. Cliquez pour l’ouvrir."
             aside={
               <div className="flex items-center gap-3 text-xs text-neutral-400">
                 <span>Risque</span>

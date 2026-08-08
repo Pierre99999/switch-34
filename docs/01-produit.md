@@ -61,7 +61,7 @@ qu'on n'a pas encore retiré.
 
 | Écran | Route | Ce qu'il fait |
 |---|---|---|
-| Mission Control | `/lab` | Le portefeuille : questions, actions de la semaine, carte, deals clos |
+| Mission Control | `/lab` | Le portefeuille : questions, actions de la semaine, carte portes × momentum, deals clos |
 | Le deal | `/lab/deals/:id` | Écran unique : hypothèse du round, portes, copilote, timeline, connaissance |
 | Contexte prospect | `/lab/deals/:id/context` | L'éditeur de ce que le prospect dit de lui-même |
 | Nouveau deal | `/lab/deals/new` | Nom, site ou document, contacts, CA |

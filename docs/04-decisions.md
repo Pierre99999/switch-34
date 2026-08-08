@@ -126,6 +126,25 @@ Elle ne se contente pas d'omettre un deal, elle fait croire qu'on les a tous
 vus. D'où la passe de séparation, déterministe, avec un test qui vérifie que le
 décalage ne fait jamais changer un deal de quadrant.
 
+**La séparation est murée dans la bande de la porte** (`xMin`/`xMax` de
+`bubble-layout.ts`). Depuis que l'abscisse est graduée en portes, un point
+poussé au-delà d'une graduation afficherait une porte que le deal n'a pas
+franchie : la place qu'on gagne ne vaut jamais ce mensonge-là.
+
+### L'abscisse de la carte est graduée en portes, pas en pourcentage
+
+« 62 % du chemin » ne se traduit en aucune action. La carte porte donc trois
+bandes — 1 L'opportunité, 2 La capacité à gagner, 3 L'impact — et un deal se
+lit « porte 2, momentum 2,1 » : la porte qu'il travaille, et si une décision se
+construit pendant qu'il la travaille. Franchir une graduation, c'est franchir
+la porte. L'ordonnée reste le momentum, parce que c'est la seule lecture
+parallèle de la méthode : deux deals sur la même porte n'ont pas la même
+urgence à être appelés.
+
+La bande d'un deal se déduit de `activeGate` ; `advancement` ne sert plus qu'à
+le placer **dans** sa bande. Un test vérifie que les deux disent la même chose
+— sinon un point s'afficherait sous un numéro de porte qu'il n'a pas atteint.
+
 ### L'avancement compte les portes franchies, pas les rounds tenus
 
 Un deal à sa cinquième conversation avec la porte 1 toujours ouverte n'a pas

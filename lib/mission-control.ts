@@ -174,6 +174,12 @@ export type PortfolioPosition = {
   prospect: string
   /** 0 → 1: how far the sequential gates have been carried. */
   advancement: number
+  /**
+   * The gate being worked on: 1, 2, 3 — or 4 when all three are carried.
+   * The gates are sequential, so the number of gates carried is always
+   * `activeGate - 1`; the map reads the abscissa from this single field.
+   */
+  activeGate: number
   /** The momentum score, 0–5, or null when nothing is captured. */
   momentum: number | null
   /** The deal score, for the label. Not a probability. */
@@ -219,6 +225,7 @@ export function portfolioPositions(input: Omit<PortfolioInput, 'coverageByDeal'>
         dealId: deal.id,
         prospect: deal.prospect_name,
         advancement,
+        activeGate: state.activeGate,
         momentum: state.momentum.score,
         score: dealScore(current),
         revenue: deal.potential_revenue,

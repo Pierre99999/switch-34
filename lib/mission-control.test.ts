@@ -158,6 +158,18 @@ test('advancement counts gates carried, not rounds held', () => {
     now: NOW,
   })
   assert.ok(pos.advancement < 0.34, `${pos.advancement}`)
+  assert.equal(pos.activeGate, 1)
+})
+
+test('the abscissa and the active gate say the same thing', () => {
+  // The map places a deal in the band of the gate it is working on, and reads
+  // that band from advancement. If the two disagree, a dot sits under a gate
+  // number the deal has not reached.
+  for (const rounds of [[captured(1)], [captured(1, { urgency: 4 })], [captured(1, { compelling_reason: 1 })]]) {
+    const [pos] = portfolioPositions({ deals: [deal({ id: 'a' })], roundsByDeal: { a: rounds }, now: NOW })
+    const band = Math.min(Math.floor(pos.advancement * 3), 2)
+    assert.equal(band, Math.min(pos.activeGate, 3) - 1, `porte ${pos.activeGate}, avancement ${pos.advancement}`)
+  }
 })
 
 test('a gate at risk marks the deal high risk', () => {

@@ -9,7 +9,7 @@ utilisateur.** Playbook → prospect → briefing → conversation → transcrip
 notation → round suivant : chaque morceau a été construit et testé
 unitairement, la chaîne entière n'a jamais tourné en conditions réelles.
 
-Le build passe, les types passent, 208 tests passent. Ça ne dit rien de ce
+Le build passe, les types passent, 211 tests passent. Ça ne dit rien de ce
 qui se passe quand un commercial s'en sert un mardi matin.
 
 Les testeurs sont sur la nouvelle interface depuis qu'elle a remplacé
@@ -19,8 +19,14 @@ l'ancienne. C'est là que les vrais défauts vont apparaître.
 
 1. **Les migrations de fin de session** (voir [05](05-migrations.md)) — sans
    elles, la création de briefing et la carte cassent.
-2. **La carte du portefeuille** — jamais vue rendue. La séparation des points
-   est testée mathématiquement, pas visuellement.
+2. **La carte du portefeuille** — vue rendue une fois, hors application, sur
+   des positions fabriquées : l'abscisse en portes, les bandes et la séparation
+   des points tiennent. Jamais vue avec de vraies données, ni avec un
+   portefeuille chargé où les étiquettes de deals peuvent se chevaucher — c'est
+   le seul défaut que les tests ne verrouillent pas.
+   **Un deal sans momentum noté se pose sur le plancher**, indiscernable d'un
+   momentum 0. Le survol dit « — », le point ne le dit pas. À trancher quand la
+   carte aura servi.
 3. **Un round complet sur un vrai deal** — surtout la porte 3 et l'adéquation
    avec le terrain de jeu, deux critères qui restaient vides et dont les
    définitions viennent d'être réécrites.

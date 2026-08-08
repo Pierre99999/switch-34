@@ -48,8 +48,8 @@ pas de profil vendeur → `/onboarding`.
 **Le portefeuille**
 | Fichier | Rôle |
 |---|---|
-| `mission-control.ts` | Les actions de la semaine, la position de chaque deal |
-| `bubble-layout.ts` | La séparation des points sur la carte |
+| `mission-control.ts` | Les actions de la semaine, la position de chaque deal — porte travaillée (`activeGate`) et momentum |
+| `bubble-layout.ts` | La séparation des points sur la carte, murée dans la bande de chaque porte |
 | `deal-outcome.ts` | Les raisons de clôture, rattachées chacune à une porte |
 
 **La conversation**

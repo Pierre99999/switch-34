@@ -5,9 +5,10 @@
 // merely omit a deal, it makes you believe you have seen all of them.
 //
 // So the data gives the position and a relaxation pass gives the room: each
-// pair that overlaps pushes apart, a few dozen times, inside the frame. The
-// drift is small enough that the quadrant a deal sits in never changes, which
-// is the only thing the map is actually read for.
+// pair that overlaps pushes apart, a few dozen times, inside the frame — and
+// inside the walls a seed asks for (`xMin`/`xMax`), because the map is read
+// for the band a deal sits in, and no amount of room is worth moving a deal
+// into a gate it has not carried.
 
 export type Seed = {
   id: string
@@ -15,6 +16,14 @@ export type Seed = {
   x: number
   y: number
   r: number
+  /**
+   * Horizontal walls this circle may not cross, tighter than the frame.
+   * The portfolio map uses them to keep a deal inside its own gate band: the
+   * drift that gives room must never carry a deal past a gate it has not
+   * carried.
+   */
+  xMin?: number
+  xMax?: number
 }
 
 export type Placed = Seed & { x: number; y: number }
@@ -36,7 +45,10 @@ export function layoutBubbles(seeds: Seed[], bounds: Bounds): Placed[] {
   }))
 
   const clamp = (p: Placed) => {
-    p.x = Math.min(Math.max(p.x, bounds.minX + p.r), bounds.maxX - p.r)
+    const lo = Math.max(bounds.minX, p.xMin ?? -Infinity) + p.r
+    const hi = Math.min(bounds.maxX, p.xMax ?? Infinity) - p.r
+    // A band narrower than the circle: centre it rather than snap it to a wall.
+    p.x = hi < lo ? (lo + hi) / 2 : Math.min(Math.max(p.x, lo), hi)
     p.y = Math.min(Math.max(p.y, bounds.minY + p.r), bounds.maxY - p.r)
   }
   placed.forEach(clamp)

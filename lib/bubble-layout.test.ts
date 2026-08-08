@@ -54,6 +54,24 @@ test('the drift stays small enough not to change the quadrant', () => {
   for (const p of out) assert.ok(Math.abs(p.y - 120) < 120, `${p.id} drifted ${p.y}`)
 })
 
+test('a bubble never drifts out of its own gate band', () => {
+  // The abscissa is graduated in gates. A deal pushed past a graduation would
+  // display a gate it has not carried — the one lie the map must not tell.
+  const band = { xMin: 300, xMax: 600 }
+  const seeds: Seed[] = Array.from({ length: 10 }, (_, i) => ({
+    id: `d${i}`, x: 595, y: 200 + i * 0.5, r: 16, ...band,
+  }))
+  for (const p of layoutBubbles(seeds, BOUNDS)) {
+    assert.ok(p.x - p.r >= band.xMin - 0.01, `${p.id} left its band on the left (${p.x})`)
+    assert.ok(p.x + p.r <= band.xMax + 0.01, `${p.id} left its band on the right (${p.x})`)
+  }
+})
+
+test('a band narrower than the bubble centres it instead of jamming it', () => {
+  const [p] = layoutBubbles([{ id: 'a', x: 0, y: 200, r: 30, xMin: 300, xMax: 320 }], BOUNDS)
+  assert.ok(Math.abs(p.x - 310) < 0.01, `${p.x}`)
+})
+
 test('the layout is deterministic — same input, same output', () => {
   const seeds = Array.from({ length: 10 }, (_, i) => seed(`d${i}`, 400 + i, 200))
   const a = layoutBubbles(seeds, BOUNDS)
