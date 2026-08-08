@@ -6,6 +6,7 @@ import { criterionLabel, gateName } from '@/lib/lab-view'
 import { prescriptions, type DealState } from '@/lib/scoring'
 import { nextStep } from '@/lib/deal-rounds'
 import { normalizeFit, FIT_AXIS_LABELS, type ActorCoverage } from '@/lib/playbook-fit'
+import { roundFocus } from '@/lib/round-focus'
 import { firstSentences, isTruncated } from '@/lib/text'
 
 // The objective, stated as something to go and do, with what it would take.
@@ -16,9 +17,6 @@ import { firstSentences, isTruncated } from '@/lib/text'
 // cross-reference.
 
 type Item = { label: string; tag: string; hint: string; source: string; tint: string }
-
-// Lowercase the first letter so a criterion label reads inside a sentence.
-const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
 
 export default function NextFocus({
   deal, rounds, current, dealState, coverage, busy, error, onRun, onOpenBriefing,
@@ -35,18 +33,17 @@ export default function NextFocus({
 }) {
   const [showAnalysis, setShowAnalysis] = useState(false)
   const step = nextStep(deal, rounds)
-  // Written by the engine right after it analysed the conversation: an
-  // objective, then one line of reason. Composing it from the prescriptions
-  // gave mechanical phrasing, so that is only the fallback.
-  const written = ((current as unknown as { focus_objective?: string } | null)?.focus_objective ?? '').trim()
-  const [writtenObjective, writtenWhy] = written ? written.split('\n').map(x => x.trim()) : [null, null]
   const gate = dealState.gates[dealState.activeGate]
   const fit = normalizeFit(deal.playbook_fit)
 
+  // The sentence of the round, computed in lib/round-focus so Mission Control
+  // prints the same one — the two screens used to disagree about what the
+  // round was for.
+  const { hypothesis, objective: title, why: writtenWhy } =
+    roundFocus({ deal, rounds, current, state: dealState, coverage })
+
   // What the next conversation owes this deal, most blocking first.
   const items: Item[] = []
-  // The same list as verbs, to compose the objective sentence.
-  const aims: string[] = []
 
   for (const p of prescriptions(current).slice(0, 3)) {
     const label = criterionLabel(p.variable)
@@ -65,12 +62,6 @@ export default function NextFocus({
             ? 'Le fait est corroboré mais le signal reste vague — il manque un chiffre, une date, une conséquence.'
             : 'Le signal est défavorable et corroboré. Il faut trancher, ou partir.',
     })
-    aims.push(
-      p.kind === 'MANQUANT' ? `ouvrir ${lower(label)}`
-        : p.kind === 'CORROBORER' ? `corroborer ${lower(label)}`
-          : p.kind === 'PRECISER' ? `préciser ${lower(label)}`
-            : `trancher sur ${lower(label)}`,
-    )
   }
 
   for (const m of (coverage?.missing ?? []).slice(0, 2)) {
@@ -81,7 +72,6 @@ export default function NextFocus({
       tag: 'absent',
       hint: m.risk || 'Ouvrir un chemin vers cette personne.',
     })
-    aims.push(`faire entrer ${lower(m.label)} dans la boucle`)
   }
 
   for (const a of (fit?.axes ?? []).filter(x => x.verdict === 'mismatch' || x.verdict === 'unknown').slice(0, 2)) {
@@ -93,36 +83,6 @@ export default function NextFocus({
       hint: a.gap?.trim() || a.reason?.trim() || 'À trancher lors du prochain échange.',
     })
   }
-
-  // The objective of the conversation ahead, as an action.
-  //
-  // Once the briefing exists the state becomes 'capture', and this used to
-  // print two fixed sentences — "Mener la conversation" / "Le briefing est
-  // prêt" — on every deal, throwing away the prescriptions that had just been
-  // computed and the angle the briefing engine had just written. The objective
-  // does not become generic because a briefing was produced; that is the
-  // moment it is at its most precise.
-  const objectiveFromAims = (() => {
-    if (aims.length === 0) return null
-    const [a, b] = aims
-    const phrase = b ? `${a} et ${b}` : a
-    return `${phrase.charAt(0).toUpperCase()}${phrase.slice(1)}.`
-  })()
-
-  const title = (() => {
-    if (step.kind === 'closed') return 'Ce deal est clos.'
-    if (step.kind !== 'capture' && writtenObjective) return writtenObjective
-    if (rounds.length === 0 && step.kind !== 'capture') return 'Préparer la première conversation.'
-    if (objectiveFromAims) return objectiveFromAims
-    if (step.kind === 'capture') {
-      return current?.briefing_line?.trim() || 'Mener la conversation, puis en importer le transcript.'
-    }
-    return gate?.lockVariable
-      ? `Lever ce qui bloque la porte ${dealState.activeGate} — ${gateName(dealState.activeGate)}.`
-      : `Préparer la conversation du round ${step.round}.`
-  })()
-
-  const hypothesis = (current?.briefing_hypothesis ?? '').trim() || null
 
   const gateLine = `Porte ${dealState.activeGate} · ${gateName(dealState.activeGate)}${gate?.lockVariable ? ` — ${criterionLabel(gate.lockVariable)}` : ''}`
   const subtitle = step.kind === 'closed' ? null

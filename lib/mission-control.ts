@@ -7,14 +7,17 @@
 // One thing deliberately NOT computed: a predicted gain. A mockup can promise
 // "+0,8 sur Momentum" for an action; nothing in the engine knows that, and the
 // method's own rule is that the outcome is never predicted. What each line
-// carries instead is the hypothesis the round is testing — particular to the
-// deal, and true.
+// carries instead is the sentence of the round — the hypothesis it is testing,
+// or the objective composed from the same prescriptions. That sentence comes
+// from `round-focus`, the one the deal screen prints too: a portfolio line and
+// the deal it opens must not disagree about what the round is for.
 
 import type { Deal, DealRound } from './types'
 import { computeDealState, dealScore, gateScore, prescriptions, DECISIVE_VARS } from './scoring'
 import { nextStep, hasCapture } from './deal-rounds'
 import { criterionLabel } from './lab-view'
 import { normalizeFit, type ActorCoverage } from './playbook-fit'
+import { roundFocus } from './round-focus'
 
 export type ActionKind = 'exit' | 'settle' | 'capture' | 'brief' | 'actor' | 'revive' | 'next_round'
 
@@ -29,7 +32,15 @@ export type PortfolioAction = {
    * read by the second one.
    */
   hypothesis: string | null
-  /** What to do, in one line. Shown when there is no hypothesis yet. */
+  /**
+   * What the deal screen prints in its hypothesis slot — the bet when there is
+   * one, otherwise the objective composed from the same prescriptions. The two
+   * screens read one sentence, computed in `round-focus`; a portfolio line that
+   * says something else than the deal it points to sends the seller into the
+   * conversation with the wrong question.
+   */
+  focus: string
+  /** What to do, in one line — the way into the deal, under the sentence. */
   title: string
   /** Why now — the state of the deal that produced it. */
   why: string
@@ -78,10 +89,16 @@ export function portfolioActions(input: PortfolioInput): PortfolioAction[] {
     const decisive = new Set(Object.values(DECISIVE_VARS).flat())
     const idle = daysSinceActivity(rounds, now)
 
-    const hypothesis = (current?.briefing_hypothesis ?? '').trim() || null
+    const focus = roundFocus({ deal, rounds, current, state, coverage: coverageByDeal[deal.id] ?? null })
 
-    const add = (a: Omit<PortfolioAction, 'dealId' | 'prospect' | 'hypothesis'>) =>
-      out.push({ dealId: deal.id, prospect: deal.prospect_name, hypothesis, ...a })
+    const add = (a: Omit<PortfolioAction, 'dealId' | 'prospect' | 'hypothesis' | 'focus'>) =>
+      out.push({
+        dealId: deal.id,
+        prospect: deal.prospect_name,
+        hypothesis: focus.hypothesis,
+        focus: focus.headline,
+        ...a,
+      })
 
     if (fit?.avoid_list_hit) {
       add({

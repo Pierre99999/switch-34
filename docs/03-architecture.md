@@ -36,6 +36,7 @@ pas de profil vendeur → `/onboarding`.
 | `deal-rounds.ts` | Héritage entre rounds, état d'un round, prochaine étape |
 | `criterion-history.ts` | L'historique d'un critère, lu depuis les rounds existants |
 | `round-changes.ts` | Ce qui a changé depuis le round précédent, et les plus gros risques |
+| `round-focus.ts` | La phrase du round — l'hypothèse écrite, sinon l'objectif composé. Lue par le deal **et** par Mission Control |
 
 **Le socle et l'adéquation**
 | Fichier | Rôle |

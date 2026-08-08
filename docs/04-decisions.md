@@ -71,6 +71,22 @@ conversation autour de ce que seul l'absent pourrait trancher.
 alors… »*. Le prompt exige une phrase **falsifiable**. C'est ce qui rend la
 capture suivante décisive — l'hypothèse tient ou ne tient pas.
 
+### La phrase du round est calculée une fois, affichée deux fois
+
+`lib/round-focus.ts` produit l'hypothèse écrite par le moteur, et à défaut
+l'objectif composé à partir des prescriptions. Le deal et Mission Control la
+lisent tous les deux.
+
+Avant, chacun répondait de son côté à « à quoi sert ce round ». Sur le même
+deal, le même jour, le deal affichait *« Ouvrir problème business réel et
+ouvrir raison impérieuse. »* et la semaine *« Faire entrer CEO dans la
+boucle »* : deux vérités sur un round, sans moyen de savoir laquelle la
+méthode voulait dire.
+
+L'action reste sous la phrase dans Mission Control — c'est la porte d'entrée,
+pas le but. **Ne pas remettre le titre d'action en ligne principale** : il
+sort identique sur trois deals à la fois et cesse d'être lu au deuxième.
+
 ### L'issue d'un deal se capture à la clôture
 
 Les scores et les patterns se recalculent ; **pourquoi un deal est mort

@@ -1,6 +1,6 @@
 # 06 — État et suites
 
-*Dernière mise à jour : 6 août 2026.*
+*Dernière mise à jour : 8 août 2026.*
 
 ## L'avertissement qui compte
 
@@ -9,7 +9,7 @@ utilisateur.** Playbook → prospect → briefing → conversation → transcrip
 notation → round suivant : chaque morceau a été construit et testé
 unitairement, la chaîne entière n'a jamais tourné en conditions réelles.
 
-Le build passe, les types passent, 203 tests passent. Ça ne dit rien de ce
+Le build passe, les types passent, 208 tests passent. Ça ne dit rien de ce
 qui se passe quand un commercial s'en sert un mardi matin.
 
 Les testeurs sont sur la nouvelle interface depuis qu'elle a remplacé
@@ -88,3 +88,5 @@ sur les doublons.
 - Le focus qui redevenait générique dès qu'un briefing existait.
 - Les noms de variables bruts affichés à l'écran (`concerns_fit`).
 - La valeur pesée deux fois, porte 2 et porte 3.
+- Mission Control et l'écran du deal qui ne disaient pas la même chose du même
+  round : la phrase vient maintenant de `lib/round-focus.ts`, des deux côtés.

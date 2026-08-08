@@ -236,14 +236,14 @@ export default function MissionControl() {
                     <div className="text-sm font-semibold text-neutral-900 group-hover:text-blue-600 transition-colors">
                       {a.prospect}
                     </div>
-                    {/* The hypothesis when the round has one — it is particular
-                        to the deal, where an action title comes out identical
-                        on three deals at once. */}
+                    {/* The sentence of the round — the same one the deal screen
+                        prints under « L'hypothèse du round ». The action stays
+                        underneath: it is the way in, not the point. */}
                     <p className="text-[15px] text-neutral-800 leading-relaxed mt-0.5">
-                      {a.hypothesis ?? a.title}
+                      {a.focus}
                     </p>
                     <p className="text-xs text-neutral-400 mt-1">
-                      {a.hypothesis ? `${a.title} · ${a.why}` : a.why}
+                      {`${a.title} · ${a.why}`}
                     </p>
                   </div>
                 </Link>
