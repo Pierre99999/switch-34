@@ -156,9 +156,18 @@ lire** — la phrase du round — jamais le mobilier autour. Les lignes de la
 semaine reprennent exactement le rythme du deal : le prospect en étiquette, la
 phrase en gras, l'action en gris dessous.
 
-Les classes de la carte vivent dans une constante `CARD` en tête de
-`MissionControl` : deux écrans d'un même produit ne doivent pas diverger sur
-ce qu'est une carte.
+Les classes de la carte vivent dans `components/lab/cards.ts` : deux écrans
+d'un même produit ne doivent pas diverger sur ce qu'est une carte. Ni l'une ni
+l'autre ne porte de padding — le copilote est plus dense qu'une section de
+Mission Control.
+
+### La carte à qui l'on parle se voit avant d'être lue
+
+`CARD_TALK` : bordure bleue de deux pixels et halo autour. Le copilote du deal
+l'avait déjà ; « Que voulez-vous savoir ? » la prend aussi. C'est le seul
+endroit de chaque écran qui **répond quand on y écrit**, et un champ de saisie
+dans une carte grise ressemble à un filtre. Les autres sections gardent la
+carte ordinaire : si tout est souligné, plus rien ne l'est.
 
 ### L'en-tête d'une section vient d'un seul composant
 

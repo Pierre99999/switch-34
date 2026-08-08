@@ -62,5 +62,11 @@ quelqu'un réintroduit le défaut — pas simplement couvrir une ligne.
 **Les migrations se donnent en SQL brut dans la réponse**, pas en chemin de
 fichier : Pierre les colle dans le SQL Editor de Supabase.
 
+**Commiter et pousser sur `main` sans demander**, dès qu'un travail est abouti
+— types et `npm run test:scoring` au vert, `docs/` à jour dans le même commit.
+Pas de branche, pas de pull request : le dépôt a un seul auteur, et une
+demande de permission à chaque fin de tâche ne protège rien. Un travail
+laissé en chantier ne se pousse pas ; on le dit.
+
 **Répondre en français.** Le produit et son utilisateur sont français ; les
 commentaires de code restent en anglais.

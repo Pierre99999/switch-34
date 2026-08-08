@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Suggestion } from '@/lib/copilot-suggestions'
+import { CARD_TALK } from './cards'
 
 // One input, not two. The suggestions are shortcuts into the same box, so
 // there is never a question of which field to type in — and they come from
@@ -41,7 +42,7 @@ export default function DealCopilot({
   }
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-blue-400/60 ring-4 ring-blue-500/10 shadow-[0_2px_12px_rgba(59,130,246,0.10)] p-5 flex flex-col min-h-[420px]">
+    <div className={`${CARD_TALK} p-5 flex flex-col min-h-[420px]`}>
       <div className="flex items-center gap-2 mb-1">
         <span className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm">✦</span>
         <span className="text-sm font-bold text-neutral-900">Copilote</span>

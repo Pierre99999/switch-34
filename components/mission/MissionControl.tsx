@@ -10,6 +10,7 @@ import { reasonLabels } from '@/lib/deal-outcome'
 import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
 import PortfolioMap from './PortfolioMap'
 import SectionLabel, { type SectionIcon } from '@/components/lab/SectionLabel'
+import { CARD as CARD_BASE, CARD_TALK } from '@/components/lab/cards'
 
 // Mission Control: what is happening across the deals, and what to do first.
 //
@@ -34,9 +35,11 @@ const SEVERITY: Record<PortfolioAction['severity'], string> = {
   low: 'bg-blue-50 text-blue-600',
 }
 
-// The deal screen's card, to the pixel: same border, same hairline shadow.
-// Two screens of one product must not disagree about what a card looks like.
-const CARD = 'bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+// The deal screen's card, to the pixel — from the same file it draws it from.
+// The thicker blue one is the copilot's: it marks the one card on the screen
+// that answers when you type in it.
+const CARD = `${CARD_BASE} p-6`
+const CARD_ASK = `${CARD_TALK} p-6`
 
 // And its section header: the deal screen's label — a drawn icon in a tinted
 // disc, the name in blue — then the sentence that says what the section is
@@ -176,7 +179,7 @@ export default function MissionControl() {
       </header>
 
       {/* ── Ask ── */}
-      <section className={CARD}>
+      <section className={CARD_ASK}>
         <SectionHead
           icon="ask"
           label="Que voulez-vous savoir ?"
