@@ -21,6 +21,8 @@ import BriefingLetter from '@/components/lab/BriefingLetter'
 import DealGreeting from '@/components/lab/DealGreeting'
 import GeneratingDialog from '@/components/lab/GeneratingDialog'
 import AttendeesDialog from '@/components/lab/AttendeesDialog'
+import OutcomeDialog from '@/components/pipeline/OutcomeDialog'
+import { outcomeUpdate, reasonLabels, type DealOutcome } from '@/lib/deal-outcome'
 import { normalizeAttendees, type Attendee } from '@/lib/attendees'
 import { useI18n } from '@/lib/i18n/context'
 import TranscriptImport from '@/components/lab/TranscriptImport'
@@ -108,6 +110,11 @@ export default function LabDealPage() {
   const [showImport, setShowImport] = useState(false)
   const [showManual, setShowManual] = useState(false)
   const [welcomeOpen, setWelcomeOpen] = useState(true)
+  // Closing a deal lived on the pipeline table. That table is gone, and the
+  // outcome is the one thing that cannot be reconstructed afterwards — so it
+  // moves here rather than disappearing with the screen that held it.
+  const [closing, setClosing] = useState<'won' | 'lost' | null>(null)
+  const [statusMenu, setStatusMenu] = useState(false)
   const [coverage, setCoverage] = useState<ActorCoverage | null>(null)
   const [stakeholders, setStakeholders] = useState<DealContact[]>([])
 
@@ -223,6 +230,16 @@ export default function LabDealPage() {
     }
   }
 
+  async function setStatus(status: Deal['status'], outcome?: DealOutcome) {
+    const supabase = createClient()
+    const update = (status === 'won' || status === 'lost') && outcome
+      ? outcomeUpdate(status, outcome)
+      : { status }
+    const { error: e } = await supabase.from('deals').update(update).eq('id', dealId)
+    if (e) { setError(e.message); return }
+    await load()
+  }
+
   const fmtRevenue = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k€` : `${n}€`
 
   return (
@@ -240,6 +257,16 @@ export default function LabDealPage() {
             setPendingBrief(null)
             generateBriefing(kind, attendees, newContacts)
           }}
+        />
+      )}
+
+      {closing && (
+        <OutcomeDialog
+          prospectName={deal.prospect_name}
+          status={closing}
+          currentRound={deal.current_round}
+          onCancel={() => setClosing(null)}
+          onConfirm={outcome => { const s = closing; setClosing(null); setStatus(s, outcome) }}
         />
       )}
 
@@ -293,6 +320,11 @@ export default function LabDealPage() {
               <p className="text-sm text-neutral-400 mt-1">
                 {deal.contact_name ?? '—'}{deal.contact_title ? <span className="text-neutral-300"> · {deal.contact_title}</span> : null}
               </p>
+              {reasonLabels((deal as unknown as { close_reasons?: string[] | null }).close_reasons).length > 0 && (
+                <p className="text-xs text-neutral-400 mt-1">
+                  {reasonLabels((deal as unknown as { close_reasons?: string[] | null }).close_reasons).join(' · ')}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-4">
               {deal.potential_revenue && (
@@ -301,6 +333,30 @@ export default function LabDealPage() {
                   <div className="text-[11px] text-neutral-400">CA potentiel</div>
                 </div>
               )}
+              <div className="relative">
+                <button
+                  onClick={() => setStatusMenu(o => !o)}
+                  className="text-sm text-neutral-400 hover:text-neutral-700 border border-neutral-200 rounded-xl px-3 py-2 transition-colors"
+                >
+                  {deal.status === 'active' ? 'Statut' : deal.status === 'won' ? 'Gagné' : deal.status === 'lost' ? 'Perdu' : 'En pause'}
+                </button>
+                {statusMenu && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setStatusMenu(false)} />
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-neutral-200 rounded-xl shadow-lg py-1 z-40 min-w-[190px]">
+                      {deal.status === 'active' ? (
+                        <>
+                          <button onClick={() => { setStatusMenu(false); setClosing('won') }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50">Marquer gagné</button>
+                          <button onClick={() => { setStatusMenu(false); setClosing('lost') }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50">Marquer perdu</button>
+                          <button onClick={() => { setStatusMenu(false); setStatus('paused') }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50">Mettre en pause</button>
+                        </>
+                      ) : (
+                        <button onClick={() => { setStatusMenu(false); setStatus('active') }} className="w-full text-left px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50">Réactiver</button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
               <select
                 value={shownRound}
                 onChange={e => setSelectedRound(Number(e.target.value))}

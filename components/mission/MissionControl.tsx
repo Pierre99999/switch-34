@@ -6,15 +6,16 @@ import { createClient } from '@/lib/supabase/client'
 import type { Deal, DealRound } from '@/lib/types'
 import { portfolioActions, portfolioPositions, type PortfolioAction } from '@/lib/mission-control'
 import { normalizePlaybook } from '@/lib/playbook'
+import { reasonLabels } from '@/lib/deal-outcome'
 import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
 import PortfolioMap from './PortfolioMap'
-import PipelineView from '@/components/pipeline/PipelineView'
 
 // Mission Control: what is happening across the deals, and what to do first.
 //
 // Three readings of the same portfolio — ask it a question, act on what it
-// prescribes, or look at where everything sits. The list of rows is still
-// here, below: a map is good for seeing, a table is good for finding.
+// prescribes, or look at where everything sits. No table underneath: the rows
+// repeated what the map and the actions already say, and a screen that says a
+// thing twice teaches the eye to skip both.
 
 const READY_QUESTIONS = [
   { icon: '⚡', label: 'Que puis-je gagner rapidement ?', q: 'Quels deals sont les plus proches d’aboutir, et sur quelles preuves ? Dis-moi ce qui reste à établir sur chacun.' },
@@ -40,6 +41,9 @@ export default function MissionControl() {
   // is a different answer every pass.
   const [now, setNow] = useState(0)
   const [showAll, setShowAll] = useState(false)
+  // Closed deals are out of the way but not out of reach: the corpus of what
+  // was won and lost is the only place patterns will ever come from.
+  const [archived, setArchived] = useState<Deal[] | null>(null)
 
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<string | null>(null)
@@ -97,6 +101,14 @@ export default function MissionControl() {
     () => portfolioPositions({ deals, roundsByDeal, now }),
     [deals, roundsByDeal, now],
   )
+
+  async function loadArchived() {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('deals').select('*').in('status', ['won', 'lost', 'paused'])
+      .order('closed_at', { ascending: false, nullsFirst: false })
+    setArchived((data ?? []) as Deal[])
+  }
 
   async function ask(q: string) {
     const text = q.trim()
@@ -248,7 +260,7 @@ export default function MissionControl() {
             <div>
               <h2 className="text-lg font-bold text-neutral-900">Votre portefeuille en un coup d’œil</h2>
               <p className="text-sm text-neutral-400 mt-1">
-                Chaque bulle est un deal : sa position dit les portes franchies et le momentum, sa taille le CA.
+                Chaque point est un deal : sa position dit les portes franchies et le momentum, sa taille le CA. Cliquez pour l’ouvrir.
               </p>
             </div>
             <div className="flex items-center gap-3 text-xs text-neutral-400">
@@ -266,10 +278,40 @@ export default function MissionControl() {
           </p>
         </section>
       )}
+      {/* ── Closed ── */}
+      <section className="text-center">
+        <button
+          onClick={() => (archived ? setArchived(null) : loadArchived())}
+          className="text-sm text-neutral-400 hover:text-neutral-700 transition-colors"
+        >
+          {archived ? 'Masquer les deals clos' : 'Voir les deals clos'}
+        </button>
 
-      {/* ── Find ── */}
-      <section>
-        <PipelineView dealHref={id => `/lab/deals/${id}`} stepHref={id => `/lab/deals/${id}`} showScores={false} />
+        {archived && archived.length > 0 && (
+          <ul className="mt-3 bg-white rounded-2xl border border-neutral-200 divide-y divide-neutral-100 text-left">
+            {archived.map(d => {
+              const reasons = reasonLabels((d as unknown as { close_reasons?: string[] | null }).close_reasons)
+              const tone = d.status === 'won' ? 'bg-emerald-50 text-emerald-600'
+                : d.status === 'lost' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+              return (
+                <li key={d.id}>
+                  <Link href={`/lab/deals/${d.id}`} className="flex items-start gap-3 px-5 py-3 hover:bg-neutral-50/70 transition-colors">
+                    <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 ${tone}`}>
+                      {d.status === 'won' ? 'Gagné' : d.status === 'lost' ? 'Perdu' : 'En pause'}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-neutral-700">{d.prospect_name}</span>
+                      {reasons.length > 0 && <span className="block text-xs text-neutral-400">{reasons.join(' · ')}</span>}
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        {archived && archived.length === 0 && (
+          <p className="text-sm text-neutral-400 mt-3">Aucun deal clos pour l’instant.</p>
+        )}
       </section>
     </div>
   )
