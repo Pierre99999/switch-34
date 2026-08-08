@@ -7,6 +7,7 @@ import { buildVendorContext, buildProspectContext, buildScoresContext, buildCapt
 import { type DealRound } from '@/lib/types'
 import { computeDealState } from '@/lib/scoring'
 import { localeInstruction } from '@/lib/ai-locale'
+import { toPlainText, PLAIN_TEXT_INSTRUCTION } from '@/lib/plain-text'
 import { recordUsage } from '@/lib/ai-usage'
 
 const client = new Anthropic()
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
 - Name the first gate that is not yet passed (currently Gate ${activeGate}) and what stands between the deal and passing it.
 - Be honest and specific: use the real prospect details, the real scores, the real capture notes. 3–5 sentences. No generic coaching.
 
-You also write the OBJECTIVE of the next conversation. It is the sentence the seller reads before picking up the phone, so it must name what to go and DO — not what a score is. "Faire qualifier le scénario décisionnel et identifier le vrai champion" is an objective; "Corroborer l'adéquation des préoccupations" is a score restated. Never mention gates, scores or criterion names in it.` + localeInstruction(locale),
+You also write the OBJECTIVE of the next conversation. It is the sentence the seller reads before picking up the phone, so it must name what to go and DO — not what a score is. "Faire qualifier le scénario décisionnel et identifier le vrai champion" is an objective; "Corroborer l'adéquation des préoccupations" is a score restated. Never mention gates, scores or criterion names in it.` + localeInstruction(locale) + PLAIN_TEXT_INSTRUCTION,
       tools: [
         {
           name: 'save_read',
@@ -85,10 +86,10 @@ You also write the OBJECTIVE of the next conversation. It is the sentence the se
     }
     const input = toolUse.input as { line: string; read: string; next_objective?: string; why?: string }
 
-    const objective = [input.next_objective?.trim(), input.why?.trim()].filter(Boolean).join('\n')
+    const objective = [toPlainText(input.next_objective ?? ''), toPlainText(input.why ?? '')].filter(Boolean).join('\n')
     await supabase.from('deal_rounds').update({
       briefing_line: input.line,
-      briefing_read: input.read,
+      briefing_read: toPlainText(input.read),
       ...(objective ? { focus_objective: objective } : {}),
     }).eq('id', roundId)
 

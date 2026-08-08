@@ -8,6 +8,7 @@ import {
   buildPrescriptionsContext, buildVoiceContext, buildFitContext, buildSellerRead,
 } from '@/lib/ai-context'
 import { localeInstruction } from '@/lib/ai-locale'
+import { toPlainText, PLAIN_TEXT_INSTRUCTION } from '@/lib/plain-text'
 import { recordUsage } from '@/lib/ai-usage'
 import type { DealRound } from '@/lib/types'
 
@@ -72,13 +73,14 @@ WHAT YOU MAY NOT DO
 STYLE
 - Answer in three to six sentences, plainly. No preamble, no bullet lists unless the question genuinely asks for one.
 - Cite what backs the claim: "Kevin (décideur) l'a dit au round 2", "seulement déclaré, donc plafonné à 2,5".
-- "Je ne sais pas, rien dans le diagnostic ne le dit" is a correct and expected answer.` + localeInstruction(locale),
+- "Je ne sais pas, rien dans le diagnostic ne le dit" is a correct and expected answer.` + localeInstruction(locale) + PLAIN_TEXT_INSTRUCTION,
       messages: [{ role: 'user', content: `${context}\n\n---\n\nQUESTION DU VENDEUR : ${String(question).trim()}` }],
     })
 
     await recordUsage(supabase, { userId: user.id, route: 'ai/copilot', model: 'claude-sonnet-4-6', usage: message.usage, dealId })
 
-    const text = message.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n').trim()
+    const text = toPlainText(
+      message.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n'))
     if (!text) return NextResponse.json({ error: 'No answer from AI' }, { status: 500 })
 
     return NextResponse.json({ answer: text })

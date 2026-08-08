@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { buildVendorContext } from '@/lib/ai-context'
 import { localeInstruction } from '@/lib/ai-locale'
+import { toPlainText, PLAIN_TEXT_INSTRUCTION } from '@/lib/plain-text'
 import { recordUsage } from '@/lib/ai-usage'
 import { computeDealState, dealScore, prescriptions } from '@/lib/scoring'
 import { nextStep } from '@/lib/deal-rounds'
@@ -106,13 +107,14 @@ WHAT YOU MAY NOT DO
 STYLE
 - Four to eight sentences, or a short list when the question asks to rank.
 - Always say what the claim rests on: "porte 1 à risque", "aucune capture depuis 23 jours", "seulement déclaré".
-- "Rien dans le diagnostic ne le dit" is a correct answer.` + localeInstruction(locale),
+- "Rien dans le diagnostic ne le dit" is a correct answer.` + localeInstruction(locale) + PLAIN_TEXT_INSTRUCTION,
       messages: [{ role: 'user', content: `${context}\n\n---\n\nQUESTION DU VENDEUR : ${String(question).trim()}` }],
     })
 
     await recordUsage(supabase, { userId: user.id, route: 'ai/portfolio', model: 'claude-sonnet-4-6', usage: message.usage })
 
-    const text = message.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n').trim()
+    const text = toPlainText(
+      message.content.filter(b => b.type === 'text').map(b => (b as { text: string }).text).join('\n'))
     if (!text) return NextResponse.json({ error: 'No answer from AI' }, { status: 500 })
 
     return NextResponse.json({ answer: text })
