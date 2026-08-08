@@ -28,7 +28,7 @@ function Icon({ name, className }: { name: 'pipeline' | 'playbook' | 'team' | 'a
 // screen — putting Dashboard / Briefing / Conversation here would rebuild the
 // tab navigation this interface exists to remove.
 const ITEMS = [
-  { href: '/lab', label: 'Pipeline', icon: 'pipeline' },
+  { href: '/lab', label: 'Mission Control', icon: 'pipeline' },
   { href: '/lab/playbook', label: 'Sales Playbook', icon: 'playbook' },
   // Inviting reps belongs to whoever owns the playbook.
   { href: '/lab/team', label: 'Équipe', icon: 'team', directorOnly: true },
