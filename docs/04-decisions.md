@@ -136,6 +136,49 @@ avancé. Le pipeline est l'endroit où ce mensonge est le plus confortable.
 Consigne dans le prompt **et** nettoyage à la sortie. La consigne seule dérive
 dès que la réponse se structure.
 
+### Pas d'emoji dans l'interface
+
+Un emoji en couleur porte sa propre couleur et son propre dessin : il ne se
+rend pas pareil sur deux machines et devient un autocollant posé sur l'écran.
+La règle était déjà écrite dans `LabSidebar` — icônes tracées en SVG, qui
+héritent de la couleur et de l'épaisseur du texte. Mission Control ne la
+suivait pas (👋 ⚡ 👤 ⚠ 📊), la timeline et les boutons du briefing non plus.
+
+Quand une icône n'ajoute rien à une phrase qui se lit déjà, **elle disparaît**
+plutôt que d'être redessinée. Les glyphes monochromes des portes (`◎ ◈ ◆ ◇`)
+et de la timeline restent : ils distinguent des choses, ils ne décorent pas.
+
+### Mission Control et le deal partagent la même carte, au pixel
+
+Même bordure, même ombre d'un pixel, même rythme : petite étiquette
+capitalisée, puis le contenu. **Ce qui est grand sur la page est ce qu'il faut
+lire** — la phrase du round — jamais le mobilier autour. Les lignes de la
+semaine reprennent exactement le rythme du deal : le prospect en étiquette, la
+phrase en gras, l'action en gris dessous.
+
+Les classes de la carte vivent dans une constante `CARD` en tête de
+`MissionControl` : deux écrans d'un même produit ne doivent pas diverger sur
+ce qu'est une carte.
+
+### Une conversation passée se relit, elle ne se rouvre pas en formulaire
+
+« Voir la capture » pointait vers `/deals/:id/capture`, l'écran de saisie de
+l'ancienne interface : il quittait le lab et affichait un formulaire vide, car
+il travaille sur le **round courant**, jamais sur le round cliqué dans la
+timeline. Un round passé n'a plus rien à saisir — ce qu'on veut de lui, c'est
+le lire.
+
+`CaptureLetter` ouvre donc la capture par-dessus l'écran du deal, comme la
+lettre de briefing : les questions du round, sous chacune ce qui a été dit,
+les locuteurs du transcript, le champ libre, puis le ressenti du vendeur.
+**Les questions restées sans réponse sont affichées en gris** plutôt que
+masquées : un blanc est une information, et les cacher ferait passer toute
+capture pour complète.
+
+Règle générale derrière ce correctif : **un lien du lab vers `/deals/...`
+est un bug**. Le lab est le produit ; l'ancienne interface ne partage ni sa
+navigation ni son état.
+
 ---
 
 ## Sécurité

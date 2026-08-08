@@ -70,6 +70,13 @@ qu'on n'a pas encore retiré.
 | Admin | `/lab/admin` | Réservé à l'adresse admin |
 | Briefing partagé | `/b/:token` | Le briefing seul, sans connexion — mobile, impression, lien privé |
 
+Deux lectures s'ouvrent par-dessus l'écran du deal, depuis la timeline
+« Historique & conversation » : la **lettre de briefing**
+(`components/lab/BriefingLetter.tsx`) et la **capture d'une conversation
+passée** (`components/lab/CaptureLetter.tsx`) — les questions du round et,
+sous chacune, ce qui a été dit. Ni l'une ni l'autre n'a de route à elle : ce
+sont des lectures du round affiché, pas des écrans à visiter.
+
 ## Déploiement
 
 - **Repo** : `scorejam`, GitHub `Pierre99999/switch-34`

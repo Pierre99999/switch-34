@@ -19,6 +19,8 @@ type Entry = {
   hrefLabel?: string
   /** Opens the briefing letter for that round, in place. */
   briefingRound?: number
+  /** Opens that round's capture — questions and answers — in place. */
+  captureRound?: number
 }
 
 function fmt(iso: string) {
@@ -44,10 +46,12 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
         .filter(s => s.side !== 'seller').map(s => s.name)
       out.push({
         at: r.updated_at ?? r.created_at,
-        icon: '🎧', tint: 'bg-violet-100 text-violet-600',
+        // Monochrome like the three others on this timeline: a colour emoji
+        // beside them reads as a sticker, not as part of the interface.
+        icon: '◑', tint: 'bg-violet-100 text-violet-600',
         title: `Conversation du round ${r.round}${speakers.length ? ` · ${speakers.join(', ')}` : ''}`,
         detail: `${Object.values(notes).filter(v => typeof v === 'string' && v.trim()).length} réponses capturées`,
-        href: `/deals/${dealId}/capture`, hrefLabel: 'Voir la capture',
+        captureRound: r.round,
       })
     }
     if (r.briefing_line) {
@@ -70,7 +74,9 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
       icon: '◫', tint: 'bg-blue-100 text-blue-600',
       title: 'Contexte prospect enrichi',
       detail: `${filled} éléments extraits`,
-      href: `/deals/${dealId}/context`, hrefLabel: 'Voir le contexte',
+      // The lab's own context screen: the app's route opens outside the lab
+      // shell and loses the deal you were reading.
+      href: `/lab/deals/${dealId}/context`, hrefLabel: 'Voir le contexte',
     })
   }
 
@@ -84,12 +90,13 @@ function buildEntries(deal: Deal, rounds: DealRound[], dealId: string): Entry[] 
 }
 
 export default function DealTimeline({
-  deal, rounds, dealId, onOpenBriefing,
+  deal, rounds, dealId, onOpenBriefing, onOpenCapture,
 }: {
   deal: Deal
   rounds: DealRound[]
   dealId: string
   onOpenBriefing: (round: number) => void
+  onOpenCapture: (round: number) => void
 }) {
   const [showAll, setShowAll] = useState(false)
   const [query, setQuery] = useState('')
@@ -141,6 +148,14 @@ export default function DealTimeline({
                     className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600 mt-1.5"
                   >
                     Voir le briefing →
+                  </button>
+                )}
+                {e.captureRound !== undefined && (
+                  <button
+                    onClick={() => onOpenCapture(e.captureRound!)}
+                    className="inline-block text-xs font-medium text-blue-500 hover:text-blue-600 mt-1.5"
+                  >
+                    Voir la capture →
                   </button>
                 )}
               </div>

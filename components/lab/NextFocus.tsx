@@ -116,7 +116,7 @@ export default function NextFocus({
   const truncated = !writtenWhy && isTruncated(fullWhy, 200)
 
   const action = step.kind === 'closed' ? null
-    : step.kind === 'capture' ? { label: '📄 Importer le transcript', run: 'capture' as const }
+    : step.kind === 'capture' ? { label: 'Importer le transcript', run: 'capture' as const }
       : step.kind === 'brief' ? { label: '✦ Générer le briefing', run: 'brief' as const }
         : { label: `✦ Créer le briefing du round ${step.round}`, run: 'next_round' as const }
 

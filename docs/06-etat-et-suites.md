@@ -90,3 +90,8 @@ sur les doublons.
 - La valeur pesée deux fois, porte 2 et porte 3.
 - Mission Control et l'écran du deal qui ne disaient pas la même chose du même
   round : la phrase vient maintenant de `lib/round-focus.ts`, des deux côtés.
+- Les liens de la timeline qui renvoyaient vers l'ancienne interface
+  (`/deals/:id/capture`, `/deals/:id/context`) : le premier ouvrait un
+  formulaire vide sur le round courant, le second sortait du lab. La capture se
+  lit maintenant sur place (`CaptureLetter`), le contexte pointe sur
+  `/lab/deals/:id/context`. **Un lien du lab vers `/deals/...` est un bug.**

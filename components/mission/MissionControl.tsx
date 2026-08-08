@@ -17,17 +17,40 @@ import PortfolioMap from './PortfolioMap'
 // repeated what the map and the actions already say, and a screen that says a
 // thing twice teaches the eye to skip both.
 
+// No icons on these four. An emoji beside a sentence adds a second thing to
+// read and nothing to understand, and the sidebar already ruled that a glyph
+// renders differently on every machine.
 const READY_QUESTIONS = [
-  { icon: '⚡', label: 'Que puis-je gagner rapidement ?', q: 'Quels deals sont les plus proches d’aboutir, et sur quelles preuves ? Dis-moi ce qui reste à établir sur chacun.' },
-  { icon: '👤', label: 'Où dois-je intervenir ?', q: 'Sur quels deals mon intervention change quelque chose aujourd’hui, et pourquoi maintenant ?' },
-  { icon: '⚠', label: 'Quels deals sont en danger ?', q: 'Quels deals sont en danger, sur quel critère exactement, et qu’est-ce qui les sauverait ?' },
-  { icon: '📊', label: 'Où est mon plus gros risque ?', q: 'Quel deal représente le plus gros risque pour mon portefeuille, en tenant compte du CA et de ce qui n’est pas établi ?' },
+  { label: 'Que puis-je gagner rapidement ?', q: 'Quels deals sont les plus proches d’aboutir, et sur quelles preuves ? Dis-moi ce qui reste à établir sur chacun.' },
+  { label: 'Où dois-je intervenir ?', q: 'Sur quels deals mon intervention change quelque chose aujourd’hui, et pourquoi maintenant ?' },
+  { label: 'Quels deals sont en danger ?', q: 'Quels deals sont en danger, sur quel critère exactement, et qu’est-ce qui les sauverait ?' },
+  { label: 'Où est mon plus gros risque ?', q: 'Quel deal représente le plus gros risque pour mon portefeuille, en tenant compte du CA et de ce qui n’est pas établi ?' },
 ]
 
 const SEVERITY: Record<PortfolioAction['severity'], string> = {
   high: 'bg-rose-50 text-rose-600',
   medium: 'bg-amber-50 text-amber-600',
   low: 'bg-blue-50 text-blue-600',
+}
+
+// The deal screen's card, to the pixel: same border, same hairline shadow.
+// Two screens of one product must not disagree about what a card looks like.
+const CARD = 'bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+
+// And its section header: a small capitalised label, then the sentence that
+// says what the section is for. The deal screen puts nothing large above its
+// content — what is big on the page is what the seller has to read, never the
+// furniture around it.
+function SectionHead({ label, hint, aside }: { label: string; hint: string; aside?: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="min-w-0">
+        <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em]">{label}</div>
+        <p className="text-sm text-neutral-500 mt-1.5 leading-relaxed">{hint}</p>
+      </div>
+      {aside}
+    </div>
+  )
 }
 
 export default function MissionControl() {
@@ -133,28 +156,29 @@ export default function MissionControl() {
   const shown = showAll ? actions : actions.slice(0, 5)
 
   return (
-    <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-5">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-7 space-y-6">
       <header className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-[28px] leading-tight font-bold text-neutral-900">
-            Bonjour {firstName || 'à vous'} <span aria-hidden>👋</span>
+          {/* Same scale as the deal's title — the two screens open the same way. */}
+          <h1 className="text-[32px] leading-tight font-bold text-neutral-900">
+            Bonjour {firstName || 'à vous'}
           </h1>
           <p className="text-sm text-neutral-400 mt-1">Voici ce qui se passe dans vos deals aujourd’hui.</p>
         </div>
         <Link
           href="/lab/deals/new"
-          className="bg-blue-500 text-white text-sm font-semibold rounded-xl px-5 py-2.5 hover:bg-blue-600 shadow-sm shadow-blue-500/20 transition-all"
+          className="bg-blue-500 text-white text-sm font-semibold rounded-xl px-5 py-3 hover:bg-blue-600 shadow-sm shadow-blue-500/25 transition-all"
         >
-          + Nouveau deal
+          Nouveau deal
         </Link>
       </header>
 
       {/* ── Ask ── */}
-      <section className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-neutral-900">Que voulez-vous savoir ?</h2>
-        <p className="text-sm text-neutral-400 mt-1">
-          Posez n’importe quelle question sur votre portefeuille. La réponse ne sort que du diagnostic — pas de pronostic.
-        </p>
+      <section className={CARD}>
+        <SectionHead
+          label="Que voulez-vous savoir ?"
+          hint="Posez n’importe quelle question sur votre portefeuille. La réponse ne sort que du diagnostic — pas de pronostic."
+        />
 
         <form
           onSubmit={e => { e.preventDefault(); ask(question) }}
@@ -169,10 +193,17 @@ export default function MissionControl() {
           <button
             type="submit"
             disabled={asking || !question.trim()}
-            className="w-11 h-11 flex-shrink-0 rounded-xl bg-blue-500 text-white text-lg hover:bg-blue-600 disabled:bg-neutral-200 disabled:text-neutral-400 transition-colors"
+            className="w-11 h-11 flex-shrink-0 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 disabled:bg-neutral-200 disabled:text-neutral-400 transition-colors"
             aria-label="Envoyer"
           >
-            {asking ? '…' : '↑'}
+            {asking ? '…' : (
+              // Drawn, not typed: an arrow character carries its own weight and
+              // renders differently on every machine (see LabSidebar).
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round" aria-hidden className="w-[18px] h-[18px]">
+                <path d="M12 19V5" /><path d="M5 12l7-7 7 7" />
+              </svg>
+            )}
           </button>
         </form>
 
@@ -193,30 +224,25 @@ export default function MissionControl() {
               key={r.label}
               onClick={() => ask(r.q)}
               disabled={asking}
-              className="flex items-start gap-2.5 text-left border border-neutral-200 rounded-xl px-3.5 py-3 hover:border-neutral-400 disabled:opacity-50 transition-colors"
+              className="text-left bg-white border border-neutral-200 text-sm font-medium text-neutral-700 leading-snug rounded-xl px-3.5 py-3 hover:border-neutral-400 disabled:opacity-50 transition-colors"
             >
-              <span aria-hidden>{r.icon}</span>
-              <span className="text-sm font-medium text-neutral-700 leading-snug">{r.label}</span>
+              {r.label}
             </button>
           ))}
         </div>
       </section>
 
       {/* ── Do ── */}
-      <section className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-neutral-900">Ce que vous devriez faire cette semaine</h2>
-            <p className="text-sm text-neutral-400 mt-1">
-              Par ordre de ce que la méthode traite en premier — trancher avant d’avancer.
-            </p>
-          </div>
-          {actions.length > 5 && (
+      <section className={CARD}>
+        <SectionHead
+          label="Ce que vous devriez faire cette semaine"
+          hint="Par ordre de ce que la méthode traite en premier — trancher avant d’avancer."
+          aside={actions.length > 5 ? (
             <button onClick={() => setShowAll(s => !s)} className="text-sm text-neutral-400 hover:text-neutral-700 flex-shrink-0">
               {showAll ? 'Réduire' : `Voir tout (${actions.length})`}
             </button>
-          )}
-        </div>
+          ) : undefined}
+        />
 
         {actions.length === 0 ? (
           <p className="text-sm text-neutral-400 mt-5">
@@ -232,17 +258,20 @@ export default function MissionControl() {
                   <span className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${SEVERITY[a.severity]}`}>
                     {i + 1}
                   </span>
+                  {/* The deal screen's rhythm, row by row: a quiet label, the
+                      sentence, then the grey line. What is large is what has to
+                      be read — here the round's sentence, not the furniture. */}
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold text-neutral-900 group-hover:text-blue-600 transition-colors">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 group-hover:text-blue-500 transition-colors">
                       {a.prospect}
                     </div>
-                    {/* The sentence of the round — the same one the deal screen
-                        prints under « L'hypothèse du round ». The action stays
-                        underneath: it is the way in, not the point. */}
-                    <p className="text-[15px] text-neutral-800 leading-relaxed mt-0.5">
+                    {/* The same one the deal screen prints under « L'hypothèse
+                        du round ». The action stays underneath: it is the way
+                        in, not the point. */}
+                    <p className="text-[15px] font-medium text-neutral-900 leading-snug mt-1">
                       {a.focus}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-1">
+                    <p className="text-xs text-neutral-400 mt-1.5">
                       {`${a.title} · ${a.why}`}
                     </p>
                   </div>
@@ -255,21 +284,19 @@ export default function MissionControl() {
 
       {/* ── See ── */}
       {positions.length > 0 && (
-        <section className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h2 className="text-lg font-bold text-neutral-900">Votre portefeuille en un coup d’œil</h2>
-              <p className="text-sm text-neutral-400 mt-1">
-                Chaque point est un deal : sa position dit les portes franchies et le momentum, sa taille le CA. Cliquez pour l’ouvrir.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-neutral-400">
-              <span>Risque</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" />Faible</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Moyen</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />Élevé</span>
-            </div>
-          </div>
+        <section className={CARD}>
+          <SectionHead
+            label="Votre portefeuille en un coup d’œil"
+            hint="Chaque point est un deal : sa position dit les portes franchies et le momentum, sa taille le CA. Cliquez pour l’ouvrir."
+            aside={
+              <div className="flex items-center gap-3 text-xs text-neutral-400">
+                <span>Risque</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" />Faible</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />Moyen</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />Élevé</span>
+              </div>
+            }
+          />
           <div className="mt-4">
             <PortfolioMap positions={positions} />
           </div>
@@ -288,7 +315,7 @@ export default function MissionControl() {
         </button>
 
         {archived && archived.length > 0 && (
-          <ul className="mt-3 bg-white rounded-2xl border border-neutral-200 divide-y divide-neutral-100 text-left">
+          <ul className="mt-3 bg-white rounded-2xl border border-neutral-200/80 shadow-[0_1px_2px_rgba(0,0,0,0.04)] divide-y divide-neutral-100 text-left">
             {archived.map(d => {
               const reasons = reasonLabels((d as unknown as { close_reasons?: string[] | null }).close_reasons)
               const tone = d.status === 'won' ? 'bg-emerald-50 text-emerald-600'

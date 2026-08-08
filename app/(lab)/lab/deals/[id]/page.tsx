@@ -18,6 +18,7 @@ import NextFocus from '@/components/lab/NextFocus'
 import { copilotSuggestions } from '@/lib/copilot-suggestions'
 import { criterionLabel, gateName, gateQuestion } from '@/lib/lab-view'
 import BriefingLetter from '@/components/lab/BriefingLetter'
+import CaptureLetter from '@/components/lab/CaptureLetter'
 import DealGreeting from '@/components/lab/DealGreeting'
 import GeneratingDialog from '@/components/lab/GeneratingDialog'
 import AttendeesDialog from '@/components/lab/AttendeesDialog'
@@ -107,6 +108,7 @@ export default function LabDealPage() {
   const [pendingBrief, setPendingBrief] = useState<'brief' | 'next_round' | null>(null)
   // Which round's briefing is open — the timeline can reach an earlier one.
   const [briefingRound, setBriefingRound] = useState<number | null>(null)
+  const [captureRound, setCaptureRound] = useState<number | null>(null)
   const [showImport, setShowImport] = useState(false)
   const [showManual, setShowManual] = useState(false)
   const [welcomeOpen, setWelcomeOpen] = useState(true)
@@ -431,7 +433,11 @@ export default function LabDealPage() {
               suggestions={copilotSuggestions({ deal, rounds, current, dealState, coverage })}
               onRan={load}
             />
-            <DealTimeline deal={deal} rounds={rounds} dealId={dealId} onOpenBriefing={setBriefingRound} />
+            <DealTimeline
+              deal={deal} rounds={rounds} dealId={dealId}
+              onOpenBriefing={setBriefingRound}
+              onOpenCapture={setCaptureRound}
+            />
           </div>
         </main>
 
@@ -439,6 +445,12 @@ export default function LabDealPage() {
         const r = rounds.find(x => x.round === briefingRound)
         return r ? (
           <BriefingLetter round={r} prospectName={deal.prospect_name} onClose={() => setBriefingRound(null)} />
+        ) : null
+      })()}
+      {captureRound !== null && (() => {
+        const r = rounds.find(x => x.round === captureRound)
+        return r ? (
+          <CaptureLetter round={r} prospectName={deal.prospect_name} onClose={() => setCaptureRound(null)} />
         ) : null
       })()}
       {showImport && current && (

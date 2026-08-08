@@ -89,7 +89,7 @@ export default function BriefingLetter({
               onClick={() => withLink('mobile', url => window.open(url, '_blank', 'noopener'))}
               className={secondary}
             >
-              {busy === 'mobile' ? '…' : '📱 Ouvrir en mode mobile'}
+              {busy === 'mobile' ? '…' : 'Ouvrir en mode mobile'}
             </button>
 
             <button
@@ -97,7 +97,7 @@ export default function BriefingLetter({
               onClick={() => withLink('print', url => window.open(`${url}?print=1`, '_blank', 'noopener'))}
               className={secondary}
             >
-              {busy === 'print' ? '…' : '🖨 Imprimer / PDF'}
+              {busy === 'print' ? '…' : 'Imprimer / PDF'}
             </button>
 
             <button
@@ -109,7 +109,7 @@ export default function BriefingLetter({
               })}
               className={secondary}
             >
-              {busy === 'link' ? '…' : linkCopied ? 'Lien copié !' : '🔗 Créer un lien privé'}
+              {busy === 'link' ? '…' : linkCopied ? 'Lien copié !' : 'Créer un lien privé'}
             </button>
           </div>
 
