@@ -8,6 +8,7 @@ import { nextStep } from '@/lib/deal-rounds'
 import { normalizeFit, FIT_AXIS_LABELS, type ActorCoverage } from '@/lib/playbook-fit'
 import { roundFocus } from '@/lib/round-focus'
 import { firstSentences, isTruncated } from '@/lib/text'
+import SectionLabel from './SectionLabel'
 
 // The objective, stated as something to go and do, with what it would take.
 //
@@ -123,10 +124,12 @@ export default function NextFocus({
   return (
     <>
       <div className="bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)] mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-sm">◈</span>
-          <span className="text-[11px] font-semibold text-blue-500 uppercase tracking-[0.08em]">L’hypothèse du round</span>
-          {step.kind !== 'closed' && <span className="text-[11px] text-neutral-300">Round {step.round}</span>}
+        <div className="mb-3">
+          <SectionLabel
+            icon="hypothesis"
+            label="L’hypothèse du round"
+            note={step.kind !== 'closed' ? `Round ${step.round}` : null}
+          />
         </div>
 
         <div className="grid lg:grid-cols-[1fr_340px] gap-6">

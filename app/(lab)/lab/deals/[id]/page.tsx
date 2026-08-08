@@ -315,7 +315,7 @@ export default function LabDealPage() {
           )}
 
           {/* Header */}
-          <Link href="/lab" className="text-sm text-neutral-400 hover:text-blue-500 transition-colors">← Retour au pipeline</Link>
+          <Link href="/lab" className="text-sm text-neutral-400 hover:text-blue-500 transition-colors">← Mission Control</Link>
           <div className="flex items-start justify-between gap-4 mt-2 mb-6 flex-wrap">
             <div>
               <h1 className="text-[32px] leading-tight font-bold text-neutral-900">{deal.prospect_name}</h1>

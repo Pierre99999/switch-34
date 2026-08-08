@@ -9,6 +9,7 @@ import { normalizePlaybook } from '@/lib/playbook'
 import { reasonLabels } from '@/lib/deal-outcome'
 import { actorCoverage, type ActorCoverage, type DealContact } from '@/lib/playbook-fit'
 import PortfolioMap from './PortfolioMap'
+import SectionLabel, { type SectionIcon } from '@/components/lab/SectionLabel'
 
 // Mission Control: what is happening across the deals, and what to do first.
 //
@@ -37,16 +38,17 @@ const SEVERITY: Record<PortfolioAction['severity'], string> = {
 // Two screens of one product must not disagree about what a card looks like.
 const CARD = 'bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
 
-// And its section header: a small capitalised label, then the sentence that
-// says what the section is for. The deal screen puts nothing large above its
-// content — what is big on the page is what the seller has to read, never the
-// furniture around it.
-function SectionHead({ label, hint, aside }: { label: string; hint: string; aside?: React.ReactNode }) {
+// And its section header: the deal screen's label — a drawn icon in a tinted
+// disc, the name in blue — then the sentence that says what the section is
+// for. Three sections, three icons: the eye finds « ce que je dois faire » and
+// « mon portefeuille » sans lire. Nothing large above the content: what is big
+// on the page is what the seller has to read, never the furniture around it.
+function SectionHead({ icon, label, hint, aside }: { icon: SectionIcon; label: string; hint: string; aside?: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap">
       <div className="min-w-0">
-        <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-[0.08em]">{label}</div>
-        <p className="text-sm text-neutral-500 mt-1.5 leading-relaxed">{hint}</p>
+        <SectionLabel icon={icon} label={label} />
+        <p className="text-sm text-neutral-500 mt-2 leading-relaxed">{hint}</p>
       </div>
       {aside}
     </div>
@@ -176,6 +178,7 @@ export default function MissionControl() {
       {/* ── Ask ── */}
       <section className={CARD}>
         <SectionHead
+          icon="ask"
           label="Que voulez-vous savoir ?"
           hint="Posez n’importe quelle question sur votre portefeuille. La réponse ne sort que du diagnostic — pas de pronostic."
         />
@@ -235,6 +238,7 @@ export default function MissionControl() {
       {/* ── Do ── */}
       <section className={CARD}>
         <SectionHead
+          icon="todo"
           label="Ce que vous devriez faire cette semaine"
           hint="Par ordre de ce que la méthode traite en premier — trancher avant d’avancer."
           aside={actions.length > 5 ? (
@@ -286,6 +290,7 @@ export default function MissionControl() {
       {positions.length > 0 && (
         <section className={CARD}>
           <SectionHead
+            icon="map"
             label="Votre portefeuille en un coup d’œil"
             hint="Chaque point est un deal : sa position dit les portes franchies et le momentum, sa taille le CA. Cliquez pour l’ouvrir."
             aside={

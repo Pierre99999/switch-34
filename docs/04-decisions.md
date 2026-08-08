@@ -160,6 +160,26 @@ Les classes de la carte vivent dans une constante `CARD` en tête de
 `MissionControl` : deux écrans d'un même produit ne doivent pas diverger sur
 ce qu'est une carte.
 
+### L'en-tête d'une section vient d'un seul composant
+
+`components/lab/SectionLabel.tsx` : une icône **tracée** dans une pastille
+bleu clair, le nom de la section en bleu, et au besoin une note grise après
+lui. C'est l'en-tête de « L'hypothèse du round » ; les trois sections de
+Mission Control le portent désormais aussi, chacune avec son icône — une bulle
+pour la question posée au portefeuille, une case cochée pour ce qu'il faut
+faire cette semaine, deux axes et trois points pour la carte.
+
+Pourquoi une couleur et une icône ici, alors que les icônes ont été retirées
+ailleurs : ces trois lignes **distinguent des sections**, elles ne décorent pas
+une phrase déjà lisible. Le gris uniforme des étiquettes obligeait à lire les
+trois pour trouver la bonne ; en bleu, avec une forme, l'œil arrive directement
+sur « ce que je dois faire cette semaine ».
+
+Le `◈` de l'hypothèse était un caractère typographique : il est maintenant
+dessiné comme les autres, pour la raison habituelle — un glyphe ne se rend pas
+pareil sur deux machines. Les glyphes des portes restent des caractères parce
+qu'ils forment une famille de quatre qu'on lit ensemble.
+
 ### Une conversation passée se relit, elle ne se rouvre pas en formulaire
 
 « Voir la capture » pointait vers `/deals/:id/capture`, l'écran de saisie de
