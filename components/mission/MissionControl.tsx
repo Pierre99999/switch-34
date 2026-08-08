@@ -213,24 +213,27 @@ export default function MissionControl() {
         ) : (
           <ul className="mt-4 divide-y divide-neutral-100">
             {shown.map((a, i) => (
-              <li key={`${a.dealId}-${i}`} className="py-4 flex items-start gap-4 flex-wrap sm:flex-nowrap">
-                <span className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${SEVERITY[a.severity]}`}>
-                  {i + 1}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-neutral-900">{a.prospect}</div>
-                  <div className="text-sm text-neutral-600 leading-relaxed">{a.title}</div>
-                  <div className="text-xs text-neutral-400 mt-0.5">{a.why}</div>
-                </div>
-                <div className="text-xs text-neutral-400 sm:w-52 flex-shrink-0">
-                  <div className="font-medium text-neutral-500">Ce que ça débloque</div>
-                  <div>{a.unlocks}</div>
-                </div>
-                <Link
-                  href={`/lab/deals/${a.dealId}`}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700 border border-neutral-200 rounded-xl px-4 py-2.5 whitespace-nowrap flex-shrink-0"
-                >
-                  {a.cta} →
+              <li key={`${a.dealId}-${i}`}>
+                {/* The whole row opens the deal: a button beside a line that is
+                    already about one deal is a second way to do one thing. */}
+                <Link href={`/lab/deals/${a.dealId}`} className="py-4 flex items-start gap-4 group">
+                  <span className={`w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${SEVERITY[a.severity]}`}>
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold text-neutral-900 group-hover:text-blue-600 transition-colors">
+                      {a.prospect}
+                    </div>
+                    {/* The hypothesis when the round has one — it is particular
+                        to the deal, where an action title comes out identical
+                        on three deals at once. */}
+                    <p className="text-[15px] text-neutral-800 leading-relaxed mt-0.5">
+                      {a.hypothesis ?? a.title}
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      {a.hypothesis ? `${a.title} · ${a.why}` : a.why}
+                    </p>
+                  </div>
                 </Link>
               </li>
             ))}

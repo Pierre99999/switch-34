@@ -83,7 +83,7 @@ test('a missing required actor outranks the next briefing', () => {
     now: NOW,
   })[0]
   assert.equal(a.kind, 'actor')
-  assert.match(a.title, /le ceo/i)
+  assert.match(a.title, /Le CEO/)
 })
 
 test('a deal nobody has touched for twelve days asks to be revived', () => {
@@ -108,10 +108,43 @@ test('no action ever promises a score', () => {
   })
   assert.ok(actions.length > 0)
   for (const a of actions) {
-    assert.ok(!/[+-]\s?\d[.,]\d/.test(a.unlocks), `predicted a delta: ${a.unlocks}`)
-    assert.ok(a.unlocks.length > 3, a.unlocks)
+    assert.ok(!/[+-]\s?\d[.,]\d/.test(`${a.title} ${a.why}`), `predicted a delta: ${a.title}`)
     assert.ok(a.why.length > 10, a.why)
   }
+})
+
+test('a round with a hypothesis carries it, so two deals never read alike', () => {
+  // Three deals missing a CEO produced three identical lines, and a line that
+  // repeats stops being read at the second one.
+  const d = deal({ id: 'a' })
+  const a = portfolioActions({
+    deals: [d],
+    roundsByDeal: { a: [briefed(1, { briefing_hypothesis: 'Si Nelson reconnaît un problème de gouvernance, alors notre offre devient pertinente.' })] },
+    now: NOW,
+  })[0]
+  assert.match(a.hypothesis ?? '', /^Si Nelson/)
+})
+
+test('without a briefing there is no hypothesis to show', () => {
+  const a = portfolioActions({ deals: [deal({ id: 'a' })], roundsByDeal: { a: [round(1)] }, now: NOW })[0]
+  assert.equal(a.hypothesis, null)
+  assert.ok(a.title.length > 5)
+})
+
+test('the missing actor keeps the capitalisation of the playbook', () => {
+  // It read "faire entrer ceo dans la boucle" on screen.
+  const a = portfolioActions({
+    deals: [deal({ id: 'a' })],
+    roundsByDeal: { a: [captured(1)] },
+    coverageByDeal: {
+      a: {
+        applicable: true, requirements: [], covered: 0, total: 1, unmatched: [],
+        missing: [{ label: 'CEO', why: '', risk: 'x', actor: 'decision_maker', covered: false, coveredBy: [] }],
+      },
+    },
+    now: NOW,
+  })[0]
+  assert.match(a.title, /CEO/)
 })
 
 // ── The map ──────────────────────────────────────────────────

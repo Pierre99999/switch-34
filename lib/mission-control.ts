@@ -6,14 +6,14 @@
 //
 // One thing deliberately NOT computed: a predicted gain. A mockup can promise
 // "+0,8 sur Momentum" for an action; nothing in the engine knows that, and the
-// method's own rule is that the outcome is never predicted. What an action
-// carries is what it would UNBLOCK — the gate waiting on it, the criterion
-// resting on one voice — which is true, checkable, and more useful.
+// method's own rule is that the outcome is never predicted. What each line
+// carries instead is the hypothesis the round is testing — particular to the
+// deal, and true.
 
 import type { Deal, DealRound } from './types'
 import { computeDealState, dealScore, gateScore, prescriptions, DECISIVE_VARS } from './scoring'
 import { nextStep, hasCapture } from './deal-rounds'
-import { criterionLabel, gateName } from './lab-view'
+import { criterionLabel } from './lab-view'
 import { normalizeFit, type ActorCoverage } from './playbook-fit'
 
 export type ActionKind = 'exit' | 'settle' | 'capture' | 'brief' | 'actor' | 'revive' | 'next_round'
@@ -22,13 +22,17 @@ export type PortfolioAction = {
   dealId: string
   prospect: string
   kind: ActionKind
-  /** What to do, in one line. */
+  /**
+   * The bet the current round is making. This is what the seller reads: it is
+   * particular to the deal, where an action title ("faire entrer le CEO dans
+   * la boucle") comes out identical on three deals at once and stops being
+   * read by the second one.
+   */
+  hypothesis: string | null
+  /** What to do, in one line. Shown when there is no hypothesis yet. */
   title: string
   /** Why now — the state of the deal that produced it. */
   why: string
-  /** What it would unblock. Never a predicted score. */
-  unlocks: string
-  cta: string
   severity: 'high' | 'medium' | 'low'
 }
 
@@ -74,16 +78,16 @@ export function portfolioActions(input: PortfolioInput): PortfolioAction[] {
     const decisive = new Set(Object.values(DECISIVE_VARS).flat())
     const idle = daysSinceActivity(rounds, now)
 
-    const add = (a: Omit<PortfolioAction, 'dealId' | 'prospect'>) =>
-      out.push({ dealId: deal.id, prospect: deal.prospect_name, ...a })
+    const hypothesis = (current?.briefing_hypothesis ?? '').trim() || null
+
+    const add = (a: Omit<PortfolioAction, 'dealId' | 'prospect' | 'hypothesis'>) =>
+      out.push({ dealId: deal.id, prospect: deal.prospect_name, hypothesis, ...a })
 
     if (fit?.avoid_list_hit) {
       add({
         kind: 'exit', severity: 'high',
         title: 'Trancher : ce prospect ressemble à un profil à fuir',
         why: 'Votre playbook dit de l’éviter.',
-        unlocks: 'Un round de moins investi à côté',
-        cta: 'Analyser ou sortir',
       })
       continue
     }
@@ -94,8 +98,6 @@ export function portfolioActions(input: PortfolioInput): PortfolioAction[] {
         kind: 'settle', severity: 'high',
         title: `Trancher sur ${criterionLabel(negative.variable).toLowerCase()}`,
         why: 'Signal défavorable et corroboré sur un critère décisif.',
-        unlocks: `Porte ${state.activeGate} · ${gateName(state.activeGate)}`,
-        cta: 'Analyser ou sortir',
       })
       continue
     }
@@ -105,8 +107,6 @@ export function portfolioActions(input: PortfolioInput): PortfolioAction[] {
         kind: 'capture', severity: 'medium',
         title: `Importer le transcript du round ${step.round}`,
         why: 'Le briefing est prêt, la conversation n’est pas capturée.',
-        unlocks: 'Rien ne se note tant que rien n’est capturé',
-        cta: 'Importer le transcript',
       })
       continue
     }
@@ -115,10 +115,8 @@ export function portfolioActions(input: PortfolioInput): PortfolioAction[] {
     if (missing) {
       add({
         kind: 'actor', severity: 'high',
-        title: `Faire entrer ${missing.label.toLowerCase()} dans la boucle`,
+        title: `Faire entrer ${missing.label} dans la boucle`,
         why: missing.risk || 'Rôle jugé nécessaire par votre playbook, absent du deal.',
-        unlocks: 'Ce qu’aucune autre voix ne peut établir',
-        cta: 'Préparer la rencontre',
       })
       continue
     }
@@ -128,8 +126,6 @@ export function portfolioActions(input: PortfolioInput): PortfolioAction[] {
         kind: 'revive', severity: 'medium',
         title: `Relancer — aucun échange depuis ${idle} jours`,
         why: 'Un deal sans conversation ne se dégrade pas dans le diagnostic, seulement dans la réalité.',
-        unlocks: 'Momentum',
-        cta: 'Relancer',
       })
       continue
     }
@@ -144,10 +140,6 @@ export function portfolioActions(input: PortfolioInput): PortfolioAction[] {
         why: decisiveWeak
           ? `${criterionLabel(decisiveWeak.variable)} reste le point dur.`
           : `Porte ${state.activeGate} en construction.`,
-        unlocks: decisiveWeak
-          ? criterionLabel(decisiveWeak.variable)
-          : `Porte ${state.activeGate} · ${gateName(state.activeGate)}`,
-        cta: 'Préparer la conversation',
       })
     }
   }
